@@ -1,0 +1,10 @@
+{
+  "magic_items": [
+    {
+      "item_id": "alchemy-jug",
+      "name": "Alchemy Jug",
+      "rarity": "uncommon",
+      "description": "A magical container capable of producing useful liquids."
+    }
+  ]
+}

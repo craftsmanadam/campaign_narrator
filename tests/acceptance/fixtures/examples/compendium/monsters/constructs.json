@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "animated-armor",
+      "name": "Animated Armor",
+      "monster_type": "construct",
+      "challenge_rating": 1,
+      "armor_class": 18,
+      "hit_points": 33
+    }
+  ]
+}

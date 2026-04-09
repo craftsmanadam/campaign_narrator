@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "awakened-shrub",
+      "name": "Awakened Shrub",
+      "monster_type": "plant",
+      "challenge_rating": 0,
+      "armor_class": 9,
+      "hit_points": 10
+    }
+  ]
+}

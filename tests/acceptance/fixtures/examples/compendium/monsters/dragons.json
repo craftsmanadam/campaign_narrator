@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "pseudodragon",
+      "name": "Pseudodragon",
+      "monster_type": "dragon",
+      "challenge_rating": "1/4",
+      "armor_class": 13,
+      "hit_points": 7
+    }
+  ]
+}

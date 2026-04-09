@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "dryad",
+      "name": "Dryad",
+      "monster_type": "fey",
+      "challenge_rating": 1,
+      "armor_class": 11,
+      "hit_points": 22
+    }
+  ]
+}

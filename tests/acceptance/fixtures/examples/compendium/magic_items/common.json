@@ -1,0 +1,10 @@
+{
+  "magic_items": [
+    {
+      "item_id": "potion-of-healing",
+      "name": "Potion of Healing",
+      "rarity": "common",
+      "description": "A restorative potion that replenishes hit points."
+    }
+  ]
+}

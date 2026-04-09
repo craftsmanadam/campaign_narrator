@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "imp",
+      "name": "Imp",
+      "monster_type": "fiend",
+      "challenge_rating": 1,
+      "armor_class": 13,
+      "hit_points": 10
+    }
+  ]
+}

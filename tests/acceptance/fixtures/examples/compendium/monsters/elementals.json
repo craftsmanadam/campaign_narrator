@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "dust-mephit",
+      "name": "Dust Mephit",
+      "monster_type": "elemental",
+      "challenge_rating": "1/2",
+      "armor_class": 12,
+      "hit_points": 17
+    }
+  ]
+}

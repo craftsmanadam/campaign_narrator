@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "owlbear",
+      "name": "Owlbear",
+      "monster_type": "monstrosity",
+      "challenge_rating": 3,
+      "armor_class": 13,
+      "hit_points": 59
+    }
+  ]
+}

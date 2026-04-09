@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "ogre",
+      "name": "Ogre",
+      "monster_type": "giant",
+      "challenge_rating": 2,
+      "armor_class": 11,
+      "hit_points": 59
+    }
+  ]
+}

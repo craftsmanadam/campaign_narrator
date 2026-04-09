@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "gibbering-mouther",
+      "name": "Gibbering Mouther",
+      "monster_type": "aberration",
+      "challenge_rating": 2,
+      "armor_class": 9,
+      "hit_points": 67
+    }
+  ]
+}

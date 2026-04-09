@@ -10,6 +10,23 @@ def test_data_contract_files_exist() -> None:
     required_paths = [
         Path("data/metadata/enums.json"),
         Path("data/schema/campaign.schema.json"),
+        Path("data/compendium/monsters/aberrations.json"),
+        Path("data/compendium/monsters/beasts.json"),
+        Path("data/compendium/monsters/celestials.json"),
+        Path("data/compendium/monsters/constructs.json"),
+        Path("data/compendium/monsters/dragons.json"),
+        Path("data/compendium/monsters/elementals.json"),
+        Path("data/compendium/monsters/fey.json"),
+        Path("data/compendium/monsters/fiends.json"),
+        Path("data/compendium/monsters/giants.json"),
+        Path("data/compendium/monsters/humanoids.json"),
+        Path("data/compendium/monsters/monstrosities.json"),
+        Path("data/compendium/monsters/oozes.json"),
+        Path("data/compendium/monsters/plants.json"),
+        Path("data/compendium/monsters/undead.json"),
+        Path("data/compendium/magic_items/common.json"),
+        Path("data/compendium/magic_items/uncommon.json"),
+        Path("data/compendium/magic_items/rare.json"),
         Path("docs/data-structures.md"),
     ]
 
@@ -24,6 +41,8 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
             "event_types",
             "npc_statuses",
             "quest_statuses",
+            "monster_types",
+            "item_rarities",
         },
         Path("data/narrative/campaign.json"): {
             "campaign_id",
@@ -44,6 +63,23 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
             "discovered_secrets",
         },
         Path("data/scenarios/test_scenarios.json"): {"scenarios"},
+        Path("data/compendium/monsters/aberrations.json"): {"monsters"},
+        Path("data/compendium/monsters/beasts.json"): {"monsters"},
+        Path("data/compendium/monsters/celestials.json"): {"monsters"},
+        Path("data/compendium/monsters/constructs.json"): {"monsters"},
+        Path("data/compendium/monsters/dragons.json"): {"monsters"},
+        Path("data/compendium/monsters/elementals.json"): {"monsters"},
+        Path("data/compendium/monsters/fey.json"): {"monsters"},
+        Path("data/compendium/monsters/fiends.json"): {"monsters"},
+        Path("data/compendium/monsters/giants.json"): {"monsters"},
+        Path("data/compendium/monsters/humanoids.json"): {"monsters"},
+        Path("data/compendium/monsters/monstrosities.json"): {"monsters"},
+        Path("data/compendium/monsters/oozes.json"): {"monsters"},
+        Path("data/compendium/monsters/plants.json"): {"monsters"},
+        Path("data/compendium/monsters/undead.json"): {"monsters"},
+        Path("data/compendium/magic_items/common.json"): {"magic_items"},
+        Path("data/compendium/magic_items/uncommon.json"): {"magic_items"},
+        Path("data/compendium/magic_items/rare.json"): {"magic_items"},
     }
 
     for path, required_keys in expected_keys.items():
@@ -77,10 +113,50 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     assert campaign_state["npc_relationships"] == {}
     assert scenarios["scenarios"] == []
 
+
+def test_compendium_starter_files_are_neutral() -> None:
+    """Compendium starter files should remain empty until corpus ingestion."""
+
+    monster_paths = [
+        Path("data/compendium/monsters/aberrations.json"),
+        Path("data/compendium/monsters/beasts.json"),
+        Path("data/compendium/monsters/celestials.json"),
+        Path("data/compendium/monsters/constructs.json"),
+        Path("data/compendium/monsters/dragons.json"),
+        Path("data/compendium/monsters/elementals.json"),
+        Path("data/compendium/monsters/fey.json"),
+        Path("data/compendium/monsters/fiends.json"),
+        Path("data/compendium/monsters/giants.json"),
+        Path("data/compendium/monsters/humanoids.json"),
+        Path("data/compendium/monsters/monstrosities.json"),
+        Path("data/compendium/monsters/oozes.json"),
+        Path("data/compendium/monsters/plants.json"),
+        Path("data/compendium/monsters/undead.json"),
+    ]
+    item_paths = [
+        Path("data/compendium/magic_items/common.json"),
+        Path("data/compendium/magic_items/uncommon.json"),
+        Path("data/compendium/magic_items/rare.json"),
+    ]
+
+    for path in monster_paths:
+        parsed = json.loads(path.read_text())
+        assert parsed["monsters"] == []
+
+    for path in item_paths:
+        parsed = json.loads(path.read_text())
+        assert parsed["magic_items"] == []
+
+
+def test_example_fixture_content_exists_for_reference_data() -> None:
+    """Acceptance fixtures should contain concrete example content."""
+
     fixture_root = Path("tests/acceptance/fixtures/examples")
     assert (fixture_root / "narrative/campaign.json").exists()
     assert (fixture_root / "state/world_state.json").exists()
     assert (fixture_root / "memory/session_summaries.jsonl").exists()
+    assert (fixture_root / "compendium/monsters/dragons.json").exists()
+    assert (fixture_root / "compendium/magic_items/rare.json").exists()
 
 
 def test_schema_files_are_parseable_json() -> None:

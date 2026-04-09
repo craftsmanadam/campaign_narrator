@@ -1,0 +1,10 @@
+{
+  "magic_items": [
+    {
+      "item_id": "bag-of-beans",
+      "name": "Bag of Beans",
+      "rarity": "rare",
+      "description": "A bag of magical beans with unpredictable effects."
+    }
+  ]
+}

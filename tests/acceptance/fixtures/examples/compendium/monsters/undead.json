@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "skeleton",
+      "name": "Skeleton",
+      "monster_type": "undead",
+      "challenge_rating": "1/4",
+      "armor_class": 13,
+      "hit_points": 13
+    }
+  ]
+}

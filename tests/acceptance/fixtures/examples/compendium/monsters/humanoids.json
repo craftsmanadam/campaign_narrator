@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "bandit",
+      "name": "Bandit",
+      "monster_type": "humanoid",
+      "challenge_rating": "1/8",
+      "armor_class": 12,
+      "hit_points": 11
+    }
+  ]
+}

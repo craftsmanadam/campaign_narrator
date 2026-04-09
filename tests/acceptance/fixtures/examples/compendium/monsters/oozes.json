@@ -1,0 +1,12 @@
+{
+  "monsters": [
+    {
+      "monster_id": "gray-ooze",
+      "name": "Gray Ooze",
+      "monster_type": "ooze",
+      "challenge_rating": "1/2",
+      "armor_class": 8,
+      "hit_points": 22
+    }
+  ]
+}
