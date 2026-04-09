@@ -321,6 +321,17 @@ docs = ["Sphinx (>=1.6)", "sphinx_bootstrap_theme (>=0.6.0)"]
 testing = ["pytest (<5.0) ; python_version < \"3.0\"", "pytest (>=5.0) ; python_version >= \"3.0\"", "pytest-html (>=1.19.0)"]
 
 [[package]]
+name = "pdftotext"
+version = "3.0.0"
+description = "Simple PDF text extraction"
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "pdftotext-3.0.0.tar.gz", hash = "sha256:c3652b19154e145515a8bfa953fc6136338ed92337bdccbb53fe0d88013b1aaa"},
+]
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 description = "plugin and hook calling mechanisms for python"
@@ -521,4 +532,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14"
-content-hash = "007fae44d32c9fc3fe4dff0add587d40895eec48828f3131a9107c527f351e62"
+content-hash = "425faf3a9f9a4462b6bcd53d9df406bfff7cd26c062e5f3ce368de1f0b46345e"
