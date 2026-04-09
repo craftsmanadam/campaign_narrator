@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Campaign Canon",
+  "type": "object",
+  "required": [
+    "campaign_id",
+    "name",
+    "pitch",
+    "tone",
+    "main_conflict",
+    "constraints",
+    "status",
+    "starting_location_id",
+    "starting_quest_id",
+    "npc_ids",
+    "location_ids",
+    "quest_ids",
+    "faction_ids"
+  ],
+  "properties": {
+    "campaign_id": { "type": "string" },
+    "name": { "type": "string" },
+    "pitch": { "type": "string" },
+    "tone": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "main_conflict": { "type": "string" },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "status": { "type": "string" },
+    "starting_location_id": { "type": "string" },
+    "starting_quest_id": { "type": "string" },
+    "npc_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "location_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "quest_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "faction_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

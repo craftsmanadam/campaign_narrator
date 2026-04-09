@@ -1,0 +1,20 @@
+{
+  "event_types": [
+    "npc_interaction",
+    "world_flag_updated",
+    "quest_progressed",
+    "combat_started",
+    "session_started",
+    "session_ended"
+  ],
+  "npc_statuses": ["alive", "dead", "missing"],
+  "quest_statuses": ["available", "active", "completed", "failed"],
+  "campaign_statuses": ["draft", "approved", "active", "completed"],
+  "interaction_outcomes": [
+    "friendly",
+    "neutral",
+    "evasive",
+    "hostile",
+    "fearful"
+  ]
+}

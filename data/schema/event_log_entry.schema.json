@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Event Log Entry",
+  "type": "object",
+  "required": ["event_id", "session_id", "type", "entity_id", "details"],
+  "properties": {
+    "event_id": { "type": "string" },
+    "session_id": { "type": "integer" },
+    "type": { "type": "string" },
+    "entity_id": { "type": "string" },
+    "details": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

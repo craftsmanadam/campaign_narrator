@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Session Summary Entry",
+  "type": "object",
+  "required": ["session_id", "summary", "key_events", "unresolved", "entity_refs"],
+  "properties": {
+    "session_id": { "type": "integer" },
+    "summary": { "type": "string" },
+    "key_events": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "entity_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

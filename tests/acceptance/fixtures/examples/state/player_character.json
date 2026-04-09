@@ -1,0 +1,12 @@
+{
+  "character_id": "pc-001",
+  "name": "Talia",
+  "level": 1,
+  "hp": {
+    "current": 18,
+    "max": 18
+  },
+  "ac": 14,
+  "inventory": ["torch", "rope"],
+  "status": []
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NPC Collection",
+  "type": "object",
+  "required": ["npcs"],
+  "properties": {
+    "npcs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "npc_id",
+          "name",
+          "role",
+          "personality",
+          "knowledge",
+          "location_id",
+          "status"
+        ],
+        "properties": {
+          "npc_id": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "personality": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "knowledge": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "location_id": { "type": "string" },
+          "status": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

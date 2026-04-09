@@ -1,0 +1,7 @@
+{
+  "stealth": ["stealth.md", "checks.md"],
+  "combat": ["combat.md", "conditions.md"],
+  "conditions": ["conditions.md"],
+  "actions": ["actions.md"],
+  "spells_basic": ["spells_basic.md"]
+}

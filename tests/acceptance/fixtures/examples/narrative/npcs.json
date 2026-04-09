@@ -1,0 +1,13 @@
+{
+  "npcs": [
+    {
+      "npc_id": "brother-corin",
+      "name": "Brother Corin",
+      "role": "priest",
+      "personality": ["nervous", "secretive"],
+      "knowledge": ["knows about the relic"],
+      "location_id": "ashen-chapel",
+      "status": "alive"
+    }
+  ]
+}

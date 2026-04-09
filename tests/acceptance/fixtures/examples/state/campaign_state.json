@@ -1,0 +1,11 @@
+{
+  "npc_relationships": {
+    "brother-corin": {
+      "trust": -1,
+      "fear": 1,
+      "last_interaction": "evasive"
+    }
+  },
+  "campaign_flags": {},
+  "discovered_secrets": []
+}

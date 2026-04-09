@@ -1,0 +1,13 @@
+{
+  "current_session": 1,
+  "current_location_id": "ashen-chapel",
+  "active_quest_ids": ["investigate-the-chapel"],
+  "quest_progress": {
+    "investigate-the-chapel": "talk-to-priest"
+  },
+  "discovered_npc_ids": ["brother-corin"],
+  "discovered_location_ids": ["ashen-chapel"],
+  "flags": {
+    "crypt_found": false
+  }
+}

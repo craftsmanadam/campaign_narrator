@@ -1,0 +1,25 @@
+{
+  "quests": [
+    {
+      "quest_id": "investigate-the-chapel",
+      "name": "Investigate the Chapel",
+      "status": "available",
+      "giver_npc_id": "brother-corin",
+      "location_id": "ashen-chapel",
+      "steps": [
+        {
+          "step_id": "talk-to-priest",
+          "description": "Talk to Brother Corin"
+        },
+        {
+          "step_id": "search-graveyard",
+          "description": "Search the graveyard"
+        },
+        {
+          "step_id": "find-crypt",
+          "description": "Find the crypt"
+        }
+      ]
+    }
+  ]
+}

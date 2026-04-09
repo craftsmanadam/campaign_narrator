@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Faction Collection",
+  "type": "object",
+  "required": ["factions"],
+  "properties": {
+    "factions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["faction_id", "name", "description"],
+        "properties": {
+          "faction_id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

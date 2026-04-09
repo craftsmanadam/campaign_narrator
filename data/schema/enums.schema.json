@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Metadata Enums",
+  "type": "object",
+  "required": [
+    "event_types",
+    "npc_statuses",
+    "quest_statuses",
+    "campaign_statuses",
+    "interaction_outcomes"
+  ],
+  "properties": {
+    "event_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "npc_statuses": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "quest_statuses": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "campaign_statuses": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "interaction_outcomes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

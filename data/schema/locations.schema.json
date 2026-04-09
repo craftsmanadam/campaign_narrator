@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Location Collection",
+  "type": "object",
+  "required": ["locations"],
+  "properties": {
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["location_id", "name", "description", "secrets", "tags"],
+        "properties": {
+          "location_id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "secrets": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

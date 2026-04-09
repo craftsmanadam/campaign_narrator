@@ -1,0 +1,15 @@
+{
+  "campaign_id": "",
+  "name": "",
+  "pitch": "",
+  "tone": [],
+  "main_conflict": "",
+  "constraints": [],
+  "status": "draft",
+  "starting_location_id": "",
+  "starting_quest_id": "",
+  "npc_ids": [],
+  "location_ids": [],
+  "quest_ids": [],
+  "faction_ids": []
+}

@@ -1,0 +1,11 @@
+{
+  "locations": [
+    {
+      "location_id": "ashen-chapel",
+      "name": "Ashen Chapel",
+      "description": "Old stone chapel surrounded by fog.",
+      "secrets": ["hidden crypt entrance"],
+      "tags": ["religious", "foggy", "isolated"]
+    }
+  ]
+}

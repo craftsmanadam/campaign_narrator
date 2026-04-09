@@ -1,0 +1,18 @@
+{
+  "campaign_id": "ashen-chapel",
+  "name": "The Ashen Chapel",
+  "pitch": "A dark fantasy mystery centered on a buried relic corrupting the land.",
+  "tone": ["dark fantasy", "mystery"],
+  "main_conflict": "A buried relic is corrupting the land",
+  "constraints": [
+    "The relic is not revealed in session 1",
+    "The priest is morally conflicted"
+  ],
+  "status": "draft",
+  "starting_location_id": "ashen-chapel",
+  "starting_quest_id": "investigate-the-chapel",
+  "npc_ids": ["brother-corin"],
+  "location_ids": ["ashen-chapel"],
+  "quest_ids": ["investigate-the-chapel"],
+  "faction_ids": []
+}

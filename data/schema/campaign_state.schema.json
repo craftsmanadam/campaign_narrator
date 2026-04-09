@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Campaign Runtime State",
+  "type": "object",
+  "required": ["npc_relationships", "campaign_flags", "discovered_secrets"],
+  "properties": {
+    "npc_relationships": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["trust", "fear", "last_interaction"],
+        "properties": {
+          "trust": { "type": "integer" },
+          "fear": { "type": "integer" },
+          "last_interaction": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "campaign_flags": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "discovered_secrets": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

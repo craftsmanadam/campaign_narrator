@@ -1,0 +1,2 @@
+{"event_id":"evt-001","session_id":1,"type":"npc_interaction","entity_id":"brother-corin","details":{"outcome":"evasive"}}
+{"event_id":"evt-002","session_id":1,"type":"world_flag_updated","entity_id":"ashen-chapel","details":{"flag":"crypt_found","value":false}}
