@@ -1,0 +1,15 @@
+{
+  "spells": [
+    {
+      "spell_id": "mage-hand",
+      "name": "Mage Hand",
+      "level": 0,
+      "school": "Conjuration",
+      "casting_time": "1 action",
+      "range": "30 feet",
+      "components": ["V", "S"],
+      "duration": "1 minute",
+      "description": "A spectral hand appears and can manipulate a nearby object."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "spells": [
+    {
+      "spell_id": "fireball",
+      "name": "Fireball",
+      "level": 3,
+      "school": "Evocation",
+      "casting_time": "1 action",
+      "range": "150 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Instantaneous",
+      "description": "A bright streak flashes to a point you choose and erupts in flame."
+    }
+  ]
+}

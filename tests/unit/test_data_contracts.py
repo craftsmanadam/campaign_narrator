@@ -27,6 +27,10 @@ def test_data_contract_files_exist() -> None:
         Path("data/compendium/magic_items/common.json"),
         Path("data/compendium/magic_items/uncommon.json"),
         Path("data/compendium/magic_items/rare.json"),
+        Path("data/compendium/spells/level_0.json"),
+        Path("data/compendium/spells/level_1.json"),
+        Path("data/compendium/spells/level_2.json"),
+        Path("data/compendium/spells/level_3.json"),
         Path("docs/data-structures.md"),
     ]
 
@@ -80,6 +84,10 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
         Path("data/compendium/magic_items/common.json"): {"magic_items"},
         Path("data/compendium/magic_items/uncommon.json"): {"magic_items"},
         Path("data/compendium/magic_items/rare.json"): {"magic_items"},
+        Path("data/compendium/spells/level_0.json"): {"spells"},
+        Path("data/compendium/spells/level_1.json"): {"spells"},
+        Path("data/compendium/spells/level_2.json"): {"spells"},
+        Path("data/compendium/spells/level_3.json"): {"spells"},
     }
 
     for path, required_keys in expected_keys.items():
@@ -138,6 +146,12 @@ def test_compendium_starter_files_are_neutral() -> None:
         Path("data/compendium/magic_items/uncommon.json"),
         Path("data/compendium/magic_items/rare.json"),
     ]
+    spell_paths = [
+        Path("data/compendium/spells/level_0.json"),
+        Path("data/compendium/spells/level_1.json"),
+        Path("data/compendium/spells/level_2.json"),
+        Path("data/compendium/spells/level_3.json"),
+    ]
 
     for path in monster_paths:
         parsed = json.loads(path.read_text())
@@ -146,6 +160,10 @@ def test_compendium_starter_files_are_neutral() -> None:
     for path in item_paths:
         parsed = json.loads(path.read_text())
         assert parsed["magic_items"] == []
+
+    for path in spell_paths:
+        parsed = json.loads(path.read_text())
+        assert parsed["spells"] == []
 
 
 def test_example_fixture_content_exists_for_reference_data() -> None:
@@ -157,6 +175,7 @@ def test_example_fixture_content_exists_for_reference_data() -> None:
     assert (fixture_root / "memory/session_summaries.jsonl").exists()
     assert (fixture_root / "compendium/monsters/dragons.json").exists()
     assert (fixture_root / "compendium/magic_items/rare.json").exists()
+    assert (fixture_root / "compendium/spells/level_3.json").exists()
 
 
 def test_schema_files_are_parseable_json() -> None:
