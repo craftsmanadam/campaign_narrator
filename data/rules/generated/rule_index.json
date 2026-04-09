@@ -1,3 +1,36 @@
 {
-  
+  "character_creation": [
+    "creation/character_creation_overview.md",
+    "creation/ability_scores.md",
+    "creation/species.md",
+    "creation/origins.md",
+    "creation/feats.md",
+    "creation/equipment_starting.md",
+    "creation/classes/barbarian.md",
+    "creation/classes/bard.md",
+    "creation/classes/cleric.md",
+    "creation/classes/druid.md",
+    "creation/classes/fighter.md",
+    "creation/classes/monk.md",
+    "creation/classes/paladin.md",
+    "creation/classes/ranger.md",
+    "creation/classes/rogue.md",
+    "creation/classes/sorcerer.md",
+    "creation/classes/warlock.md",
+    "creation/classes/wizard.md"
+  ],
+  "core_resolution": [
+    "adjudication/core_resolution.md",
+    "adjudication/ability_checks.md",
+    "adjudication/advantage_disadvantage.md"
+  ],
+  "combat": [
+    "adjudication/combat_flow.md",
+    "adjudication/combat_actions.md",
+    "adjudication/damage_healing.md",
+    "adjudication/death_dying.md"
+  ],
+  "spellcasting": [
+    "adjudication/spellcasting_basics.md"
+  ]
 }

@@ -1,3 +1,136 @@
 {
-  "spells": []
+  "spells": [
+    {
+      "spell_id": "bless",
+      "name": "Bless",
+      "level": 1,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Bless up to three creatures within range; whenever a target makes an attack roll or saving throw before the spell ends, it adds 1d4 to the roll."
+    },
+    {
+      "spell_id": "guiding-bolt",
+      "name": "Guiding Bolt",
+      "level": 1,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S"],
+      "duration": "1 round",
+      "description": "Make a ranged spell attack; on a hit the target takes 4d6 radiant damage, and the next attack roll against it before the end of your next turn has advantage."
+    },
+    {
+      "spell_id": "charm-person",
+      "name": "Charm Person",
+      "level": 1,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["V", "S"],
+      "duration": "1 hour",
+      "description": "One humanoid you can see makes a Wisdom save; on a failure it is charmed and friendly to you until the spell ends or you or your allies damage it."
+    },
+    {
+      "spell_id": "cure-wounds",
+      "name": "Cure Wounds",
+      "level": 1,
+      "school": "Abjuration",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "A creature you touch regains 2d8 plus your spellcasting ability modifier hit points, with extra healing when cast using a higher-level slot."
+    },
+    {
+      "spell_id": "healing-word",
+      "name": "Healing Word",
+      "level": 1,
+      "school": "Abjuration",
+      "casting_time": "Bonus Action",
+      "range": "60 feet",
+      "components": ["V"],
+      "duration": "Instantaneous",
+      "description": "A creature you can see within range regains hit points as a quick burst of healing magic."
+    },
+    {
+      "spell_id": "thunderwave",
+      "name": "Thunderwave",
+      "level": 1,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "A wave of thunderous force erupts from you in a cube, damaging creatures and potentially pushing them away."
+    },
+    {
+      "spell_id": "hunters-mark",
+      "name": "Hunter's Mark",
+      "level": 1,
+      "school": "Divination",
+      "casting_time": "Bonus Action",
+      "range": "90 feet",
+      "components": ["V"],
+      "duration": "Concentration, up to 1 hour",
+      "description": "Mark a target you can see; you deal extra damage to it when you hit and gain tracking benefits while the spell lasts."
+    },
+    {
+      "spell_id": "goodberry",
+      "name": "Goodberry",
+      "level": 1,
+      "school": "Conjuration",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S", "M"],
+      "duration": "24 hours",
+      "description": "Create ten magical berries that restore a small amount of nourishment and healing when eaten."
+    },
+    {
+      "spell_id": "burning-hands",
+      "name": "Burning Hands",
+      "level": 1,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "A 15-foot cone of fire blasts from you; creatures in the area make Dexterity saves and flammable objects can ignite."
+    },
+    {
+      "spell_id": "magic-missile",
+      "name": "Magic Missile",
+      "level": 1,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Create three darts of magical force that automatically strike one or more visible creatures within range for 1d4 + 1 force damage each."
+    },
+    {
+      "spell_id": "shield",
+      "name": "Shield",
+      "level": 1,
+      "school": "Abjuration",
+      "casting_time": "Reaction",
+      "range": "Self",
+      "components": ["V", "S"],
+      "duration": "1 round",
+      "description": "When hit by an attack or targeted by Magic Missile, gain +5 AC until the start of your next turn and take no damage from Magic Missile."
+    },
+    {
+      "spell_id": "detect-magic",
+      "name": "Detect Magic",
+      "level": 1,
+      "school": "Divination",
+      "casting_time": "Action or Ritual",
+      "range": "Self",
+      "components": ["V", "S"],
+      "duration": "Concentration, up to 10 minutes",
+      "description": "Sense the presence of magic within 30 feet and, while concentrating, use the Magic action to perceive magical auras."
+    }
+  ]
 }

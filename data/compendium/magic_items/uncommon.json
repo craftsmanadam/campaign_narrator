@@ -1,3 +1,32 @@
 {
-  "magic_items": []
+  "magic_items": [
+    {
+      "item_id": "elemental-gem",
+      "name": "Elemental Gem",
+      "rarity": "uncommon",
+      "category": "wondrous_item",
+      "description": "Breaking the gem summons an elemental tied to the gem type for up to 1 hour; it understands your languages, obeys your commands, and acts after you in initiative."
+    },
+    {
+      "item_id": "eversmoking-bottle",
+      "name": "Eversmoking Bottle",
+      "rarity": "uncommon",
+      "category": "wondrous_item",
+      "description": "Opening the bottle creates a heavily obscuring smoke cloud in a 60-foot emanation that grows while the bottle stays open and disperses after closing or strong wind."
+    },
+    {
+      "item_id": "eyes-of-charming",
+      "name": "Eyes of Charming",
+      "rarity": "uncommon",
+      "category": "wondrous_item",
+      "description": "These attuned crystal lenses hold 3 charges and let the wearer cast Charm Person with save DC 13, regaining charges daily at dawn."
+    },
+    {
+      "item_id": "spell-scroll-level-2-or-3",
+      "name": "Spell Scroll",
+      "rarity": "uncommon",
+      "category": "scroll",
+      "description": "A spell scroll of level 2 or 3 uses the spell's normal casting time, is consumed after casting, and uses save DC 13 or 15 and attack bonus +5 or +7 depending on spell level."
+    }
+  ]
 }

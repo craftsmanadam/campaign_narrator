@@ -1,3 +1,27 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "cloud-giant",
+      "name": "Cloud Giant",
+      "monster_type": "giant",
+      "size": "Huge",
+      "alignment": "neutral",
+      "challenge_rating": 9,
+      "armor_class": 14,
+      "hit_points": 200,
+      "speed": {
+        "walk": 40,
+        "fly": 20
+      },
+      "languages": ["Common", "Giant"],
+      "senses": ["Passive Perception 21"],
+      "traits": [
+        "Multiattack",
+        "Thunderous Mace",
+        "Thundercloud",
+        "Spellcasting",
+        "Misty Step"
+      ]
+    }
+  ]
 }

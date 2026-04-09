@@ -1,3 +1,18 @@
 {
-  "magic_items": []
+  "magic_items": [
+    {
+      "item_id": "potion-of-healing",
+      "name": "Potion of Healing",
+      "rarity": "common",
+      "category": "potion",
+      "description": "When consumed, this potion restores 2d4 + 2 hit points."
+    },
+    {
+      "item_id": "spell-scroll-cantrip-or-1",
+      "name": "Spell Scroll",
+      "rarity": "common",
+      "category": "scroll",
+      "description": "A spell scroll holds one cantrip or level 1 spell. If the spell is on your spell list, you can cast it from the scroll without material components; afterward the scroll crumbles to dust."
+    }
+  ]
 }

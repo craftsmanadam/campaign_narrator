@@ -1,3 +1,95 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "copper-dragon-wyrmling",
+      "name": "Copper Dragon Wyrmling",
+      "monster_type": "dragon",
+      "size": "Medium",
+      "alignment": "chaotic_good",
+      "challenge_rating": 1,
+      "armor_class": 16,
+      "hit_points": 22,
+      "speed": {
+        "walk": 30,
+        "climb": 30,
+        "fly": 60
+      },
+      "languages": ["Draconic"],
+      "senses": ["Blindsight 10 ft.", "Darkvision 60 ft.", "Passive Perception 14"],
+      "traits": [
+        "Acid Immunity",
+        "Acid Breath (Recharge 5-6)",
+        "Slowing Breath"
+      ]
+    },
+    {
+      "monster_id": "young-copper-dragon",
+      "name": "Young Copper Dragon",
+      "monster_type": "dragon",
+      "size": "Large",
+      "alignment": "chaotic_good",
+      "challenge_rating": 7,
+      "armor_class": 17,
+      "hit_points": 119,
+      "speed": {
+        "walk": 40,
+        "climb": 40,
+        "fly": 80
+      },
+      "languages": ["Common", "Draconic"],
+      "senses": ["Blindsight 30 ft.", "Darkvision 120 ft.", "Passive Perception 17"],
+      "traits": [
+        "Acid Immunity",
+        "Multiattack",
+        "Acid Breath (Recharge 5-6)",
+        "Slowing Breath"
+      ]
+    },
+    {
+      "monster_id": "adult-copper-dragon",
+      "name": "Adult Copper Dragon",
+      "monster_type": "dragon",
+      "size": "Huge",
+      "alignment": "chaotic_good",
+      "challenge_rating": 14,
+      "armor_class": 18,
+      "hit_points": 184,
+      "speed": {
+        "walk": 40,
+        "climb": 40,
+        "fly": 80
+      },
+      "languages": ["Common", "Draconic"],
+      "senses": ["Blindsight 60 ft.", "Darkvision 120 ft.", "Passive Perception 22"],
+      "traits": [
+        "Legendary Resistance (3/Day, or 4/Day in lair)",
+        "Spellcasting",
+        "Acid Breath (Recharge 5-6)",
+        "Slowing Breath"
+      ]
+    },
+    {
+      "monster_id": "ancient-copper-dragon",
+      "name": "Ancient Copper Dragon",
+      "monster_type": "dragon",
+      "size": "Gargantuan",
+      "alignment": "chaotic_good",
+      "challenge_rating": 21,
+      "armor_class": 21,
+      "hit_points": 367,
+      "speed": {
+        "walk": 40,
+        "climb": 40,
+        "fly": 80
+      },
+      "languages": ["Common", "Draconic"],
+      "senses": ["Blindsight 60 ft.", "Darkvision 120 ft.", "Passive Perception 27"],
+      "traits": [
+        "Legendary Resistance (4/Day, or 5/Day in lair)",
+        "Spellcasting",
+        "Acid Breath (Recharge 5-6)",
+        "Slowing Breath"
+      ]
+    }
+  ]
 }

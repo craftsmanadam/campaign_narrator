@@ -1,3 +1,81 @@
 {
-  "spells": []
+  "spells": [
+    {
+      "spell_id": "guidance",
+      "name": "Guidance",
+      "level": 0,
+      "school": "Divination",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Touch a willing creature and choose a skill; until the spell ends, the creature adds 1d4 to ability checks using that skill."
+    },
+    {
+      "spell_id": "light",
+      "name": "Light",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "M"],
+      "duration": "1 hour",
+      "description": "Touch one Large or smaller unattended object to make it shed bright light in a 20-foot radius and dim light for 20 feet more; covering the object blocks the light."
+    },
+    {
+      "spell_id": "mage-hand",
+      "name": "Mage Hand",
+      "level": 0,
+      "school": "Conjuration",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["V", "S"],
+      "duration": "1 minute",
+      "description": "Create a spectral hand that can manipulate objects, open unlocked containers, and move up to 30 feet on later turns, but it cannot attack, activate magic items, or carry more than 10 pounds."
+    },
+    {
+      "spell_id": "minor-illusion",
+      "name": "Minor Illusion",
+      "level": 0,
+      "school": "Illusion",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["S", "M"],
+      "duration": "1 minute",
+      "description": "Create either a simple sound or an image of an object no larger than a 5-foot cube; the illusion becomes faint to creatures that identify it with Investigation."
+    },
+    {
+      "spell_id": "prestidigitation",
+      "name": "Prestidigitation",
+      "level": 0,
+      "school": "Transmutation",
+      "casting_time": "Action",
+      "range": "10 feet",
+      "components": ["V", "S"],
+      "duration": "Up to 1 hour",
+      "description": "Perform minor magical tricks such as sensory effects, small clean-or-soil effects, brief marks, tiny conjured trinkets, or lighting and snuffing small flames."
+    },
+    {
+      "spell_id": "fire-bolt",
+      "name": "Fire Bolt",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Make a ranged spell attack against a creature or object; on a hit it takes 1d10 fire damage, and unattended flammable objects can ignite."
+    },
+    {
+      "spell_id": "eldritch-blast",
+      "name": "Eldritch Blast",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Launch a crackling beam of magical force as a ranged spell attack, with additional beams gained at higher character levels."
+    }
+  ]
 }

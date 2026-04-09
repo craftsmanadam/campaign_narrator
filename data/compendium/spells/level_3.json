@@ -1,3 +1,48 @@
 {
-  "spells": []
+  "spells": [
+    {
+      "spell_id": "counterspell",
+      "name": "Counterspell",
+      "level": 3,
+      "school": "Abjuration",
+      "casting_time": "Reaction",
+      "range": "60 feet",
+      "components": ["S"],
+      "duration": "Instantaneous",
+      "description": "When you see a creature within range casting a spell with components, force it to make a Constitution save; on a failed save the spell fizzles and the action is wasted without expending the slot."
+    },
+    {
+      "spell_id": "fireball",
+      "name": "Fireball",
+      "level": 3,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "150 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Instantaneous",
+      "description": "A bright streak erupts into a 20-foot-radius sphere; creatures in the area make a Dexterity save, taking 8d6 fire damage on a failure or half on a success."
+    },
+    {
+      "spell_id": "lightning-bolt",
+      "name": "Lightning Bolt",
+      "level": 3,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S", "M"],
+      "duration": "Instantaneous",
+      "description": "A 100-foot-long, 5-foot-wide line of lightning blasts from you; creatures in the line make Dexterity saves against 8d6 lightning damage."
+    },
+    {
+      "spell_id": "mass-healing-word",
+      "name": "Mass Healing Word",
+      "level": 3,
+      "school": "Abjuration",
+      "casting_time": "Bonus Action",
+      "range": "60 feet",
+      "components": ["V"],
+      "duration": "Instantaneous",
+      "description": "Up to six creatures you can see within range regain hit points equal to 2d4 plus your spellcasting ability modifier."
+    }
+  ]
 }

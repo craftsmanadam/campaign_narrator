@@ -31,6 +31,32 @@ def test_data_contract_files_exist() -> None:
         Path("data/compendium/spells/level_1.json"),
         Path("data/compendium/spells/level_2.json"),
         Path("data/compendium/spells/level_3.json"),
+        Path("data/rules/source/creation/character_creation_overview.md"),
+        Path("data/rules/source/creation/ability_scores.md"),
+        Path("data/rules/source/creation/species.md"),
+        Path("data/rules/source/creation/origins.md"),
+        Path("data/rules/source/creation/feats.md"),
+        Path("data/rules/source/creation/equipment_starting.md"),
+        Path("data/rules/source/creation/classes/barbarian.md"),
+        Path("data/rules/source/creation/classes/bard.md"),
+        Path("data/rules/source/creation/classes/cleric.md"),
+        Path("data/rules/source/creation/classes/druid.md"),
+        Path("data/rules/source/creation/classes/fighter.md"),
+        Path("data/rules/source/creation/classes/monk.md"),
+        Path("data/rules/source/creation/classes/paladin.md"),
+        Path("data/rules/source/creation/classes/ranger.md"),
+        Path("data/rules/source/creation/classes/rogue.md"),
+        Path("data/rules/source/creation/classes/sorcerer.md"),
+        Path("data/rules/source/creation/classes/warlock.md"),
+        Path("data/rules/source/creation/classes/wizard.md"),
+        Path("data/rules/source/adjudication/core_resolution.md"),
+        Path("data/rules/source/adjudication/ability_checks.md"),
+        Path("data/rules/source/adjudication/advantage_disadvantage.md"),
+        Path("data/rules/source/adjudication/combat_flow.md"),
+        Path("data/rules/source/adjudication/combat_actions.md"),
+        Path("data/rules/source/adjudication/damage_healing.md"),
+        Path("data/rules/source/adjudication/death_dying.md"),
+        Path("data/rules/source/adjudication/spellcasting_basics.md"),
         Path("docs/data-structures.md"),
     ]
 
@@ -122,8 +148,8 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     assert scenarios["scenarios"] == []
 
 
-def test_compendium_starter_files_are_neutral() -> None:
-    """Compendium starter files should remain empty until corpus ingestion."""
+def test_live_compendium_files_match_their_wrappers() -> None:
+    """Live compendium files should keep stable wrapper objects after ingestion."""
 
     monster_paths = [
         Path("data/compendium/monsters/aberrations.json"),
@@ -155,15 +181,110 @@ def test_compendium_starter_files_are_neutral() -> None:
 
     for path in monster_paths:
         parsed = json.loads(path.read_text())
-        assert parsed["monsters"] == []
+        assert isinstance(parsed["monsters"], list)
 
     for path in item_paths:
         parsed = json.loads(path.read_text())
-        assert parsed["magic_items"] == []
+        assert isinstance(parsed["magic_items"], list)
 
     for path in spell_paths:
         parsed = json.loads(path.read_text())
-        assert parsed["spells"] == []
+        assert isinstance(parsed["spells"], list)
+
+
+def test_first_ingested_corpus_content_exists() -> None:
+    """The first SRD ingestion pass should load representative live corpus content."""
+
+    aberrations = json.loads(
+        Path("data/compendium/monsters/aberrations.json").read_text()
+    )
+    celestials = json.loads(
+        Path("data/compendium/monsters/celestials.json").read_text()
+    )
+    dragons = json.loads(Path("data/compendium/monsters/dragons.json").read_text())
+    common_items = json.loads(
+        Path("data/compendium/magic_items/common.json").read_text()
+    )
+    uncommon_items = json.loads(
+        Path("data/compendium/magic_items/uncommon.json").read_text()
+    )
+    rare_items = json.loads(Path("data/compendium/magic_items/rare.json").read_text())
+    cantrips = json.loads(Path("data/compendium/spells/level_0.json").read_text())
+    level_one_spells = json.loads(
+        Path("data/compendium/spells/level_1.json").read_text()
+    )
+    level_two_spells = json.loads(
+        Path("data/compendium/spells/level_2.json").read_text()
+    )
+    level_three_spells = json.loads(
+        Path("data/compendium/spells/level_3.json").read_text()
+    )
+
+    assert any(
+        monster["monster_id"] == "aboleth" for monster in aberrations["monsters"]
+    )
+    assert any(monster["monster_id"] == "couatl" for monster in celestials["monsters"])
+    assert any(
+        monster["monster_id"] == "copper-dragon-wyrmling"
+        for monster in dragons["monsters"]
+    )
+    assert any(
+        item["item_id"] == "potion-of-healing" for item in common_items["magic_items"]
+    )
+    assert any(
+        item["item_id"] == "elemental-gem" for item in uncommon_items["magic_items"]
+    )
+    assert any(
+        item["item_id"] == "elixir-of-health" for item in rare_items["magic_items"]
+    )
+    assert any(spell["spell_id"] == "light" for spell in cantrips["spells"])
+    assert any(
+        spell["spell_id"] == "magic-missile" for spell in level_one_spells["spells"]
+    )
+    assert any(
+        spell["spell_id"] == "misty-step" for spell in level_two_spells["spells"]
+    )
+    assert any(
+        spell["spell_id"] == "fireball" for spell in level_three_spells["spells"]
+    )
+
+
+def test_rule_source_files_are_nonempty() -> None:
+    """First-cut rule source files should contain ingested prose rather than stubs."""
+
+    minimum_rule_length = 40
+
+    rule_paths = [
+        Path("data/rules/source/creation/character_creation_overview.md"),
+        Path("data/rules/source/creation/ability_scores.md"),
+        Path("data/rules/source/creation/species.md"),
+        Path("data/rules/source/creation/origins.md"),
+        Path("data/rules/source/creation/feats.md"),
+        Path("data/rules/source/creation/equipment_starting.md"),
+        Path("data/rules/source/creation/classes/barbarian.md"),
+        Path("data/rules/source/creation/classes/bard.md"),
+        Path("data/rules/source/creation/classes/cleric.md"),
+        Path("data/rules/source/creation/classes/druid.md"),
+        Path("data/rules/source/creation/classes/fighter.md"),
+        Path("data/rules/source/creation/classes/monk.md"),
+        Path("data/rules/source/creation/classes/paladin.md"),
+        Path("data/rules/source/creation/classes/ranger.md"),
+        Path("data/rules/source/creation/classes/rogue.md"),
+        Path("data/rules/source/creation/classes/sorcerer.md"),
+        Path("data/rules/source/creation/classes/warlock.md"),
+        Path("data/rules/source/creation/classes/wizard.md"),
+        Path("data/rules/source/adjudication/core_resolution.md"),
+        Path("data/rules/source/adjudication/ability_checks.md"),
+        Path("data/rules/source/adjudication/advantage_disadvantage.md"),
+        Path("data/rules/source/adjudication/combat_flow.md"),
+        Path("data/rules/source/adjudication/combat_actions.md"),
+        Path("data/rules/source/adjudication/damage_healing.md"),
+        Path("data/rules/source/adjudication/death_dying.md"),
+        Path("data/rules/source/adjudication/spellcasting_basics.md"),
+    ]
+
+    for path in rule_paths:
+        assert len(path.read_text().strip()) > minimum_rule_length, path
 
 
 def test_example_fixture_content_exists_for_reference_data() -> None:

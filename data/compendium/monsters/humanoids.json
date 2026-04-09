@@ -1,3 +1,23 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "commoner",
+      "name": "Commoner",
+      "monster_type": "humanoid",
+      "size": "Medium or Small",
+      "alignment": "neutral",
+      "challenge_rating": 0,
+      "armor_class": 10,
+      "hit_points": 4,
+      "speed": {
+        "walk": 30
+      },
+      "languages": ["Common"],
+      "senses": ["Passive Perception 10"],
+      "traits": [
+        "Training",
+        "Club"
+      ]
+    }
+  ]
 }

@@ -1,3 +1,81 @@
 {
-  "spells": []
+  "spells": [
+    {
+      "spell_id": "darkness",
+      "name": "Darkness",
+      "level": 2,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "M"],
+      "duration": "Concentration, up to 10 minutes",
+      "description": "Create magical darkness in a 15-foot-radius sphere or emanation that darkvision cannot penetrate and low-level magical light can be dispelled by."
+    },
+    {
+      "spell_id": "darkvision",
+      "name": "Darkvision",
+      "level": 2,
+      "school": "Transmutation",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S", "M"],
+      "duration": "8 hours",
+      "description": "A willing creature you touch gains darkvision with a range of 150 feet."
+    },
+    {
+      "spell_id": "misty-step",
+      "name": "Misty Step",
+      "level": 2,
+      "school": "Conjuration",
+      "casting_time": "Bonus Action",
+      "range": "Self",
+      "components": ["V"],
+      "duration": "Instantaneous",
+      "description": "Teleport up to 30 feet to an unoccupied space you can see."
+    },
+    {
+      "spell_id": "scorching-ray",
+      "name": "Scorching Ray",
+      "level": 2,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Hurl three fiery rays at one or more targets, making a ranged spell attack for each ray and dealing 2d6 fire damage on each hit."
+    },
+    {
+      "spell_id": "shatter",
+      "name": "Shatter",
+      "level": 2,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Instantaneous",
+      "description": "A loud burst erupts in a 10-foot-radius sphere; creatures make Constitution saves and nonmagical objects in the area also take thunder damage."
+    },
+    {
+      "spell_id": "gust-of-wind",
+      "name": "Gust of Wind",
+      "level": 2,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Project a 60-foot line of strong wind that pushes creatures, hampers movement toward you, disperses gas or vapor, and can extinguish flames."
+    },
+    {
+      "spell_id": "see-invisibility",
+      "name": "See Invisibility",
+      "level": 2,
+      "school": "Divination",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S", "M"],
+      "duration": "1 hour",
+      "description": "See invisible creatures and objects as visible and perceive into the Ethereal Plane."
+    }
+  ]
 }

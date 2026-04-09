@@ -1,3 +1,93 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "air-elemental",
+      "name": "Air Elemental",
+      "monster_type": "elemental",
+      "size": "Large",
+      "alignment": "neutral",
+      "challenge_rating": 5,
+      "armor_class": 15,
+      "hit_points": 90,
+      "speed": {
+        "walk": 10,
+        "fly": 90
+      },
+      "languages": ["Primordial (Auran)"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 10"],
+      "traits": [
+        "Air Form",
+        "Multiattack",
+        "Thunderous Slam",
+        "Whirlwind (Recharge 4-6)"
+      ]
+    },
+    {
+      "monster_id": "earth-elemental",
+      "name": "Earth Elemental",
+      "monster_type": "elemental",
+      "size": "Large",
+      "alignment": "neutral",
+      "challenge_rating": 5,
+      "armor_class": 17,
+      "hit_points": 147,
+      "speed": {
+        "walk": 30,
+        "burrow": 30
+      },
+      "languages": ["Primordial (Terran)"],
+      "senses": ["Darkvision 60 ft.", "Tremorsense 60 ft.", "Passive Perception 10"],
+      "traits": [
+        "Vulnerability to Thunder",
+        "Earth Glide",
+        "Siege Monster",
+        "Multiattack",
+        "Slam",
+        "Rock Launch"
+      ]
+    },
+    {
+      "monster_id": "fire-elemental",
+      "name": "Fire Elemental",
+      "monster_type": "elemental",
+      "size": "Large",
+      "alignment": "neutral",
+      "challenge_rating": 5,
+      "armor_class": 13,
+      "hit_points": 93,
+      "speed": {
+        "walk": 50
+      },
+      "languages": ["Primordial (Ignan)"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 10"],
+      "traits": [
+        "Fire Aura",
+        "Fire Form",
+        "Illumination",
+        "Water Susceptibility",
+        "Multiattack",
+        "Burn"
+      ]
+    },
+    {
+      "monster_id": "water-elemental",
+      "name": "Water Elemental",
+      "monster_type": "elemental",
+      "size": "Large",
+      "alignment": "neutral",
+      "challenge_rating": 5,
+      "armor_class": 14,
+      "hit_points": 114,
+      "speed": {
+        "walk": 30,
+        "swim": 90
+      },
+      "languages": ["Primordial (Aquan)"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 10"],
+      "traits": [
+        "Resistance to Acid and Fire",
+        "Water Form"
+      ]
+    }
+  ]
 }
