@@ -9,7 +9,9 @@
       "range": "60 feet",
       "components": ["S"],
       "duration": "Instantaneous",
-      "description": "When you see a creature within range casting a spell with components, force it to make a Constitution save; on a failed save the spell fizzles and the action is wasted without expending the slot."
+      "description": "You attempt to interrupt a creature in the process of casting a spell. The creature must be within 60 feet of you and casting a spell with Verbal, Somatic, or Material components. The target makes a Constitution saving throw. On a failed save, the spell dissipates with no effect, and the action, Bonus Action, or Reaction used to cast it is wasted. If that spell was cast with a spell slot, the slot isn't expended.",
+      "save": "constitution",
+      "trigger": "seeing a creature within 60 feet of you casting a spell with Verbal, Somatic, or Material components"
     },
     {
       "spell_id": "dispel-magic",
@@ -20,7 +22,8 @@
       "range": "120 feet",
       "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": "Choose a creature, object, or magical effect within range; ongoing spells of level 3 or lower end, and higher-level spells end on a successful spellcasting ability check."
+      "description": "Choose one creature, object, or magical effect within range. Any spell of level 3 or lower on the target ends. For each spell of level 4 or higher on the target, make an ability check using your spellcasting ability. The DC equals 10 plus that spell's level. On a successful check, the spell ends.",
+      "higher_level": "You automatically end a spell on the target if the spell's level is less than or equal to the level of the spell slot you use for Dispel Magic."
     },
     {
       "spell_id": "fear",
@@ -31,7 +34,10 @@
       "range": "Self",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 1 minute",
-      "description": "Each creature in a 30-foot cone makes a Wisdom save or drops what it is holding and becomes frightened, dashing away from you by the safest route while it can still see you."
+      "description": "Each creature in a 30-foot Cone must succeed on a Wisdom saving throw or drop whatever it is holding and have the Frightened condition for the duration. A Frightened creature must take the Dash action on each of its turns and move away from you by the safest available route unless there is nowhere to move. If the creature ends its turn in a location where it doesn't have line of sight to you, the creature can make a Wisdom saving throw, ending the spell on itself on a success.",
+      "save": "wisdom",
+      "area": "30-foot Cone",
+      "concentration": true
     },
     {
       "spell_id": "fireball",
@@ -42,7 +48,10 @@
       "range": "150 feet",
       "components": ["V", "S", "M"],
       "duration": "Instantaneous",
-      "description": "A bright streak erupts into a 20-foot-radius sphere; creatures in the area make a Dexterity save, taking 8d6 fire damage on a failure or half on a success."
+      "description": "A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one. Flammable objects in the area that aren't being worn or carried start burning.",
+      "save": "dexterity",
+      "area": "20-foot-radius Sphere",
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 3."
     },
     {
       "spell_id": "fly",
@@ -53,7 +62,9 @@
       "range": "Touch",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 10 minutes",
-      "description": "Touch a willing creature to grant it a fly speed of 60 feet and the ability to hover until the spell ends."
+      "description": "You touch a willing creature. For the duration, the target gains a Fly Speed of 60 feet and can hover. When the spell ends, the target falls if it is still aloft unless it can stop the fall.",
+      "concentration": true,
+      "higher_level": "You can target one additional creature for each spell slot level above 3."
     },
     {
       "spell_id": "haste",
@@ -64,7 +75,8 @@
       "range": "30 feet",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 1 minute",
-      "description": "Choose a willing creature to double its Speed, grant +2 AC, advantage on Dexterity saves, and an extra limited action each turn until the spell ends."
+      "description": "Choose a willing creature that you can see within range. Until the spell ends, the target's Speed is doubled, it gains a +2 bonus to Armor Class, it has Advantage on Dexterity saving throws, and it gains an additional action on each of its turns. That action can be used only to take the Attack action with one weapon attack only, Dash, Disengage, Hide, or Utilize. When the spell ends, the target is Incapacitated and has a Speed of 0 until the end of its next turn, as a wave of lethargy washes over it.",
+      "concentration": true
     },
     {
       "spell_id": "hypnotic-pattern",
@@ -75,7 +87,10 @@
       "range": "120 feet",
       "components": ["S", "M"],
       "duration": "Concentration, up to 1 minute",
-      "description": "Create a twisting pattern of colors in a 30-foot cube; creatures who can see it make Wisdom saves or become charmed, incapacitated, and speed 0 until damaged or shaken free."
+      "description": "You create a twisting pattern of colors that weaves through the air inside a 30-foot Cube within range. The pattern appears for a moment and vanishes. Each creature in the area who can see the pattern must make a Wisdom saving throw. On a failed save, the target has the Charmed and Incapacitated conditions and has a Speed of 0 for the duration. The spell ends for an affected creature if it takes any damage or if someone else takes an action to shake the creature out of its stupor.",
+      "save": "wisdom",
+      "area": "30-foot Cube",
+      "concentration": true
     },
     {
       "spell_id": "lightning-bolt",
@@ -86,7 +101,10 @@
       "range": "Self",
       "components": ["V", "S", "M"],
       "duration": "Instantaneous",
-      "description": "A 100-foot-long, 5-foot-wide line of lightning blasts from you; creatures in the line make Dexterity saves against 8d6 lightning damage."
+      "description": "A stroke of lightning forming a 100-foot-long, 5-foot-wide Line blasts out from you in a direction you choose. Each creature in the Line makes a Dexterity saving throw, taking 8d6 Lightning damage on a failed save or half as much damage on a successful one.",
+      "save": "dexterity",
+      "area": "100-foot Line",
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 3."
     },
     {
       "spell_id": "mass-healing-word",
@@ -97,7 +115,9 @@
       "range": "60 feet",
       "components": ["V"],
       "duration": "Instantaneous",
-      "description": "Up to six creatures you can see within range regain hit points equal to 2d4 plus your spellcasting ability modifier."
+      "description": "Up to six creatures of your choice that you can see within range regain Hit Points equal to 2d4 plus your spellcasting ability modifier.",
+      "healing": "2d4 + spellcasting ability modifier",
+      "higher_level": "The healing increases by 1d4 for each spell slot level above 3."
     },
     {
       "spell_id": "revivify",
@@ -108,7 +128,7 @@
       "range": "Touch",
       "components": ["V", "S", "M"],
       "duration": "Instantaneous",
-      "description": "Touch a creature that died within the last minute to restore it to life with 1 hit point, provided it did not die of old age and has the necessary body parts."
+      "description": "You touch a creature that has died within the last minute. That creature returns to life with 1 Hit Point. This spell can't return to life a creature that has died of old age, nor can it restore any missing body parts."
     },
     {
       "spell_id": "sending",
@@ -119,7 +139,8 @@
       "range": "Unlimited",
       "components": ["V", "S", "M"],
       "duration": "Instantaneous",
-      "description": "Send a short message of 25 words or fewer to a creature you know or that has been described by someone who has met it; the target can reply immediately."
+      "description": "You send a short message of 25 words or fewer to a creature you are familiar with or to a creature described to you by someone who is familiar with it. The target hears the message in its mind, recognizes you as the sender if it knows you, and can answer in a like manner immediately.",
+      "special": "You can send the message across any distance and even to other planes, though there is a 5 percent chance the message does not arrive if the target is on a different plane."
     },
     {
       "spell_id": "spirit-guardians",
@@ -130,7 +151,11 @@
       "range": "Self",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 10 minutes",
-      "description": "Protective spirits surround you in a 15-foot emanation, slowing enemies and forcing them to make Wisdom saves or take radiant or necrotic damage when they enter or end turns there."
+      "description": "Protective spirits flit around you in a 15-foot Emanation for the duration. If you are Good or Neutral, their spectral form appears angelic or fey; if you are Evil, they appear fiendish. When you cast this spell, you can designate any number of creatures you can see to be unaffected by it. An affected creature's Speed is halved in the area, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage if you are Good or Neutral, or 3d8 Necrotic damage if you are Evil. On a successful save, the creature takes half as much damage.",
+      "save": "wisdom",
+      "area": "15-foot Emanation",
+      "concentration": true,
+      "higher_level": "The damage increases by 1d8 for each spell slot level above 3."
     },
     {
       "spell_id": "stinking-cloud",
@@ -141,7 +166,10 @@
       "range": "90 feet",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 1 minute",
-      "description": "Create a heavily obscured 20-foot-radius sphere of nauseating gas; creatures starting their turns there make Constitution saves or are poisoned and unable to take actions or bonus actions that turn."
+      "description": "You create a 20-foot-radius Sphere of yellow, nauseating gas centered on a point within range. The cloud is Heavily Obscured. The cloud lingers in the air for the duration or until a strong wind disperses it. Each creature that starts its turn in the Sphere must succeed on a Constitution saving throw or have the Poisoned condition until the end of the current turn. While Poisoned in this way, the creature can't take an action or a Bonus Action.",
+      "save": "constitution",
+      "area": "20-foot-radius Sphere",
+      "concentration": true
     }
   ]
 }

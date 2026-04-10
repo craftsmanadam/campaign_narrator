@@ -12,6 +12,15 @@ LIGHT_WEAPON_TEXT = "When you take the Attack action on your turn and attack"
 ARMOR_TRAINING_TEXT = "If you wear Light, Medium, or Heavy armor and lack training"
 ONE_SLOT_PER_TURN_TEXT = "On a turn, you can expend only one spell slot to cast a spell"
 MATERIAL_HAND_TEXT = "hand free to access materials or a pouch"
+CHARM_PERSON_TEXT = "The Charmed creature is Friendly to you"
+COUNTERSPELL_TEXT = "the action, Bonus Action, or Reaction used to cast it is wasted"
+FIREBALL_TEXT = (
+    "Flammable objects in the area that aren't being worn or carried start burning"
+)
+SPIRIT_GUARDIANS_TEXT = "whenever the Emanation enters a creature's space"
+WEB_TEXT = (
+    "A Restrained creature can take an action to make a Strength (Athletics) check"
+)
 
 
 def test_data_contract_files_exist() -> None:
@@ -645,6 +654,95 @@ def test_equipment_and_spellcasting_rule_files_capture_core_srd_details() -> Non
     assert "Portable Ram" in gear
     assert ONE_SLOT_PER_TURN_TEXT in spellcasting
     assert MATERIAL_HAND_TEXT in spellcasting
+
+
+def test_spell_compendium_entries_capture_exact_spell_details() -> None:
+    """Representative spell entries should preserve actionable SRD mechanics."""
+
+    cantrips = json.loads(Path("data/compendium/spells/level_0.json").read_text())
+    level_one = json.loads(Path("data/compendium/spells/level_1.json").read_text())
+    level_two = json.loads(Path("data/compendium/spells/level_2.json").read_text())
+    level_three = json.loads(Path("data/compendium/spells/level_3.json").read_text())
+
+    acid_splash = next(
+        spell for spell in cantrips["spells"] if spell["spell_id"] == "acid-splash"
+    )
+    guidance = next(
+        spell for spell in cantrips["spells"] if spell["spell_id"] == "guidance"
+    )
+    eldritch_blast = next(
+        spell for spell in cantrips["spells"] if spell["spell_id"] == "eldritch-blast"
+    )
+    charm_person = next(
+        spell for spell in level_one["spells"] if spell["spell_id"] == "charm-person"
+    )
+    burning_hands = next(
+        spell for spell in level_one["spells"] if spell["spell_id"] == "burning-hands"
+    )
+    shield = next(
+        spell for spell in level_one["spells"] if spell["spell_id"] == "shield"
+    )
+    web = next(spell for spell in level_two["spells"] if spell["spell_id"] == "web")
+    spiritual_weapon = next(
+        spell
+        for spell in level_two["spells"]
+        if spell["spell_id"] == "spiritual-weapon"
+    )
+    counterspell = next(
+        spell for spell in level_three["spells"] if spell["spell_id"] == "counterspell"
+    )
+    fireball = next(
+        spell for spell in level_three["spells"] if spell["spell_id"] == "fireball"
+    )
+    spirit_guardians = next(
+        spell
+        for spell in level_three["spells"]
+        if spell["spell_id"] == "spirit-guardians"
+    )
+
+    assert acid_splash["save"] == "dexterity"
+    assert "within 5 feet of each other" in acid_splash["description"]
+    assert "levels 5 (2d6), 11 (3d6), and 17 (4d6)" in acid_splash["higher_level"]
+
+    assert guidance["concentration"] is True
+    assert "choose a skill" in guidance["description"]
+
+    assert eldritch_blast["attack"] == "ranged spell attack"
+    assert "2 beams" in eldritch_blast["higher_level"]
+
+    assert charm_person["save"] == "wisdom"
+    assert CHARM_PERSON_TEXT in charm_person["description"]
+    assert "one additional creature" in charm_person["higher_level"]
+
+    assert burning_hands["area"] == "15-foot Cone"
+    assert burning_hands["save"] == "dexterity"
+    assert "3d6 Fire damage" in burning_hands["description"]
+
+    assert (
+        shield["trigger"]
+        == "being hit by an attack roll or targeted by the Magic Missile spell"
+    )
+    assert "+5 bonus to AC" in shield["description"]
+
+    assert web["concentration"] is True
+    assert web["area"] == "20-foot Cube"
+    assert WEB_TEXT in web["description"]
+
+    assert spiritual_weapon["attack"] == "melee spell attack"
+    assert (
+        "1d8 plus your spellcasting ability modifier" in spiritual_weapon["description"]
+    )
+
+    assert counterspell["save"] == "constitution"
+    assert COUNTERSPELL_TEXT in counterspell["description"]
+
+    assert fireball["area"] == "20-foot-radius Sphere"
+    assert FIREBALL_TEXT in fireball["description"]
+    assert "The damage increases by 1d6" in fireball["higher_level"]
+
+    assert spirit_guardians["area"] == "15-foot Emanation"
+    assert spirit_guardians["save"] == "wisdom"
+    assert SPIRIT_GUARDIANS_TEXT in spirit_guardians["description"]
 
 
 def test_example_fixture_content_exists_for_reference_data() -> None:

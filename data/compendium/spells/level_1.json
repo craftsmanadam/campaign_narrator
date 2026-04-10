@@ -9,7 +9,9 @@
       "range": "30 feet",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 1 minute",
-      "description": "Bless up to three creatures within range; whenever a target makes an attack roll or saving throw before the spell ends, it adds 1d4 to the roll."
+      "description": "You bless up to three creatures of your choice within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target adds 1d4 to the attack roll or save.",
+      "concentration": true,
+      "higher_level": "You can target one additional creature for each spell slot level above 1."
     },
     {
       "spell_id": "guiding-bolt",
@@ -20,7 +22,9 @@
       "range": "120 feet",
       "components": ["V", "S"],
       "duration": "1 round",
-      "description": "Make a ranged spell attack; on a hit the target takes 4d6 radiant damage, and the next attack roll against it before the end of your next turn has advantage."
+      "description": "You hurl a bolt of light toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 4d6 Radiant damage, and the next attack roll made against it before the end of your next turn has Advantage.",
+      "attack": "ranged spell attack",
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 1."
     },
     {
       "spell_id": "charm-person",
@@ -31,7 +35,9 @@
       "range": "30 feet",
       "components": ["V", "S"],
       "duration": "1 hour",
-      "description": "One humanoid you can see makes a Wisdom save; on a failure it is charmed and friendly to you until the spell ends or you or your allies damage it."
+      "description": "One Humanoid you can see within range makes a Wisdom saving throw. It does so with Advantage if you or your allies are fighting it. On a failed save, the target has the Charmed condition until the spell ends or until you or your allies damage it. The Charmed creature is Friendly to you. When the spell ends, the target knows it was Charmed by you.",
+      "save": "wisdom",
+      "higher_level": "You can target one additional creature for each spell slot level above 1."
     },
     {
       "spell_id": "command",
@@ -42,7 +48,9 @@
       "range": "60 feet",
       "components": ["V"],
       "duration": "Instantaneous",
-      "description": "Speak a one-word command to a creature that can hear and understand you; on a failed Wisdom save it follows the command on its next turn if able."
+      "description": "You speak a one-word command to a creature you can see within range. The target must succeed on a Wisdom saving throw or follow the command on its next turn. The spell has no effect if the target is Undead, if it doesn't understand your language, or if your command is directly harmful to it.",
+      "save": "wisdom",
+      "higher_level": "You can affect one additional creature for each spell slot level above 1."
     },
     {
       "spell_id": "cure-wounds",
@@ -53,7 +61,9 @@
       "range": "Touch",
       "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": "A creature you touch regains 2d8 plus your spellcasting ability modifier hit points, with extra healing when cast using a higher-level slot."
+      "description": "A creature you touch regains a number of Hit Points equal to 2d8 plus your spellcasting ability modifier.",
+      "healing": "2d8 + spellcasting ability modifier",
+      "higher_level": "The healing increases by 2d8 for each spell slot level above 1."
     },
     {
       "spell_id": "healing-word",
@@ -64,7 +74,9 @@
       "range": "60 feet",
       "components": ["V"],
       "duration": "Instantaneous",
-      "description": "A creature you can see within range regains hit points as a quick burst of healing magic."
+      "description": "A creature of your choice that you can see within range regains Hit Points equal to 2d4 plus your spellcasting ability modifier.",
+      "healing": "2d4 + spellcasting ability modifier",
+      "higher_level": "The healing increases by 2d4 for each spell slot level above 1."
     },
     {
       "spell_id": "thunderwave",
@@ -75,7 +87,10 @@
       "range": "Self",
       "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": "A wave of thunderous force erupts from you in a cube, damaging creatures and potentially pushing them away."
+      "description": "A wave of thunderous force sweeps out from you. Each creature in a 15-foot Cube originating from you makes a Constitution saving throw. On a failed save, a creature takes 2d8 Thunder damage and is pushed 10 feet away from you. On a successful save, the creature takes half as much damage only. In addition, unsecured objects that are completely within the Cube are pushed 10 feet away from you, and a thunderous boom emanates from the spell that is audible out to 300 feet.",
+      "save": "constitution",
+      "area": "15-foot Cube",
+      "higher_level": "The damage increases by 1d8 for each spell slot level above 1."
     },
     {
       "spell_id": "hunters-mark",
@@ -86,7 +101,9 @@
       "range": "90 feet",
       "components": ["V"],
       "duration": "Concentration, up to 1 hour",
-      "description": "Mark a target you can see; you deal extra damage to it when you hit and gain tracking benefits while the spell lasts."
+      "description": "You choose a creature you can see within range and mystically mark it as your quarry. Until the spell ends, you deal an extra 1d6 Force damage to the target whenever you hit it with an attack roll, and you have Advantage on any Wisdom (Perception or Survival) check you make to find it. If the target drops to 0 Hit Points before this spell ends, you can take a Bonus Action on a later turn to mark a new creature.",
+      "concentration": true,
+      "higher_level": "Your Concentration can last longer when you cast this spell using a higher-level spell slot."
     },
     {
       "spell_id": "goodberry",
@@ -97,7 +114,7 @@
       "range": "Self",
       "components": ["V", "S", "M"],
       "duration": "24 hours",
-      "description": "Create ten magical berries that restore a small amount of nourishment and healing when eaten."
+      "description": "Ten berries appear in your hand and are infused with magic for the duration. A creature can take a Bonus Action to eat one berry. Eating a berry restores 1 Hit Point, and the berry provides enough nourishment to sustain a creature for one day."
     },
     {
       "spell_id": "heroism",
@@ -108,7 +125,8 @@
       "range": "Touch",
       "components": ["V", "S"],
       "duration": "Concentration, up to 1 minute",
-      "description": "A willing creature you touch becomes immune to the frightened condition and gains temporary hit points equal to your spellcasting ability modifier at the start of each of its turns."
+      "description": "A willing creature you touch is imbued with bravery. Until the spell ends, the creature is immune to the Frightened condition and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns.",
+      "concentration": true
     },
     {
       "spell_id": "hex",
@@ -119,7 +137,9 @@
       "range": "90 feet",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 1 hour",
-      "description": "Curse a creature you can see; you deal an extra 1d6 necrotic damage to it on attack hits and it has disadvantage on ability checks made with one chosen ability."
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also choose one ability when you cast the spell. The target has Disadvantage on ability checks made with the chosen ability. If the target drops to 0 Hit Points before the spell ends, you can take a Bonus Action on a later turn to curse a new creature.",
+      "concentration": true,
+      "higher_level": "Your Concentration can last longer when you cast this spell using a higher-level spell slot."
     },
     {
       "spell_id": "burning-hands",
@@ -130,7 +150,10 @@
       "range": "Self",
       "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": "A 15-foot cone of fire blasts from you; creatures in the area make Dexterity saves and flammable objects can ignite."
+      "description": "As you hold your hands with thumbs touching and fingers spread, a thin sheet of flames shoots forth from you. Each creature in a 15-foot Cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failed save or half as much damage on a successful one. Flammable objects in the Cone that aren't being worn or carried start burning.",
+      "save": "dexterity",
+      "area": "15-foot Cone",
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 1."
     },
     {
       "spell_id": "magic-missile",
@@ -141,7 +164,8 @@
       "range": "120 feet",
       "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": "Create three darts of magical force that automatically strike one or more visible creatures within range for 1d4 + 1 force damage each."
+      "description": "You create three glowing darts of magical force. Each dart strikes a creature of your choice that you can see within range. A dart deals 1d4 + 1 Force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
+      "higher_level": "The spell creates one more dart for each spell slot level above 1."
     },
     {
       "spell_id": "shield",
@@ -152,7 +176,8 @@
       "range": "Self",
       "components": ["V", "S"],
       "duration": "1 round",
-      "description": "When hit by an attack or targeted by Magic Missile, gain +5 AC until the start of your next turn and take no damage from Magic Missile."
+      "description": "An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from Magic Missile.",
+      "trigger": "being hit by an attack roll or targeted by the Magic Missile spell"
     },
     {
       "spell_id": "detect-magic",
@@ -163,7 +188,9 @@
       "range": "Self",
       "components": ["V", "S"],
       "duration": "Concentration, up to 10 minutes",
-      "description": "Sense the presence of magic within 30 feet and, while concentrating, use the Magic action to perceive magical auras."
+      "description": "For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or object in the area that bears the magic, and if an effect was created by a spell, you learn the spell's school of magic.",
+      "concentration": true,
+      "ritual": true
     },
     {
       "spell_id": "sleep",
@@ -174,7 +201,10 @@
       "range": "60 feet",
       "components": ["V", "S", "M"],
       "duration": "Concentration, up to 1 minute",
-      "description": "Creatures in a 5-foot-radius sphere centered on a point within range make Wisdom saves or become unconscious for the duration until they take damage or are shaken awake."
+      "description": "Each creature of your choice in a 5-foot-radius Sphere centered on a point within range must succeed on a Wisdom saving throw or have the Unconscious condition until the spell ends. A target awakens if it takes damage or if someone within 5 feet of it takes an action to wake it.",
+      "save": "wisdom",
+      "area": "5-foot-radius Sphere",
+      "concentration": true
     }
   ]
 }
