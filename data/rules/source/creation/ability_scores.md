@@ -11,27 +11,28 @@ The six abilities are Strength, Dexterity, Constitution, Intelligence, Wisdom, a
 - Wisdom: perception and mental fortitude
 - Charisma: confidence, poise, and charm
 
-## Score Bands
+## Generating Scores
 
-- `1`: the lowest a score normally goes
-- `2-9`: weak capability
-- `10-11`: human average
-- `12-19`: strong capability
-- `20`: highest normal adventurer score unless a feature says otherwise
-- `21-29`: extraordinary capability
-- `30`: highest possible score
+The SRD provides three supported methods:
 
-## Ability Modifiers
+- Standard Array: `15, 14, 13, 12, 10, 8`
+- Random Generation: roll four `d6`, total the highest three dice, and repeat until six numbers are generated
+- Point Cost: spend `27` points using the cost table below
 
-Ability modifiers are derived from the score and are used in D20 Tests. Key breakpoints:
+## Ability Score Point Costs
 
-- `8-9`: `-1`
-- `10-11`: `+0`
-- `12-13`: `+1`
-- `14-15`: `+2`
-- `16-17`: `+3`
-- `18-19`: `+4`
-- `20-21`: `+5`
+- `8`: `0`
+- `9`: `1`
+- `10`: `2`
+- `11`: `3`
+- `12`: `4`
+- `13`: `5`
+- `14`: `7`
+- `15`: `9`
+
+## Assigning Scores
+
+After generating six numbers, assign one to each ability. The SRD also provides a suggested Standard Array by class table to help place the highest values in each class's main abilities.
 
 ## Background-Based Increases
 
@@ -41,6 +42,21 @@ Each SRD background lists three ability scores. Increase:
 - all three by 1.
 
 None of these increases can raise a score above 20.
+
+## Ability Scores and Modifiers
+
+Ability modifiers are derived from the score and are used in D20 Tests.
+
+- `3`: `-4`
+- `4-5`: `-3`
+- `6-7`: `-2`
+- `8-9`: `-1`
+- `10-11`: `+0`
+- `12-13`: `+1`
+- `14-15`: `+2`
+- `16-17`: `+3`
+- `18-19`: `+4`
+- `20`: `+5`
 
 ## Rounding Rule
 

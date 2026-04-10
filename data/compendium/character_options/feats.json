@@ -5,5 +5,120 @@
     "fighting_style",
     "epic_boon"
   ],
-  "feats": []
+  "feats": [
+    {
+      "feat_id": "alert",
+      "name": "Alert",
+      "category": "origin",
+      "benefit_ids": ["initiative-proficiency", "initiative-swap"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "magic-initiate-cleric",
+      "name": "Magic Initiate (Cleric)",
+      "category": "origin",
+      "spell_list": "cleric",
+      "benefit_ids": ["two-cantrips", "level-1-spell", "spell-change"],
+      "repeatable": true
+    },
+    {
+      "feat_id": "magic-initiate-druid",
+      "name": "Magic Initiate (Druid)",
+      "category": "origin",
+      "spell_list": "druid",
+      "benefit_ids": ["two-cantrips", "level-1-spell", "spell-change"],
+      "repeatable": true
+    },
+    {
+      "feat_id": "magic-initiate-wizard",
+      "name": "Magic Initiate (Wizard)",
+      "category": "origin",
+      "spell_list": "wizard",
+      "benefit_ids": ["two-cantrips", "level-1-spell", "spell-change"],
+      "repeatable": true
+    },
+    {
+      "feat_id": "savage-attacker",
+      "name": "Savage Attacker",
+      "category": "origin",
+      "benefit_ids": ["reroll-weapon-damage-once-per-turn"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "skilled",
+      "name": "Skilled",
+      "category": "origin",
+      "benefit_ids": ["three-skill-or-tool-proficiencies"],
+      "repeatable": true
+    },
+    {
+      "feat_id": "ability-score-improvement",
+      "name": "Ability Score Improvement",
+      "category": "general",
+      "prerequisite": "level-4+",
+      "benefit_ids": ["increase-one-score-by-2-or-two-scores-by-1"],
+      "repeatable": true
+    },
+    {
+      "feat_id": "grappler",
+      "name": "Grappler",
+      "category": "general",
+      "prerequisite": "level-4+, strength-or-dexterity-13+",
+      "benefit_ids": [
+        "ability-score-increase",
+        "punch-and-grab",
+        "attack-advantage",
+        "fast-wrestler"
+      ],
+      "repeatable": false
+    },
+    {
+      "feat_id": "archery",
+      "name": "Archery",
+      "category": "fighting_style",
+      "prerequisite": "fighting-style-feature",
+      "benefit_ids": ["plus-2-ranged-attack-rolls"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "defense",
+      "name": "Defense",
+      "category": "fighting_style",
+      "prerequisite": "fighting-style-feature",
+      "benefit_ids": ["plus-1-ac-while-armored"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "great-weapon-fighting",
+      "name": "Great Weapon Fighting",
+      "category": "fighting_style",
+      "prerequisite": "fighting-style-feature",
+      "benefit_ids": ["treat-1-or-2-damage-rolls-as-3"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "two-weapon-fighting",
+      "name": "Two-Weapon Fighting",
+      "category": "fighting_style",
+      "prerequisite": "fighting-style-feature",
+      "benefit_ids": ["add-ability-modifier-to-light-extra-attack-damage"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "boon-of-combat-prowess",
+      "name": "Boon of Combat Prowess",
+      "category": "epic_boon",
+      "prerequisite": "level-19+",
+      "benefit_ids": ["ability-score-increase", "peerless-aim"],
+      "repeatable": false
+    },
+    {
+      "feat_id": "boon-of-dimensional-travel",
+      "name": "Boon of Dimensional Travel",
+      "category": "epic_boon",
+      "prerequisite": "level-19+",
+      "benefit_ids": ["ability-score-increase", "blink-steps"],
+      "repeatable": false
+    }
+  ]
 }

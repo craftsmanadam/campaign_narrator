@@ -8,12 +8,31 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["species_id", "name", "playable", "source_section"],
+        "required": [
+          "species_id",
+          "name",
+          "playable",
+          "source_section",
+          "creature_type",
+          "size_options",
+          "speed",
+          "trait_ids"
+        ],
         "properties": {
           "species_id": { "type": "string" },
           "name": { "type": "string" },
           "playable": { "type": "boolean" },
-          "source_section": { "type": "string" }
+          "source_section": { "type": "string" },
+          "creature_type": { "type": "string" },
+          "size_options": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "speed": { "type": "integer" },
+          "trait_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
         },
         "additionalProperties": false
       }

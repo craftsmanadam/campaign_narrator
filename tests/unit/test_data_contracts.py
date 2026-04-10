@@ -3,6 +3,10 @@
 import json
 from pathlib import Path
 
+MEDIUM_SPEED_FEET = 30
+BARD_SKILL_CHOICES = 3
+SUBCLASS_ENTRY_LEVEL = 3
+
 
 def test_data_contract_files_exist() -> None:
     """Core schema and docs artifacts should exist."""
@@ -41,8 +45,12 @@ def test_data_contract_files_exist() -> None:
         Path("data/compendium/spells/level_2.json"),
         Path("data/compendium/spells/level_3.json"),
         Path("data/compendium/spells/class_spell_lists.json"),
+        Path("data/rules/source/creation/choose_character_sheet.md"),
         Path("data/rules/source/creation/character_creation_overview.md"),
         Path("data/rules/source/creation/ability_scores.md"),
+        Path("data/rules/source/creation/alignment.md"),
+        Path("data/rules/source/creation/level_advancement.md"),
+        Path("data/rules/source/creation/multiclassing.md"),
         Path("data/rules/source/creation/species.md"),
         Path("data/rules/source/creation/origins.md"),
         Path("data/rules/source/creation/feats.md"),
@@ -60,14 +68,36 @@ def test_data_contract_files_exist() -> None:
         Path("data/rules/source/creation/classes/warlock.md"),
         Path("data/rules/source/creation/classes/wizard.md"),
         Path("data/rules/source/adjudication/core_resolution.md"),
+        Path("data/rules/source/adjudication/rhythm_of_play.md"),
+        Path("data/rules/source/adjudication/six_abilities.md"),
+        Path("data/rules/source/adjudication/d20_tests.md"),
         Path("data/rules/source/adjudication/ability_checks.md"),
+        Path("data/rules/source/adjudication/saving_throws.md"),
+        Path("data/rules/source/adjudication/attack_rolls.md"),
         Path("data/rules/source/adjudication/advantage_disadvantage.md"),
+        Path("data/rules/source/adjudication/proficiency.md"),
         Path("data/rules/source/adjudication/combat_flow.md"),
         Path("data/rules/source/adjudication/combat_actions.md"),
+        Path("data/rules/source/adjudication/actions.md"),
+        Path("data/rules/source/adjudication/bonus_actions.md"),
+        Path("data/rules/source/adjudication/reactions.md"),
+        Path("data/rules/source/adjudication/social_interaction.md"),
+        Path("data/rules/source/adjudication/exploration.md"),
+        Path("data/rules/source/adjudication/vision_and_light.md"),
+        Path("data/rules/source/adjudication/hiding.md"),
+        Path("data/rules/source/adjudication/interacting_with_objects.md"),
+        Path("data/rules/source/adjudication/hazards.md"),
+        Path("data/rules/source/adjudication/travel.md"),
+        Path("data/rules/source/adjudication/order_of_combat.md"),
+        Path("data/rules/source/adjudication/movement_and_position.md"),
+        Path("data/rules/source/adjudication/making_an_attack.md"),
+        Path("data/rules/source/adjudication/ranged_attacks.md"),
+        Path("data/rules/source/adjudication/melee_attacks.md"),
         Path("data/rules/source/adjudication/damage_healing.md"),
         Path("data/rules/source/adjudication/death_dying.md"),
         Path("data/rules/source/adjudication/spellcasting_basics.md"),
         Path("docs/data-structures.md"),
+        Path("TODO.md"),
     ]
 
     assert all(path.exists() for path in required_paths)
@@ -164,8 +194,6 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     gear = json.loads(
         Path("data/compendium/equipment/adventuring_gear.json").read_text()
     )
-    feats = json.loads(Path("data/compendium/character_options/feats.json").read_text())
-
     assert campaign["campaign_id"] == ""
     assert campaign["name"] == ""
     assert campaign["npc_ids"] == []
@@ -182,7 +210,6 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     assert armor["armor"] == []
     assert tools["tools"] == []
     assert gear["adventuring_gear"] == []
-    assert feats["feats"] == []
 
 
 def test_live_compendium_files_match_their_wrappers() -> None:
@@ -292,6 +319,88 @@ def test_structured_character_options_and_spell_lists_exist() -> None:
     )
 
 
+def test_class_and_subclass_metadata_support_basic_build_queries() -> None:
+    """Class metadata should expose core chassis details needed during creation."""
+
+    classes = json.loads(
+        Path("data/compendium/character_options/classes.json").read_text()
+    )
+    subclasses = json.loads(
+        Path("data/compendium/character_options/subclasses.json").read_text()
+    )
+
+    barbarian = next(
+        entry for entry in classes["classes"] if entry["class_id"] == "barbarian"
+    )
+    bard = next(entry for entry in classes["classes"] if entry["class_id"] == "bard")
+    warlock = next(
+        entry for entry in classes["classes"] if entry["class_id"] == "warlock"
+    )
+    lore_bard = next(
+        entry
+        for entry in subclasses["subclasses"]
+        if entry["subclass_id"] == "college-of-lore"
+    )
+
+    assert barbarian["saving_throws"] == ["strength", "constitution"]
+    assert "martial-weapons" in barbarian["weapon_proficiencies"]
+    assert "shields" in barbarian["armor_training"]
+
+    assert bard["skill_choice_count"] == BARD_SKILL_CHOICES
+    assert "musical-instrument" in bard["tool_proficiencies"]
+    assert bard["spellcasting_ability"] == "charisma"
+
+    assert warlock["saving_throws"] == ["wisdom", "charisma"]
+    assert warlock["is_spellcaster"] is True
+    assert lore_bard["entry_level"] == SUBCLASS_ENTRY_LEVEL
+
+
+def test_origins_species_and_feats_are_structured_for_build_resolution() -> None:
+    """Character options should carry enough structure for legal build queries."""
+
+    species = json.loads(
+        Path("data/compendium/character_options/species.json").read_text()
+    )
+    origins = json.loads(
+        Path("data/compendium/character_options/origins.json").read_text()
+    )
+    feats = json.loads(Path("data/compendium/character_options/feats.json").read_text())
+
+    dragonborn = next(
+        entry for entry in species["species"] if entry["species_id"] == "dragonborn"
+    )
+    human = next(
+        entry for entry in species["species"] if entry["species_id"] == "human"
+    )
+    acolyte = next(
+        entry for entry in origins["origins"] if entry["origin_id"] == "acolyte"
+    )
+    alert = next(entry for entry in feats["feats"] if entry["feat_id"] == "alert")
+    magic_initiate = next(
+        entry for entry in feats["feats"] if entry["feat_id"] == "magic-initiate-cleric"
+    )
+    archery = next(entry for entry in feats["feats"] if entry["feat_id"] == "archery")
+
+    assert dragonborn["creature_type"] == "humanoid"
+    assert dragonborn["speed"] == MEDIUM_SPEED_FEET
+    assert "draconic-ancestry" in dragonborn["trait_ids"]
+    assert human["size_options"] == ["medium", "small"]
+    assert "origin-feat-choice" in human["trait_ids"]
+
+    assert acolyte["ability_score_options"] == [
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ]
+    assert acolyte["feat_id"] == "magic-initiate-cleric"
+    assert acolyte["skill_proficiencies"] == ["insight", "religion"]
+
+    assert alert["category"] == "origin"
+    assert "initiative-proficiency" in alert["benefit_ids"]
+    assert magic_initiate["repeatable"] is True
+    assert archery["category"] == "fighting_style"
+
+
 def test_first_ingested_corpus_content_exists() -> None:
     """The first SRD ingestion pass should load representative live corpus content."""
 
@@ -391,8 +500,12 @@ def test_rule_source_files_are_nonempty() -> None:
     minimum_rule_length = 40
 
     rule_paths = [
+        Path("data/rules/source/creation/choose_character_sheet.md"),
         Path("data/rules/source/creation/character_creation_overview.md"),
         Path("data/rules/source/creation/ability_scores.md"),
+        Path("data/rules/source/creation/alignment.md"),
+        Path("data/rules/source/creation/level_advancement.md"),
+        Path("data/rules/source/creation/multiclassing.md"),
         Path("data/rules/source/creation/species.md"),
         Path("data/rules/source/creation/origins.md"),
         Path("data/rules/source/creation/feats.md"),
@@ -410,10 +523,31 @@ def test_rule_source_files_are_nonempty() -> None:
         Path("data/rules/source/creation/classes/warlock.md"),
         Path("data/rules/source/creation/classes/wizard.md"),
         Path("data/rules/source/adjudication/core_resolution.md"),
+        Path("data/rules/source/adjudication/rhythm_of_play.md"),
+        Path("data/rules/source/adjudication/six_abilities.md"),
+        Path("data/rules/source/adjudication/d20_tests.md"),
         Path("data/rules/source/adjudication/ability_checks.md"),
+        Path("data/rules/source/adjudication/saving_throws.md"),
+        Path("data/rules/source/adjudication/attack_rolls.md"),
         Path("data/rules/source/adjudication/advantage_disadvantage.md"),
+        Path("data/rules/source/adjudication/proficiency.md"),
         Path("data/rules/source/adjudication/combat_flow.md"),
         Path("data/rules/source/adjudication/combat_actions.md"),
+        Path("data/rules/source/adjudication/actions.md"),
+        Path("data/rules/source/adjudication/bonus_actions.md"),
+        Path("data/rules/source/adjudication/reactions.md"),
+        Path("data/rules/source/adjudication/social_interaction.md"),
+        Path("data/rules/source/adjudication/exploration.md"),
+        Path("data/rules/source/adjudication/vision_and_light.md"),
+        Path("data/rules/source/adjudication/hiding.md"),
+        Path("data/rules/source/adjudication/interacting_with_objects.md"),
+        Path("data/rules/source/adjudication/hazards.md"),
+        Path("data/rules/source/adjudication/travel.md"),
+        Path("data/rules/source/adjudication/order_of_combat.md"),
+        Path("data/rules/source/adjudication/movement_and_position.md"),
+        Path("data/rules/source/adjudication/making_an_attack.md"),
+        Path("data/rules/source/adjudication/ranged_attacks.md"),
+        Path("data/rules/source/adjudication/melee_attacks.md"),
         Path("data/rules/source/adjudication/damage_healing.md"),
         Path("data/rules/source/adjudication/death_dying.md"),
         Path("data/rules/source/adjudication/spellcasting_basics.md"),
@@ -421,6 +555,30 @@ def test_rule_source_files_are_nonempty() -> None:
 
     for path in rule_paths:
         assert len(path.read_text().strip()) > minimum_rule_length, path
+
+
+def test_representative_class_files_capture_exact_low_level_rules() -> None:
+    """Representative class files should include exact low-level SRD mechanics."""
+
+    barbarian = Path("data/rules/source/creation/classes/barbarian.md").read_text()
+    bard = Path("data/rules/source/creation/classes/bard.md").read_text()
+    cleric = Path("data/rules/source/creation/classes/cleric.md").read_text()
+    druid = Path("data/rules/source/creation/classes/druid.md").read_text()
+    warlock = Path("data/rules/source/creation/classes/warlock.md").read_text()
+    wizard = Path("data/rules/source/creation/classes/wizard.md").read_text()
+
+    assert "Rage lasts until the end of your next turn" in barbarian
+    assert "At level 1, Rage uses: `2`" in barbarian
+    assert "At level 3, prepared spells: `6`" in bard
+    assert "regain all your expended uses of Bardic Inspiration when you finish a Short or Long Rest" in bard
+    assert "You can use this class's Channel Divinity twice" in cleric
+    assert "Divine Spark" in cleric
+    assert "You know four Beast forms" in druid
+    assert "Temporary Hit Points equal to your Druid level" in druid
+    assert "At level 1, Pact Magic slots: `1`" in warlock
+    assert "At level 3, Pact Magic slot level: `2`" in warlock
+    assert "It starts with six level 1 Wizard spells of your choice" in wizard
+    assert "Arcane Recovery" in wizard
 
 
 def test_example_fixture_content_exists_for_reference_data() -> None:

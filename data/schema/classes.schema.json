@@ -13,6 +13,12 @@
           "name",
           "hit_die",
           "primary_abilities",
+          "saving_throws",
+          "skill_choice_count",
+          "skill_proficiency_options",
+          "weapon_proficiencies",
+          "armor_training",
+          "tool_proficiencies",
           "spellcasting_ability",
           "is_spellcaster"
         ],
@@ -21,6 +27,27 @@
           "name": { "type": "string" },
           "hit_die": { "type": "string" },
           "primary_abilities": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "saving_throws": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "skill_choice_count": { "type": "integer" },
+          "skill_proficiency_options": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "weapon_proficiencies": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "armor_training": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "tool_proficiencies": {
             "type": "array",
             "items": { "type": "string" }
           },

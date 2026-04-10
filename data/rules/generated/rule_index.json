@@ -1,7 +1,11 @@
 {
   "character_creation": [
+    "creation/choose_character_sheet.md",
     "creation/character_creation_overview.md",
     "creation/ability_scores.md",
+    "creation/alignment.md",
+    "creation/level_advancement.md",
+    "creation/multiclassing.md",
     "creation/species.md",
     "creation/origins.md",
     "creation/feats.md",
@@ -21,14 +25,39 @@
   ],
   "core_resolution": [
     "adjudication/core_resolution.md",
+    "adjudication/rhythm_of_play.md",
+    "adjudication/six_abilities.md",
+    "adjudication/d20_tests.md",
     "adjudication/ability_checks.md",
-    "adjudication/advantage_disadvantage.md"
+    "adjudication/saving_throws.md",
+    "adjudication/attack_rolls.md",
+    "adjudication/advantage_disadvantage.md",
+    "adjudication/proficiency.md"
   ],
   "combat": [
     "adjudication/combat_flow.md",
+    "adjudication/actions.md",
+    "adjudication/bonus_actions.md",
+    "adjudication/reactions.md",
     "adjudication/combat_actions.md",
+    "adjudication/order_of_combat.md",
+    "adjudication/movement_and_position.md",
+    "adjudication/making_an_attack.md",
+    "adjudication/ranged_attacks.md",
+    "adjudication/melee_attacks.md",
     "adjudication/damage_healing.md",
     "adjudication/death_dying.md"
+  ],
+  "social_interaction": [
+    "adjudication/social_interaction.md"
+  ],
+  "exploration": [
+    "adjudication/exploration.md",
+    "adjudication/vision_and_light.md",
+    "adjudication/hiding.md",
+    "adjudication/interacting_with_objects.md",
+    "adjudication/hazards.md",
+    "adjudication/travel.md"
   ],
   "spellcasting": [
     "adjudication/spellcasting_basics.md"

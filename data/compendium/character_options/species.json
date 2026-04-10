@@ -4,55 +4,117 @@
       "species_id": "dragonborn",
       "name": "Dragonborn",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium"],
+      "speed": 30,
+      "trait_ids": [
+        "draconic-ancestry",
+        "breath-weapon",
+        "damage-resistance",
+        "darkvision",
+        "draconic-flight"
+      ]
     },
     {
       "species_id": "dwarf",
       "name": "Dwarf",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium"],
+      "speed": 30,
+      "trait_ids": [
+        "darkvision",
+        "dwarven-resilience",
+        "dwarven-toughness",
+        "stonecunning"
+      ]
     },
     {
       "species_id": "elf",
       "name": "Elf",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium"],
+      "speed": 30,
+      "trait_ids": [
+        "darkvision",
+        "elven-lineage",
+        "fey-ancestry",
+        "keen-senses",
+        "trance"
+      ]
     },
     {
       "species_id": "gnome",
       "name": "Gnome",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["small"],
+      "speed": 30,
+      "trait_ids": ["darkvision", "gnomish-cunning", "gnomish-lineage"]
     },
     {
       "species_id": "goliath",
       "name": "Goliath",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium"],
+      "speed": 35,
+      "trait_ids": ["giant-ancestry", "large-form", "powerful-build"]
     },
     {
       "species_id": "halfling",
       "name": "Halfling",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["small"],
+      "speed": 30,
+      "trait_ids": [
+        "brave",
+        "halfling-nimbleness",
+        "luck",
+        "naturally-stealthy"
+      ]
     },
     {
       "species_id": "human",
       "name": "Human",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium", "small"],
+      "speed": 30,
+      "trait_ids": ["resourceful", "skillful", "origin-feat-choice"]
     },
     {
       "species_id": "orc",
       "name": "Orc",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium"],
+      "speed": 30,
+      "trait_ids": ["adrenaline-rush", "darkvision", "relentless-endurance"]
     },
     {
       "species_id": "tiefling",
       "name": "Tiefling",
       "playable": true,
-      "source_section": "Character Species"
+      "source_section": "Character Species",
+      "creature_type": "humanoid",
+      "size_options": ["medium", "small"],
+      "speed": 30,
+      "trait_ids": [
+        "darkvision",
+        "fiendish-legacy",
+        "otherworldly-presence"
+      ]
     }
   ]
 }

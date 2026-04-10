@@ -8,11 +8,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["subclass_id", "class_id", "name"],
+        "required": ["subclass_id", "class_id", "name", "entry_level"],
         "properties": {
           "subclass_id": { "type": "string" },
           "class_id": { "type": "string" },
-          "name": { "type": "string" }
+          "name": { "type": "string" },
+          "entry_level": { "type": "integer" }
         },
         "additionalProperties": false
       }

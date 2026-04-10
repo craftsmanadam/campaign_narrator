@@ -12,11 +12,18 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["feat_id", "name", "category"],
+        "required": ["feat_id", "name", "category", "benefit_ids", "repeatable"],
         "properties": {
           "feat_id": { "type": "string" },
           "name": { "type": "string" },
-          "category": { "type": "string" }
+          "category": { "type": "string" },
+          "prerequisite": { "type": "string" },
+          "spell_list": { "type": "string" },
+          "benefit_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "repeatable": { "type": "boolean" }
         },
         "additionalProperties": true
       }

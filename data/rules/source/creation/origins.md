@@ -1,6 +1,6 @@
 # Origins
 
-In the SRD, the origin layer used in first-cut character creation is primarily represented by backgrounds. A background packages ability score choices, an Origin feat, two skill proficiencies, one tool proficiency, and a starting equipment option.
+In this SRD slice, origin is determined by background, species, and languages. Background and species are chosen during character creation, and the character also knows `Common` plus two additional languages chosen or rolled from the Standard Languages table.
 
 ## Background Structure
 
@@ -12,6 +12,30 @@ Each background includes:
 - one tool proficiency,
 - and a choice between a predefined gear package or `50 GP`.
 
+Each character also chooses two languages beyond `Common`. The Standard Languages table includes:
+
+- Common Sign Language
+- Draconic
+- Dwarvish
+- Elvish
+- Giant
+- Gnomish
+- Goblin
+- Halfling
+- Orc
+
+The Rare Languages table includes:
+
+- Abyssal
+- Celestial
+- Deep Speech
+- Druidic
+- Infernal
+- Primordial
+- Sylvan
+- Thieves' Cant
+- Undercommon
+
 ## SRD Backgrounds in First Cut
 
 ### Acolyte
@@ -20,6 +44,8 @@ Each background includes:
 - Feat: Magic Initiate (Cleric)
 - Skills: Insight, Religion
 - Tool: Calligrapher's Supplies
+- Equipment A: Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, `8 GP`
+- Equipment B: `50 GP`
 
 ### Criminal
 
@@ -27,6 +53,8 @@ Each background includes:
 - Feat: Alert
 - Skills: Sleight of Hand, Stealth
 - Tool: Thieves' Tools
+- Equipment A: 2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes, `16 GP`
+- Equipment B: `50 GP`
 
 ### Sage
 
@@ -34,6 +62,8 @@ Each background includes:
 - Feat: Magic Initiate (Wizard)
 - Skills: Arcana, History
 - Tool: Calligrapher's Supplies
+- Equipment A: Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, `8 GP`
+- Equipment B: `50 GP`
 
 ### Soldier
 
@@ -41,9 +71,12 @@ Each background includes:
 - Feat: Savage Attacker
 - Skills: Athletics, Intimidation
 - Tool: one Gaming Set
+- Equipment A: Spear, Shortbow, 20 Arrows, Gaming Set, Healer's Kit, Quiver, Traveler's Clothes, `14 GP`
+- Equipment B: `50 GP`
 
 ## First-Cut Guidance
 
 - Start with the printed SRD backgrounds instead of custom backgrounds.
 - Treat the background package as the canonical source for level 1 ability score increases.
 - Record both the fixed feat and the equipment choice during character creation.
+- Use background, species, and languages together when building the character's early identity and past.

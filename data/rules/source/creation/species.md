@@ -12,6 +12,8 @@ Each species entry provides:
 - special traits,
 - and sometimes scalable features that improve at character levels 3 or 5.
 
+All playable SRD species in this corpus are `Humanoid`. Most species normally live about 80 years unless a species entry says otherwise, and all reach physical maturity at about the same age.
+
 ## SRD Species Included in First Cut
 
 ### Dragonborn
@@ -94,3 +96,12 @@ The first-cut prototype should specifically support species features that scale 
 - Elf lineage spells
 - Goliath Large Form
 - Tiefling legacy spells
+
+## Mechanical Details Worth Preserving Exactly
+
+- Dragonborn Breath Weapon save DC is `8 + Constitution modifier + Proficiency Bonus`.
+- Dragonborn Breath Weapon scales at character levels `5`, `11`, and `17`.
+- Elf and Tiefling lineage or legacy spells are always prepared, can each be cast once without a spell slot per Long Rest, and can also be cast with spell slots.
+- Gnome lineage spells use a chosen mental ability score: Intelligence, Wisdom, or Charisma.
+- Goliath ancestry benefits use Proficiency Bonus-based uses per Long Rest.
+- Orc `Adrenaline Rush` recharges on a Short or Long Rest.

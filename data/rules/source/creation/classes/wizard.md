@@ -5,8 +5,10 @@
 - Primary ability: Intelligence
 - Hit Point Die: `d6`
 - Saves: Intelligence, Wisdom
+- Skills: choose `2` from Arcana, History, Insight, Investigation, Medicine, Nature, or Religion
 - Armor: none
 - Weapons: Simple
+- Starting equipment: `2 Daggers`, Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar's Pack, and `5 GP`; or `55 GP`
 
 ## Level 1 to 5
 
@@ -20,17 +22,21 @@
 
 The Wizard is built around a spellbook rather than a fixed known-spells list.
 
-- starts with six level 1 Wizard spells in the book,
+- It starts with six level 1 Wizard spells of your choice
 - learns two more Wizard spells each level,
 - prepares spells from the book after Long Rests,
 - can copy discovered Wizard spells into the spellbook with time and gold.
+
+Copying a discovered spell into the spellbook takes `2 hours` and `50 GP` per spell level. Copying your own spellbook into another book takes `1 hour` and `10 GP` per spell level.
 
 ## Spellcasting Shape
 
 - Cantrips known at level 1: 3
 - Prepared level 1+ spells at level 1: 4
+- At level 3, prepared spells: `6`
 - Spellcasting ability: Intelligence
 - Can use an Arcane Focus or the spellbook as a spellcasting focus
+- Spell slots progress as `2` level-1 slots at level 1, `3` level-1 at level 2, `4/2` at level 3, `4/3` at level 4, and `4/3/2` at level 5.
 
 ## Core Features
 
@@ -39,11 +45,19 @@ The Wizard is built around a spellbook rather than a fixed known-spells list.
 - `Scholar` grants expertise in a chosen knowledge skill
 - `Memorize Spell` swaps one prepared Wizard spell after a Short Rest
 
+### Arcane Recovery
+
+- available from level 1
+- after a Short Rest, recover spell slots with combined level up to half Wizard level, rounded up
+- no recovered slot can be level 6 or higher
+- once per Long Rest
+
 ## Subclass in the SRD
 
 `Evoker`
 
-This is the first SRD Wizard subclass and is the relevant baseline for early implementation.
+- Level 3: `Evocation Savant`, `Potent Cantrip`
+- entry level: `3`
 
 ## First-Cut Use
 

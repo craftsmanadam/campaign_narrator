@@ -3,22 +3,38 @@
     {
       "origin_id": "acolyte",
       "name": "Acolyte",
-      "source_section": "Character Backgrounds"
+      "source_section": "Character Backgrounds",
+      "ability_score_options": ["intelligence", "wisdom", "charisma"],
+      "feat_id": "magic-initiate-cleric",
+      "skill_proficiencies": ["insight", "religion"],
+      "tool_proficiency": "calligraphers-supplies"
     },
     {
       "origin_id": "criminal",
       "name": "Criminal",
-      "source_section": "Character Backgrounds"
+      "source_section": "Character Backgrounds",
+      "ability_score_options": ["dexterity", "constitution", "intelligence"],
+      "feat_id": "alert",
+      "skill_proficiencies": ["sleight-of-hand", "stealth"],
+      "tool_proficiency": "thieves-tools"
     },
     {
       "origin_id": "sage",
       "name": "Sage",
-      "source_section": "Character Backgrounds"
+      "source_section": "Character Backgrounds",
+      "ability_score_options": ["constitution", "intelligence", "wisdom"],
+      "feat_id": "magic-initiate-wizard",
+      "skill_proficiencies": ["arcana", "history"],
+      "tool_proficiency": "calligraphers-supplies"
     },
     {
       "origin_id": "soldier",
       "name": "Soldier",
-      "source_section": "Character Backgrounds"
+      "source_section": "Character Backgrounds",
+      "ability_score_options": ["strength", "dexterity", "constitution"],
+      "feat_id": "savage-attacker",
+      "skill_proficiencies": ["athletics", "intimidation"],
+      "tool_proficiency": "gaming-set-choice"
     }
   ]
 }

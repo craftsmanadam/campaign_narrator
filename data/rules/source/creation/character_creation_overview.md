@@ -1,21 +1,75 @@
 # Character Creation Overview
 
-This file captures the first-cut character-creation flow from the SRD for Campaign Narrator. It is optimized for level 1 to 5 play.
+Character creation in the SRD follows a fixed five-step process after the player chooses a way to track the character on a character sheet.
 
-## Level 1 Flow
+## The Five Steps
 
 1. Choose a class.
-2. Choose a background.
-3. Choose a species.
-4. Apply ability score increases from the background.
-5. Record proficiencies, feat, equipment, and class features.
-6. Set derived combat and spellcasting values.
+2. Determine origin.
+3. Determine ability scores.
+4. Choose an alignment.
+5. Fill in details.
+
+Each step builds on the previous ones, so class, origin, and ability scores should be chosen before final derived values are written down.
+
+## Step 1: Choose a Class
+
+When choosing a class, record:
+
+- class,
+- level,
+- Experience Points,
+- subclass if the character starts at level `3` or higher,
+- armor training granted by the class.
+
+A level 1 character starts with `0 XP`.
+
+## Step 2: Determine Origin
+
+Origin includes:
+
+- background,
+- species,
+- two languages in addition to `Common`.
+
+Background determines:
+
+- which ability scores are increased,
+- a feat,
+- two skill proficiencies,
+- one tool proficiency,
+- part of starting equipment.
+
+Species determines at least:
+
+- species traits,
+- size,
+- Speed.
+
+## Step 3: Determine Ability Scores
+
+Generate six scores, assign them to the six abilities, apply any background increases, and then determine the resulting ability modifiers.
+
+## Step 4: Choose an Alignment
+
+Choose and record a moral alignment for the character. The SRD assumes player characters are not evil-aligned unless the GM approves otherwise.
+
+## Step 5: Fill in Details
+
+After class, origin, ability scores, and alignment are set, fill in the remaining parts of the character sheet, including:
+
+- proficiencies and Proficiency Bonus,
+- Hit Points and Hit Dice,
+- Armor Class, initiative, Speed, and size,
+- attacks, save DCs, and spell attack bonus as relevant,
+- equipment, coins, and languages,
+- feats, subclass, features, cantrips, prepared spells, and spell slots as relevant.
 
 ## Core Derived Values
 
 - Passive Perception: `10 + Wisdom (Perception) modifier`
-- Melee attack bonus with a proficient weapon: `Strength modifier + Proficiency Bonus`
-- Ranged attack bonus with a proficient weapon: `Dexterity modifier + Proficiency Bonus`
+- Melee attack bonus with a proficient weapon: relevant ability modifier `+ Proficiency Bonus`
+- Ranged attack bonus with a proficient weapon: relevant ability modifier `+ Proficiency Bonus`
 - Spell save DC: `8 + spellcasting ability modifier + Proficiency Bonus`
 - Spell attack bonus: `spellcasting ability modifier + Proficiency Bonus`
 
@@ -26,48 +80,10 @@ This file captures the first-cut character-creation flow from the SRD for Campai
 - Bard, Cleric, Druid, Monk, Rogue, Warlock: `8 + Constitution modifier`
 - Sorcerer, Wizard: `6 + Constitution modifier`
 
-At level 1, a character has 1 Hit Die from their class.
+At level 1, a character has one Hit Die from the chosen class.
 
 ## Armor Class Basics
 
 - Without armor or a shield, base AC is `10 + Dexterity modifier`.
-- Armor and shields replace or modify this calculation based on the equipment rules.
-- Some class features provide alternative AC calculations, and only one AC calculation can apply at a time.
-
-## Spellcasting Notes
-
-If a class grants `Spellcasting` or `Pact Magic`, record:
-
-- spell slots,
-- cantrips known,
-- prepared spells,
-- spell save DC,
-- spell attack bonus.
-
-## Advancement Through Level 5
-
-XP thresholds relevant to the prototype:
-
-- Level 1: 0 XP
-- Level 2: 300 XP
-- Level 3: 900 XP
-- Level 4: 2,700 XP
-- Level 5: 6,500 XP
-
-Proficiency Bonus stays `+2` through level 4 and becomes `+3` at level 5.
-
-When a character gains a level:
-
-1. Choose whether to advance in the current class or multiclass.
-2. Add one Hit Die and increase Hit Points.
-3. Record new class features.
-4. Update Proficiency Bonus if the total character level changes it.
-5. Update derived modifiers if a feat changes an ability score.
-
-## Multiclassing Notes
-
-- Multiclassing requires a score of at least 13 in the primary ability of the new class and of the current class or classes.
-- The total character level determines XP progression and Proficiency Bonus.
-- Extra Attack from multiple classes does not stack.
-- Multiple alternative AC calculations do not stack.
-- Multiclass spellcasting depends on combined spellcasting levels and class-specific rules.
+- Armor and shields replace or modify this calculation according to the equipment rules.
+- If multiple features offer alternative AC calculations, only one can be used at a time.
