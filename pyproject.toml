@@ -7,7 +7,8 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "multi-dice (>=1.0.1,<2.0.0)"
+    "multi-dice (>=1.0.1,<2.0.0)",
+    "openai (>=2.31.0,<3.0.0)"
 ]
 
 [build-system]
@@ -22,13 +23,16 @@ dev = [
     "pytest-mock (>=3.15.1,<4.0.0)",
     "pytest-sugar (>=1.1.1,<2.0.0)",
     "ruff (>=0.15.10,<0.16.0)",
-    "pdftotext (>=3.0.0,<4.0.0)"
+    "pdftotext (>=3.0.0,<4.0.0)",
 ]
 
 [tool.poetry]
 packages = [
     { include = "campaignnarrator", from = "app" }
 ]
+
+[project.scripts]
+campaignnarrator = "campaignnarrator.cli:main"
 
 [tool.ruff]
 target-version = "py314"

@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-fake-openai-api-key}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://wiremock:8080/v1}
+      CAMPAIGNNARRATOR_DICE_SEED: ${CAMPAIGNNARRATOR_DICE_SEED:-7}
+    volumes:
+      - ${RUNTIME_DATA_ROOT:?RUNTIME_DATA_ROOT is required}:/runtime/data:rw
+
+  wiremock:
+    image: wiremock/wiremock:3.13.1
+    command:
+      - --global-response-templating
+      - --verbose
+    ports:
+      - "127.0.0.1:${WIREMOCK_PORT:-18080}:8080"
+    volumes:
+      - ./tests/acceptance/wiremock/mappings:/home/wiremock/mappings:ro
+      - ./tests/acceptance/wiremock/__files:/home/wiremock/__files:ro

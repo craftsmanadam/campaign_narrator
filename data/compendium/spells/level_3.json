@@ -22,8 +22,8 @@
       "range": "120 feet",
       "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": "Choose one creature, object, or magical effect within range. Any spell of level 3 or lower on the target ends. For each spell of level 4 or higher on the target, make an ability check using your spellcasting ability. The DC equals 10 plus that spell's level. On a successful check, the spell ends.",
-      "higher_level": "You automatically end a spell on the target if the spell's level is less than or equal to the level of the spell slot you use for Dispel Magic."
+      "description": "Choose one creature, object, or magical effect within range. Any ongoing spell of level 3 or lower on the target ends. For each ongoing spell of level 4 or higher on the target, make an ability check using your spellcasting ability. The DC equals 10 plus that spell's level. On a successful check, the spell ends.",
+      "higher_level": "You automatically end a spell on the target if the spell's level is equal to or less than the level of the spell slot you use."
     },
     {
       "spell_id": "fear",
@@ -143,6 +143,34 @@
       "special": "You can send the message across any distance and even to other planes, though there is a 5 percent chance the message does not arrive if the target is on a different plane."
     },
     {
+      "spell_id": "sleet-storm",
+      "name": "Sleet Storm",
+      "level": 3,
+      "school": "Conjuration",
+      "casting_time": "Action",
+      "range": "150 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Freezing rain and sleet fall in a 40-foot-radius, 20-foot-high Cylinder centered on a point within range. The area is Heavily Obscured, exposed flames are doused, and the ground is Difficult Terrain. A creature that starts its turn in the area or enters it must make a Dexterity saving throw or have the Prone condition.",
+      "save": "dexterity",
+      "area": "40-foot-radius, 20-foot-high Cylinder",
+      "concentration": true
+    },
+    {
+      "spell_id": "slow",
+      "name": "Slow",
+      "level": 3,
+      "school": "Transmutation",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "You alter time around up to six creatures of your choice in a 40-foot Cube within range. Each target makes a Wisdom saving throw. On a failed save, a target's Speed is halved, it takes a penalty to AC and Dexterity saving throws, and it has limited action options until the spell ends.",
+      "save": "wisdom",
+      "area": "40-foot Cube",
+      "concentration": true
+    },
+    {
       "spell_id": "spirit-guardians",
       "name": "Spirit Guardians",
       "level": 3,
@@ -170,6 +198,18 @@
       "save": "constitution",
       "area": "20-foot-radius Sphere",
       "concentration": true
+    },
+    {
+      "spell_id": "water-breathing",
+      "name": "Water Breathing",
+      "level": 3,
+      "school": "Transmutation",
+      "casting_time": "Action or Ritual",
+      "range": "30 feet",
+      "components": ["V", "S", "M"],
+      "duration": "24 hours",
+      "description": "This spell grants up to ten willing creatures of your choice within range the ability to breathe underwater until the spell ends. Affected creatures also retain their normal mode of respiration.",
+      "ritual": true
     }
   ]
 }

@@ -47,8 +47,7 @@
       "range": "Touch",
       "components": ["V", "M"],
       "duration": "1 hour",
-      "description": "You touch one Large or smaller object that isn't being worn or carried. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. Completely covering the object with something opaque blocks the light.",
-      "material_component_detail": "a firefly or phosphorescent moss"
+      "description": "You touch one Large or smaller object that isn't being worn or carried. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. Completely covering the object with something opaque blocks the light."
     },
     {
       "spell_id": "mage-hand",
@@ -169,8 +168,7 @@
       "components": ["S", "M"],
       "duration": "Instantaneous",
       "description": "Guided by a flash of magical insight, you make one attack with the weapon used in the spell's casting. For that attack, you use your spellcasting ability instead of Strength or Dexterity for the attack and damage rolls. If the attack deals damage, it can deal Radiant damage or the weapon's normal damage type.",
-      "attack": "weapon attack",
-      "material_component_detail": "a weapon with which you have proficiency"
+      "attack": "weapon attack"
     },
     {
       "spell_id": "eldritch-blast",

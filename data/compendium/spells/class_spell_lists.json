@@ -14,16 +14,26 @@
       "spell_ids_by_level": {
         "0": ["true-strike", "vicious-mockery"],
         "1": [
+          "bane",
           "charm-person",
+          "comprehend-languages",
           "detect-magic",
+          "feather-fall",
           "healing-word",
           "heroism",
+          "hideous-laughter",
+          "silent-image",
           "sleep",
+          "speak-with-animals",
           "thunderwave"
         ],
         "2": [
+          "detect-thoughts",
+          "enthrall",
           "hold-person",
           "invisibility",
+          "locate-object",
+          "phantasmal-force",
           "see-invisibility",
           "shatter",
           "suggestion"
@@ -42,14 +52,16 @@
       "spell_ids_by_level": {
         "0": ["guidance", "sacred-flame", "thaumaturgy"],
         "1": [
+          "bane",
           "bless",
           "command",
           "cure-wounds",
           "detect-magic",
           "guiding-bolt",
-          "healing-word"
+          "healing-word",
+          "protection-from-evil-and-good"
         ],
-        "2": ["hold-person", "spiritual-weapon"],
+        "2": ["hold-person", "locate-object", "spiritual-weapon"],
         "3": [
           "dispel-magic",
           "mass-healing-word",
@@ -68,10 +80,11 @@
           "detect-magic",
           "goodberry",
           "healing-word",
+          "speak-with-animals",
           "thunderwave"
         ],
-        "2": ["gust-of-wind", "hold-person"],
-        "3": ["dispel-magic", "revivify"]
+        "2": ["gust-of-wind", "hold-person", "locate-object"],
+        "3": ["dispel-magic", "revivify", "sleet-storm", "water-breathing"]
       }
     },
     {
@@ -96,8 +109,8 @@
       "class_id": "paladin",
       "spell_ids_by_level": {
         "0": [],
-        "1": ["bless", "heroism"],
-        "2": [],
+        "1": ["bless", "heroism", "protection-from-evil-and-good"],
+        "2": ["magic-weapon"],
         "3": ["revivify"]
       }
     },
@@ -105,9 +118,9 @@
       "class_id": "ranger",
       "spell_ids_by_level": {
         "0": [],
-        "1": ["goodberry", "hunters-mark", "thunderwave"],
-        "2": ["gust-of-wind"],
-        "3": ["revivify"]
+        "1": ["goodberry", "hunters-mark", "speak-with-animals", "thunderwave"],
+        "2": ["gust-of-wind", "locate-object", "magic-weapon"],
+        "3": ["revivify", "water-breathing"]
       }
     },
     {
@@ -137,20 +150,33 @@
         "1": [
           "burning-hands",
           "charm-person",
+          "chromatic-orb",
+          "comprehend-languages",
           "detect-magic",
+          "feather-fall",
+          "mage-armor",
           "magic-missile",
+          "ray-of-sickness",
+          "silent-image",
           "shield"
         ],
         "2": [
           "darkness",
           "darkvision",
+          "detect-thoughts",
           "gust-of-wind",
           "hold-person",
           "invisibility",
+          "levitate",
+          "magic-weapon",
+          "mind-spike",
           "misty-step",
+          "mirror-image",
+          "phantasmal-force",
           "scorching-ray",
           "see-invisibility",
           "shatter",
+          "spider-climb",
           "suggestion",
           "web"
         ],
@@ -163,6 +189,8 @@
           "haste",
           "hypnotic-pattern",
           "lightning-bolt",
+          "sleet-storm",
+          "slow",
           "stinking-cloud"
         ]
       }
@@ -171,8 +199,28 @@
       "class_id": "warlock",
       "spell_ids_by_level": {
         "0": ["chill-touch", "eldritch-blast", "true-strike"],
-        "1": ["charm-person", "hex"],
-        "2": ["hold-person", "invisibility", "suggestion"],
+        "1": [
+          "bane",
+          "charm-person",
+          "comprehend-languages",
+          "hellish-rebuke",
+          "hex",
+          "hideous-laughter",
+          "protection-from-evil-and-good",
+          "speak-with-animals",
+          "unseen-servant"
+        ],
+        "2": [
+          "darkness",
+          "enthrall",
+          "hold-person",
+          "invisibility",
+          "mind-spike",
+          "mirror-image",
+          "ray-of-enfeeblement",
+          "spider-climb",
+          "suggestion"
+        ],
         "3": [
           "counterspell",
           "dispel-magic",
@@ -199,20 +247,38 @@
         ],
         "1": [
           "burning-hands",
+          "chromatic-orb",
+          "comprehend-languages",
           "detect-magic",
+          "feather-fall",
+          "find-familiar",
+          "floating-disk",
+          "mage-armor",
           "magic-missile",
+          "protection-from-evil-and-good",
+          "ray-of-sickness",
+          "silent-image",
           "shield"
         ],
         "2": [
           "darkness",
           "darkvision",
+          "detect-thoughts",
           "gust-of-wind",
           "hold-person",
           "invisibility",
+          "levitate",
+          "locate-object",
+          "magic-weapon",
+          "mind-spike",
           "misty-step",
+          "mirror-image",
+          "phantasmal-force",
+          "ray-of-enfeeblement",
           "scorching-ray",
           "see-invisibility",
           "shatter",
+          "spider-climb",
           "web"
         ],
         "3": [
@@ -225,6 +291,8 @@
           "hypnotic-pattern",
           "lightning-bolt",
           "sending",
+          "sleet-storm",
+          "slow",
           "stinking-cloud"
         ]
       }

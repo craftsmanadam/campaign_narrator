@@ -21,6 +21,36 @@ SPIRIT_GUARDIANS_TEXT = "whenever the Emanation enters a creature's space"
 WEB_TEXT = (
     "A Restrained creature can take an action to make a Strength (Athletics) check"
 )
+STARTER_SPELL_IDS = {
+    "bane",
+    "comprehend-languages",
+    "hellish-rebuke",
+    "hideous-laughter",
+    "protection-from-evil-and-good",
+    "speak-with-animals",
+    "unseen-servant",
+    "darkness",
+    "enthrall",
+    "mind-spike",
+    "mirror-image",
+    "ray-of-enfeeblement",
+    "spider-climb",
+    "find-familiar",
+    "floating-disk",
+    "silent-image",
+    "detect-thoughts",
+    "levitate",
+    "locate-object",
+    "magic-weapon",
+    "phantasmal-force",
+    "sleet-storm",
+    "slow",
+    "water-breathing",
+    "chromatic-orb",
+    "fireball",
+    "magic-missile",
+    "eldritch-blast",
+}
 
 
 def test_data_contract_files_exist() -> None:
@@ -334,6 +364,31 @@ def test_structured_character_options_and_spell_lists_exist() -> None:
         for entry in class_spell_lists["class_spell_lists"]
     )
     assert any(
+        entry["class_id"] == "wizard"
+        and "mage-armor" in entry["spell_ids_by_level"]["1"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
+    assert any(
+        entry["class_id"] == "sorcerer"
+        and "mage-armor" in entry["spell_ids_by_level"]["1"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
+    assert any(
+        entry["class_id"] == "bard"
+        and "feather-fall" in entry["spell_ids_by_level"]["1"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
+    assert any(
+        entry["class_id"] == "sorcerer"
+        and "feather-fall" in entry["spell_ids_by_level"]["1"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
+    assert any(
+        entry["class_id"] == "wizard"
+        and "feather-fall" in entry["spell_ids_by_level"]["1"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
+    assert any(
         entry["class_id"] == "cleric" and "guidance" in entry["spell_ids_by_level"]["0"]
         for entry in class_spell_lists["class_spell_lists"]
     )
@@ -494,6 +549,10 @@ def test_first_ingested_corpus_content_exists() -> None:
     assert any(
         spell["spell_id"] == "magic-missile" for spell in level_one_spells["spells"]
     )
+    assert any(
+        spell["spell_id"] == "feather-fall" for spell in level_one_spells["spells"]
+    )
+    assert any(spell["spell_id"] == "mage-armor" for spell in level_one_spells["spells"])
     assert any(spell["spell_id"] == "command" for spell in level_one_spells["spells"])
     assert any(spell["spell_id"] == "sleep" for spell in level_one_spells["spells"])
     assert any(
@@ -512,6 +571,34 @@ def test_first_ingested_corpus_content_exists() -> None:
         spell["spell_id"] == "dispel-magic" for spell in level_three_spells["spells"]
     )
     assert any(spell["spell_id"] == "fly" for spell in level_three_spells["spells"])
+
+
+def test_requested_starter_spell_subset_exists_and_is_class_referenced() -> None:
+    """The starter spell subset should be available for level 1 to 5 builds."""
+
+    root = Path("data/compendium/spells")
+    spell_files = [
+        root / "level_0.json",
+        root / "level_1.json",
+        root / "level_2.json",
+        root / "level_3.json",
+    ]
+    spell_ids = {
+        spell["spell_id"]
+        for path in spell_files
+        for spell in json.loads(path.read_text())["spells"]
+    }
+    class_spell_lists = json.loads((root / "class_spell_lists.json").read_text())
+    referenced_spell_ids = {
+        spell_id
+        for entry in class_spell_lists["class_spell_lists"]
+        for spell_ids_by_level in entry["spell_ids_by_level"].values()
+        for spell_id in spell_ids_by_level
+    }
+
+    assert STARTER_SPELL_IDS.issubset(spell_ids)
+    assert STARTER_SPELL_IDS.issubset(referenced_spell_ids)
+    assert referenced_spell_ids.issubset(spell_ids)
 
 
 def test_rule_source_files_are_nonempty() -> None:
@@ -676,11 +763,15 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
     charm_person = next(
         spell for spell in level_one["spells"] if spell["spell_id"] == "charm-person"
     )
+    bless = next(spell for spell in level_one["spells"] if spell["spell_id"] == "bless")
     burning_hands = next(
         spell for spell in level_one["spells"] if spell["spell_id"] == "burning-hands"
     )
     shield = next(
         spell for spell in level_one["spells"] if spell["spell_id"] == "shield"
+    )
+    sleep = next(
+        spell for spell in level_one["spells"] if spell["spell_id"] == "sleep"
     )
     web = next(spell for spell in level_two["spells"] if spell["spell_id"] == "web")
     spiritual_weapon = next(
@@ -691,8 +782,14 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
     counterspell = next(
         spell for spell in level_three["spells"] if spell["spell_id"] == "counterspell"
     )
+    dispel_magic = next(
+        spell for spell in level_three["spells"] if spell["spell_id"] == "dispel-magic"
+    )
     fireball = next(
         spell for spell in level_three["spells"] if spell["spell_id"] == "fireball"
+    )
+    lightning_bolt = next(
+        spell for spell in level_three["spells"] if spell["spell_id"] == "lightning-bolt"
     )
     spirit_guardians = next(
         spell
@@ -710,6 +807,8 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
     assert eldritch_blast["attack"] == "ranged spell attack"
     assert "2 beams" in eldritch_blast["higher_level"]
 
+    assert bless["concentration"] is True
+
     assert charm_person["save"] == "wisdom"
     assert CHARM_PERSON_TEXT in charm_person["description"]
     assert "one additional creature" in charm_person["higher_level"]
@@ -724,6 +823,17 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
     )
     assert "+5 bonus to AC" in shield["description"]
 
+    assert sleep["concentration"] is True
+    assert sleep["save"] == "wisdom"
+    assert (
+        "Incapacitated condition until the end of its next turn"
+        in sleep["description"]
+    )
+    assert (
+        "have Immunity to the Exhaustion condition automatically succeed"
+        in sleep["description"]
+    )
+
     assert web["concentration"] is True
     assert web["area"] == "20-foot Cube"
     assert WEB_TEXT in web["description"]
@@ -735,6 +845,12 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
 
     assert counterspell["save"] == "constitution"
     assert COUNTERSPELL_TEXT in counterspell["description"]
+
+    assert "Any ongoing spell of level 3 or lower" in dispel_magic["description"]
+    assert "For each ongoing spell of level 4 or higher" in dispel_magic["description"]
+    assert "equal to or less than the level of the spell slot you use" in dispel_magic[
+        "higher_level"
+    ]
 
     assert fireball["area"] == "20-foot-radius Sphere"
     assert FIREBALL_TEXT in fireball["description"]
