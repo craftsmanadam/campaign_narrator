@@ -276,6 +276,18 @@ files = [
 ]
 
 [[package]]
+name = "multi-dice"
+version = "1.0.1"
+description = "A dice rolling package focused on flexibility"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "multi_dice-1.0.1-py3-none-any.whl", hash = "sha256:4e66fbd40e9a394225ed64c4e2253f86a86ad664f6f8565d535fc0dae2b0d1f8"},
+    {file = "multi_dice-1.0.1.tar.gz", hash = "sha256:c08e778c632a75cc804134ef79ad78f5c3890169717ce9677ef787fd85ab9dd0"},
+]
+
+[[package]]
 name = "packaging"
 version = "26.0"
 description = "Core utilities for Python packages"
@@ -532,4 +544,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14"
-content-hash = "425faf3a9f9a4462b6bcd53d9df406bfff7cd26c062e5f3ce368de1f0b46345e"
+content-hash = "9351c7ab76356dd2c07c040d984db2a357afd405ba12988c98afbbb5b7a4cf02"
