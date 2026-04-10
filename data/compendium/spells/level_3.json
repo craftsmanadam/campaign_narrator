@@ -12,6 +12,28 @@
       "description": "When you see a creature within range casting a spell with components, force it to make a Constitution save; on a failed save the spell fizzles and the action is wasted without expending the slot."
     },
     {
+      "spell_id": "dispel-magic",
+      "name": "Dispel Magic",
+      "level": 3,
+      "school": "Abjuration",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Choose a creature, object, or magical effect within range; ongoing spells of level 3 or lower end, and higher-level spells end on a successful spellcasting ability check."
+    },
+    {
+      "spell_id": "fear",
+      "name": "Fear",
+      "level": 3,
+      "school": "Illusion",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Each creature in a 30-foot cone makes a Wisdom save or drops what it is holding and becomes frightened, dashing away from you by the safest route while it can still see you."
+    },
+    {
       "spell_id": "fireball",
       "name": "Fireball",
       "level": 3,
@@ -21,6 +43,39 @@
       "components": ["V", "S", "M"],
       "duration": "Instantaneous",
       "description": "A bright streak erupts into a 20-foot-radius sphere; creatures in the area make a Dexterity save, taking 8d6 fire damage on a failure or half on a success."
+    },
+    {
+      "spell_id": "fly",
+      "name": "Fly",
+      "level": 3,
+      "school": "Transmutation",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 10 minutes",
+      "description": "Touch a willing creature to grant it a fly speed of 60 feet and the ability to hover until the spell ends."
+    },
+    {
+      "spell_id": "haste",
+      "name": "Haste",
+      "level": 3,
+      "school": "Transmutation",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Choose a willing creature to double its Speed, grant +2 AC, advantage on Dexterity saves, and an extra limited action each turn until the spell ends."
+    },
+    {
+      "spell_id": "hypnotic-pattern",
+      "name": "Hypnotic Pattern",
+      "level": 3,
+      "school": "Illusion",
+      "casting_time": "Action",
+      "range": "120 feet",
+      "components": ["S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Create a twisting pattern of colors in a 30-foot cube; creatures who can see it make Wisdom saves or become charmed, incapacitated, and speed 0 until damaged or shaken free."
     },
     {
       "spell_id": "lightning-bolt",
@@ -43,6 +98,50 @@
       "components": ["V"],
       "duration": "Instantaneous",
       "description": "Up to six creatures you can see within range regain hit points equal to 2d4 plus your spellcasting ability modifier."
+    },
+    {
+      "spell_id": "revivify",
+      "name": "Revivify",
+      "level": 3,
+      "school": "Necromancy",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S", "M"],
+      "duration": "Instantaneous",
+      "description": "Touch a creature that died within the last minute to restore it to life with 1 hit point, provided it did not die of old age and has the necessary body parts."
+    },
+    {
+      "spell_id": "sending",
+      "name": "Sending",
+      "level": 3,
+      "school": "Divination",
+      "casting_time": "Action",
+      "range": "Unlimited",
+      "components": ["V", "S", "M"],
+      "duration": "Instantaneous",
+      "description": "Send a short message of 25 words or fewer to a creature you know or that has been described by someone who has met it; the target can reply immediately."
+    },
+    {
+      "spell_id": "spirit-guardians",
+      "name": "Spirit Guardians",
+      "level": 3,
+      "school": "Conjuration",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 10 minutes",
+      "description": "Protective spirits surround you in a 15-foot emanation, slowing enemies and forcing them to make Wisdom saves or take radiant or necrotic damage when they enter or end turns there."
+    },
+    {
+      "spell_id": "stinking-cloud",
+      "name": "Stinking Cloud",
+      "level": 3,
+      "school": "Conjuration",
+      "casting_time": "Action",
+      "range": "90 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Create a heavily obscured 20-foot-radius sphere of nauseating gas; creatures starting their turns there make Constitution saves or are poisoned and unable to take actions or bonus actions that turn."
     }
   ]
 }

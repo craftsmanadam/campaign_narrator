@@ -1,3 +1,26 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "imp",
+      "name": "Imp",
+      "monster_type": "fiend",
+      "size": "Tiny",
+      "alignment": "lawful_evil",
+      "challenge_rating": 1,
+      "armor_class": 13,
+      "hit_points": 21,
+      "speed": {
+        "walk": 20,
+        "fly": 40
+      },
+      "languages": ["Common", "Infernal"],
+      "senses": ["Darkvision 120 ft.", "Passive Perception 11"],
+      "traits": [
+        "Magic Resistance",
+        "Sting",
+        "Invisibility",
+        "Shape-Shift"
+      ]
+    }
+  ]
 }

@@ -1,3 +1,24 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "dryad",
+      "name": "Dryad",
+      "monster_type": "fey",
+      "size": "Medium",
+      "alignment": "neutral",
+      "challenge_rating": 1,
+      "armor_class": 16,
+      "hit_points": 22,
+      "speed": {
+        "walk": 30
+      },
+      "languages": ["Elvish", "Sylvan"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 14"],
+      "traits": [
+        "Magic Resistance",
+        "Speak with Beasts and Plants",
+        "Thorn Burst"
+      ]
+    }
+  ]
 }

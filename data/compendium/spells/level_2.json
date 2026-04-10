@@ -34,6 +34,28 @@
       "description": "Teleport up to 30 feet to an unoccupied space you can see."
     },
     {
+      "spell_id": "hold-person",
+      "name": "Hold Person",
+      "level": 2,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Choose a humanoid you can see; on a failed Wisdom save it is paralyzed for the duration and repeats the save at the end of each of its turns."
+    },
+    {
+      "spell_id": "invisibility",
+      "name": "Invisibility",
+      "level": 2,
+      "school": "Illusion",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 hour",
+      "description": "A creature you touch gains the Invisible condition until the spell ends, though the spell ends early if the target attacks, deals damage, or casts a spell."
+    },
+    {
       "spell_id": "scorching-ray",
       "name": "Scorching Ray",
       "level": 2,
@@ -76,6 +98,39 @@
       "components": ["V", "S", "M"],
       "duration": "1 hour",
       "description": "See invisible creatures and objects as visible and perceive into the Ethereal Plane."
+    },
+    {
+      "spell_id": "spiritual-weapon",
+      "name": "Spiritual Weapon",
+      "level": 2,
+      "school": "Evocation",
+      "casting_time": "Bonus Action",
+      "range": "60 feet",
+      "components": ["V", "S"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Create a floating spectral force resembling a weapon; it appears within range, makes an immediate melee spell attack, and can be moved and used again with later bonus actions."
+    },
+    {
+      "spell_id": "suggestion",
+      "name": "Suggestion",
+      "level": 2,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["V", "M"],
+      "duration": "Concentration, up to 8 hours",
+      "description": "Suggest a reasonable course of activity in no more than 25 words to a creature that can hear and understand you; on a failed Wisdom save it is charmed and pursues the suggestion."
+    },
+    {
+      "spell_id": "web",
+      "name": "Web",
+      "level": 2,
+      "school": "Conjuration",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 hour",
+      "description": "Create a mass of sticky webs filling a 20-foot cube; the area is difficult terrain, lightly obscured, flammable, and can restrain creatures that fail the required save."
     }
   ]
 }

@@ -34,6 +34,17 @@
       "description": "One humanoid you can see makes a Wisdom save; on a failure it is charmed and friendly to you until the spell ends or you or your allies damage it."
     },
     {
+      "spell_id": "command",
+      "name": "Command",
+      "level": 1,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V"],
+      "duration": "Instantaneous",
+      "description": "Speak a one-word command to a creature that can hear and understand you; on a failed Wisdom save it follows the command on its next turn if able."
+    },
+    {
       "spell_id": "cure-wounds",
       "name": "Cure Wounds",
       "level": 1,
@@ -89,6 +100,28 @@
       "description": "Create ten magical berries that restore a small amount of nourishment and healing when eaten."
     },
     {
+      "spell_id": "heroism",
+      "name": "Heroism",
+      "level": 1,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "A willing creature you touch becomes immune to the frightened condition and gains temporary hit points equal to your spellcasting ability modifier at the start of each of its turns."
+    },
+    {
+      "spell_id": "hex",
+      "name": "Hex",
+      "level": 1,
+      "school": "Enchantment",
+      "casting_time": "Bonus Action",
+      "range": "90 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 hour",
+      "description": "Curse a creature you can see; you deal an extra 1d6 necrotic damage to it on attack hits and it has disadvantage on ability checks made with one chosen ability."
+    },
+    {
       "spell_id": "burning-hands",
       "name": "Burning Hands",
       "level": 1,
@@ -131,6 +164,17 @@
       "components": ["V", "S"],
       "duration": "Concentration, up to 10 minutes",
       "description": "Sense the presence of magic within 30 feet and, while concentrating, use the Magic action to perceive magical auras."
+    },
+    {
+      "spell_id": "sleep",
+      "name": "Sleep",
+      "level": 1,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S", "M"],
+      "duration": "Concentration, up to 1 minute",
+      "description": "Creatures in a 5-foot-radius sphere centered on a point within range make Wisdom saves or become unconscious for the duration until they take damage or are shaken awake."
     }
   ]
 }

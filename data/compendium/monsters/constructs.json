@@ -1,3 +1,24 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "animated-armor",
+      "name": "Animated Armor",
+      "monster_type": "construct",
+      "size": "Medium",
+      "alignment": "unaligned",
+      "challenge_rating": 1,
+      "armor_class": 18,
+      "hit_points": 33,
+      "speed": {
+        "walk": 25
+      },
+      "languages": ["None"],
+      "senses": ["Blindsight 60 ft.", "Passive Perception 6"],
+      "traits": [
+        "Immunities to Poison and Psychic",
+        "Multiattack",
+        "Slam"
+      ]
+    }
+  ]
 }

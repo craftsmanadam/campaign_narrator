@@ -1,6 +1,28 @@
 {
   "spells": [
     {
+      "spell_id": "acid-splash",
+      "name": "Acid Splash",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Create an acidic bubble at a point within range; creatures in a 5-foot-radius sphere make a Dexterity save or take 1d6 acid damage."
+    },
+    {
+      "spell_id": "chill-touch",
+      "name": "Chill Touch",
+      "level": 0,
+      "school": "Necromancy",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Make a melee spell attack channeling grave-cold energy; on a hit the target takes 1d10 necrotic damage and cannot regain hit points until the end of your next turn."
+    },
+    {
       "spell_id": "guidance",
       "name": "Guidance",
       "level": 0,
@@ -67,6 +89,72 @@
       "description": "Make a ranged spell attack against a creature or object; on a hit it takes 1d10 fire damage, and unattended flammable objects can ignite."
     },
     {
+      "spell_id": "produce-flame",
+      "name": "Produce Flame",
+      "level": 0,
+      "school": "Conjuration",
+      "casting_time": "Bonus Action",
+      "range": "Self",
+      "components": ["V", "S"],
+      "duration": "10 minutes",
+      "description": "A flame appears in your hand shedding light; until it ends you can hurl it with a Magic action as a ranged spell attack that deals 1d8 fire damage on a hit."
+    },
+    {
+      "spell_id": "ray-of-frost",
+      "name": "Ray of Frost",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "A frigid beam streaks toward a creature; on a hit it takes 1d8 cold damage and its Speed is reduced by 10 feet until the start of your next turn."
+    },
+    {
+      "spell_id": "sacred-flame",
+      "name": "Sacred Flame",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Flame-like radiance descends on a creature you can see; it makes a Dexterity save or takes 1d8 radiant damage, gaining no benefit from half or three-quarters cover for the save."
+    },
+    {
+      "spell_id": "shocking-grasp",
+      "name": "Shocking Grasp",
+      "level": 0,
+      "school": "Evocation",
+      "casting_time": "Action",
+      "range": "Touch",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": "Make a melee spell attack charged with lightning; on a hit the target takes 1d8 lightning damage and cannot make opportunity attacks until the start of its next turn."
+    },
+    {
+      "spell_id": "thaumaturgy",
+      "name": "Thaumaturgy",
+      "level": 0,
+      "school": "Transmutation",
+      "casting_time": "Action",
+      "range": "30 feet",
+      "components": ["V"],
+      "duration": "Up to 1 minute",
+      "description": "Create a minor supernatural effect such as a booming voice, flickering flames, briefly opening or shutting doors and windows, strange sounds, or harmless tremors."
+    },
+    {
+      "spell_id": "true-strike",
+      "name": "True Strike",
+      "level": 0,
+      "school": "Divination",
+      "casting_time": "Action",
+      "range": "Self",
+      "components": ["S", "M"],
+      "duration": "Instantaneous",
+      "description": "Guided by magical insight, make one weapon attack using your spellcasting ability for the attack and damage rolls; the damage can be radiant or the weapon's normal damage type."
+    },
+    {
       "spell_id": "eldritch-blast",
       "name": "Eldritch Blast",
       "level": 0,
@@ -76,6 +164,17 @@
       "components": ["V", "S"],
       "duration": "Instantaneous",
       "description": "Launch a crackling beam of magical force as a ranged spell attack, with additional beams gained at higher character levels."
+    },
+    {
+      "spell_id": "vicious-mockery",
+      "name": "Vicious Mockery",
+      "level": 0,
+      "school": "Enchantment",
+      "casting_time": "Action",
+      "range": "60 feet",
+      "components": ["V"],
+      "duration": "Instantaneous",
+      "description": "Unleash magically laced insults at one creature that can see or hear you; on a failed Wisdom save it takes 1d6 psychic damage and has disadvantage on its next attack roll before the end of its next turn."
     }
   ]
 }

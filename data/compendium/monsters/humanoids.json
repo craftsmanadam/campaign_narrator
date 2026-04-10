@@ -18,6 +18,25 @@
         "Training",
         "Club"
       ]
+    },
+    {
+      "monster_id": "bandit",
+      "name": "Bandit",
+      "monster_type": "humanoid",
+      "size": "Medium or Small",
+      "alignment": "neutral",
+      "challenge_rating": "1/8",
+      "armor_class": 12,
+      "hit_points": 11,
+      "speed": {
+        "walk": 30
+      },
+      "languages": ["Common", "Thieves' Cant"],
+      "senses": ["Passive Perception 10"],
+      "traits": [
+        "Scimitar",
+        "Light Crossbow"
+      ]
     }
   ]
 }

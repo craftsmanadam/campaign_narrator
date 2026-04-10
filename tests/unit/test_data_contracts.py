@@ -198,10 +198,20 @@ def test_first_ingested_corpus_content_exists() -> None:
     aberrations = json.loads(
         Path("data/compendium/monsters/aberrations.json").read_text()
     )
+    beasts = json.loads(Path("data/compendium/monsters/beasts.json").read_text())
     celestials = json.loads(
         Path("data/compendium/monsters/celestials.json").read_text()
     )
+    constructs = json.loads(
+        Path("data/compendium/monsters/constructs.json").read_text()
+    )
     dragons = json.loads(Path("data/compendium/monsters/dragons.json").read_text())
+    fey = json.loads(Path("data/compendium/monsters/fey.json").read_text())
+    fiends = json.loads(Path("data/compendium/monsters/fiends.json").read_text())
+    humanoids = json.loads(Path("data/compendium/monsters/humanoids.json").read_text())
+    oozes = json.loads(Path("data/compendium/monsters/oozes.json").read_text())
+    plants = json.loads(Path("data/compendium/monsters/plants.json").read_text())
+    undead = json.loads(Path("data/compendium/monsters/undead.json").read_text())
     common_items = json.loads(
         Path("data/compendium/magic_items/common.json").read_text()
     )
@@ -223,11 +233,23 @@ def test_first_ingested_corpus_content_exists() -> None:
     assert any(
         monster["monster_id"] == "aboleth" for monster in aberrations["monsters"]
     )
+    assert any(monster["monster_id"] == "wolf" for monster in beasts["monsters"])
     assert any(monster["monster_id"] == "couatl" for monster in celestials["monsters"])
+    assert any(
+        monster["monster_id"] == "animated-armor" for monster in constructs["monsters"]
+    )
     assert any(
         monster["monster_id"] == "copper-dragon-wyrmling"
         for monster in dragons["monsters"]
     )
+    assert any(monster["monster_id"] == "dryad" for monster in fey["monsters"])
+    assert any(monster["monster_id"] == "imp" for monster in fiends["monsters"])
+    assert any(monster["monster_id"] == "bandit" for monster in humanoids["monsters"])
+    assert any(
+        monster["monster_id"] == "gelatinous-cube" for monster in oozes["monsters"]
+    )
+    assert any(monster["monster_id"] == "shrieker" for monster in plants["monsters"])
+    assert any(monster["monster_id"] == "skeleton" for monster in undead["monsters"])
     assert any(
         item["item_id"] == "potion-of-healing" for item in common_items["magic_items"]
     )
@@ -238,15 +260,29 @@ def test_first_ingested_corpus_content_exists() -> None:
         item["item_id"] == "elixir-of-health" for item in rare_items["magic_items"]
     )
     assert any(spell["spell_id"] == "light" for spell in cantrips["spells"])
+    assert any(spell["spell_id"] == "acid-splash" for spell in cantrips["spells"])
+    assert any(spell["spell_id"] == "vicious-mockery" for spell in cantrips["spells"])
     assert any(
         spell["spell_id"] == "magic-missile" for spell in level_one_spells["spells"]
     )
+    assert any(spell["spell_id"] == "command" for spell in level_one_spells["spells"])
+    assert any(spell["spell_id"] == "sleep" for spell in level_one_spells["spells"])
     assert any(
         spell["spell_id"] == "misty-step" for spell in level_two_spells["spells"]
     )
     assert any(
+        spell["spell_id"] == "hold-person" for spell in level_two_spells["spells"]
+    )
+    assert any(
+        spell["spell_id"] == "suggestion" for spell in level_two_spells["spells"]
+    )
+    assert any(
         spell["spell_id"] == "fireball" for spell in level_three_spells["spells"]
     )
+    assert any(
+        spell["spell_id"] == "dispel-magic" for spell in level_three_spells["spells"]
+    )
+    assert any(spell["spell_id"] == "fly" for spell in level_three_spells["spells"])
 
 
 def test_rule_source_files_are_nonempty() -> None:

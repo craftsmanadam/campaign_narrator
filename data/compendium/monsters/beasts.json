@@ -1,3 +1,23 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "wolf",
+      "name": "Wolf",
+      "monster_type": "beast",
+      "size": "Medium",
+      "alignment": "unaligned",
+      "challenge_rating": "1/4",
+      "armor_class": 12,
+      "hit_points": 11,
+      "speed": {
+        "walk": 40
+      },
+      "languages": ["None"],
+      "senses": ["Passive Perception 15"],
+      "traits": [
+        "Pack Tactics",
+        "Bite"
+      ]
+    }
+  ]
 }

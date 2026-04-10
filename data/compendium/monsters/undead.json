@@ -1,3 +1,64 @@
 {
-  "monsters": []
+  "monsters": [
+    {
+      "monster_id": "skeleton",
+      "name": "Skeleton",
+      "monster_type": "undead",
+      "size": "Medium",
+      "alignment": "lawful_evil",
+      "challenge_rating": "1/4",
+      "armor_class": 14,
+      "hit_points": 13,
+      "speed": {
+        "walk": 30
+      },
+      "languages": ["Understands Common plus one other language but can't speak"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 9"],
+      "traits": [
+        "Vulnerability to Bludgeoning",
+        "Shortsword",
+        "Shortbow"
+      ]
+    },
+    {
+      "monster_id": "wight",
+      "name": "Wight",
+      "monster_type": "undead",
+      "size": "Medium",
+      "alignment": "neutral_evil",
+      "challenge_rating": 3,
+      "armor_class": 14,
+      "hit_points": 82,
+      "speed": {
+        "walk": 30
+      },
+      "languages": ["Common plus one other language"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 13"],
+      "traits": [
+        "Sunlight Sensitivity",
+        "Necrotic Sword",
+        "Necrotic Bow",
+        "Life Drain"
+      ]
+    },
+    {
+      "monster_id": "zombie",
+      "name": "Zombie",
+      "monster_type": "undead",
+      "size": "Medium",
+      "alignment": "neutral_evil",
+      "challenge_rating": "1/4",
+      "armor_class": 8,
+      "hit_points": 15,
+      "speed": {
+        "walk": 20
+      },
+      "languages": ["Understands Common plus one other language but can't speak"],
+      "senses": ["Darkvision 60 ft.", "Passive Perception 8"],
+      "traits": [
+        "Undead Fortitude",
+        "Slam"
+      ]
+    }
+  ]
 }
