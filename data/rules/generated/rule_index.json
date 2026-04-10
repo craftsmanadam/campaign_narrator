@@ -48,6 +48,13 @@
     "adjudication/damage_healing.md",
     "adjudication/death_dying.md"
   ],
+  "equipment": [
+    "adjudication/equipment_overview.md",
+    "adjudication/weapon_properties.md",
+    "adjudication/armor_rules.md",
+    "adjudication/tools.md",
+    "adjudication/adventuring_gear.md"
+  ],
   "social_interaction": [
     "adjudication/social_interaction.md"
   ],

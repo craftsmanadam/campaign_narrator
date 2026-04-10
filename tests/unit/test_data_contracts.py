@@ -8,6 +8,10 @@ BARD_SKILL_CHOICES = 3
 SUBCLASS_ENTRY_LEVEL = 3
 BARD_SHORT_REST_TEXT = "regain all your expended uses of Bardic Inspiration"
 MONK_FOCUS_TEXT = "Your focus and martial training allow you to harness"
+LIGHT_WEAPON_TEXT = "When you take the Attack action on your turn and attack"
+ARMOR_TRAINING_TEXT = "If you wear Light, Medium, or Heavy armor and lack training"
+ONE_SLOT_PER_TURN_TEXT = "On a turn, you can expend only one spell slot to cast a spell"
+MATERIAL_HAND_TEXT = "hand free to access materials or a pouch"
 
 
 def test_data_contract_files_exist() -> None:
@@ -97,6 +101,11 @@ def test_data_contract_files_exist() -> None:
         Path("data/rules/source/adjudication/melee_attacks.md"),
         Path("data/rules/source/adjudication/damage_healing.md"),
         Path("data/rules/source/adjudication/death_dying.md"),
+        Path("data/rules/source/adjudication/equipment_overview.md"),
+        Path("data/rules/source/adjudication/weapon_properties.md"),
+        Path("data/rules/source/adjudication/armor_rules.md"),
+        Path("data/rules/source/adjudication/tools.md"),
+        Path("data/rules/source/adjudication/adventuring_gear.md"),
         Path("data/rules/source/adjudication/spellcasting_basics.md"),
         Path("docs/data-structures.md"),
         Path("TODO.md"),
@@ -552,6 +561,11 @@ def test_rule_source_files_are_nonempty() -> None:
         Path("data/rules/source/adjudication/melee_attacks.md"),
         Path("data/rules/source/adjudication/damage_healing.md"),
         Path("data/rules/source/adjudication/death_dying.md"),
+        Path("data/rules/source/adjudication/equipment_overview.md"),
+        Path("data/rules/source/adjudication/weapon_properties.md"),
+        Path("data/rules/source/adjudication/armor_rules.md"),
+        Path("data/rules/source/adjudication/tools.md"),
+        Path("data/rules/source/adjudication/adventuring_gear.md"),
         Path("data/rules/source/adjudication/spellcasting_basics.md"),
     ]
 
@@ -605,6 +619,32 @@ def test_additional_class_files_capture_exact_low_level_rules() -> None:
     assert "Cunning Strike" in rogue
     assert "Sorcery Points" in sorcerer
     assert "Innate Sorcery" in sorcerer
+
+
+def test_equipment_and_spellcasting_rule_files_capture_core_srd_details() -> None:
+    """Equipment and generic spellcasting files should preserve included SRD rules."""
+
+    equipment = Path("data/rules/source/adjudication/equipment_overview.md").read_text()
+    properties = Path("data/rules/source/adjudication/weapon_properties.md").read_text()
+    armor = Path("data/rules/source/adjudication/armor_rules.md").read_text()
+    tools = Path("data/rules/source/adjudication/tools.md").read_text()
+    gear = Path("data/rules/source/adjudication/adventuring_gear.md").read_text()
+    spellcasting = Path(
+        "data/rules/source/adjudication/spellcasting_basics.md"
+    ).read_text()
+
+    assert "fifty coins weigh a pound" in equipment
+    assert "Equipment fetches half its cost when sold" in equipment
+    assert LIGHT_WEAPON_TEXT in properties
+    assert "Push" in properties
+    assert ARMOR_TRAINING_TEXT in armor
+    assert "A creature can wear only one suit of armor at a time" in armor
+    assert "If you have proficiency with a tool, add your Proficiency Bonus" in tools
+    assert "Thieves' Tools" in tools
+    assert "Potion of Healing" in gear
+    assert "Portable Ram" in gear
+    assert ONE_SLOT_PER_TURN_TEXT in spellcasting
+    assert MATERIAL_HAND_TEXT in spellcasting
 
 
 def test_example_fixture_content_exists_for_reference_data() -> None:
