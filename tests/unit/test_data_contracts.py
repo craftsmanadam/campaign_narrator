@@ -6,6 +6,8 @@ from pathlib import Path
 MEDIUM_SPEED_FEET = 30
 BARD_SKILL_CHOICES = 3
 SUBCLASS_ENTRY_LEVEL = 3
+BARD_SHORT_REST_TEXT = "regain all your expended uses of Bardic Inspiration"
+MONK_FOCUS_TEXT = "Your focus and martial training allow you to harness"
 
 
 def test_data_contract_files_exist() -> None:
@@ -570,7 +572,7 @@ def test_representative_class_files_capture_exact_low_level_rules() -> None:
     assert "Rage lasts until the end of your next turn" in barbarian
     assert "At level 1, Rage uses: `2`" in barbarian
     assert "At level 3, prepared spells: `6`" in bard
-    assert "regain all your expended uses of Bardic Inspiration when you finish a Short or Long Rest" in bard
+    assert BARD_SHORT_REST_TEXT in bard
     assert "You can use this class's Channel Divinity twice" in cleric
     assert "Divine Spark" in cleric
     assert "You know four Beast forms" in druid
@@ -579,6 +581,30 @@ def test_representative_class_files_capture_exact_low_level_rules() -> None:
     assert "At level 3, Pact Magic slot level: `2`" in warlock
     assert "It starts with six level 1 Wizard spells of your choice" in wizard
     assert "Arcane Recovery" in wizard
+
+
+def test_additional_class_files_capture_exact_low_level_rules() -> None:
+    """The second class batch should also carry exact low-level SRD mechanics."""
+
+    fighter = Path("data/rules/source/creation/classes/fighter.md").read_text()
+    monk = Path("data/rules/source/creation/classes/monk.md").read_text()
+    paladin = Path("data/rules/source/creation/classes/paladin.md").read_text()
+    ranger = Path("data/rules/source/creation/classes/ranger.md").read_text()
+    rogue = Path("data/rules/source/creation/classes/rogue.md").read_text()
+    sorcerer = Path("data/rules/source/creation/classes/sorcerer.md").read_text()
+
+    assert "You can use this feature twice" in fighter
+    assert "you can take one additional action, except the Magic action" in fighter
+    assert MONK_FOCUS_TEXT in monk
+    assert "At level 2, Focus Points: `2`" in monk
+    assert "pool of healing power" in paladin
+    assert "You can use this class's Channel Divinity twice" in paladin
+    assert "Hunter's Mark" in ranger
+    assert "prepared spells: `6`" in ranger
+    assert "Sneak Attack" in rogue
+    assert "Cunning Strike" in rogue
+    assert "Sorcery Points" in sorcerer
+    assert "Innate Sorcery" in sorcerer
 
 
 def test_example_fixture_content_exists_for_reference_data() -> None:
