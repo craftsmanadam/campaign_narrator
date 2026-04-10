@@ -34,6 +34,38 @@
     "legendary",
     "artifact"
   ],
+  "conditions": [
+    "blinded",
+    "charmed",
+    "deafened",
+    "exhaustion",
+    "frightened",
+    "grappled",
+    "incapacitated",
+    "invisible",
+    "paralyzed",
+    "petrified",
+    "poisoned",
+    "prone",
+    "restrained",
+    "stunned",
+    "unconscious"
+  ],
+  "damage_types": [
+    "acid",
+    "bludgeoning",
+    "cold",
+    "fire",
+    "force",
+    "lightning",
+    "necrotic",
+    "piercing",
+    "poison",
+    "psychic",
+    "radiant",
+    "slashing",
+    "thunder"
+  ],
   "interaction_outcomes": [
     "friendly",
     "neutral",

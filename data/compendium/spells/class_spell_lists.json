@@ -1,0 +1,233 @@
+{
+  "class_spell_lists": [
+    {
+      "class_id": "barbarian",
+      "spell_ids_by_level": {
+        "0": [],
+        "1": [],
+        "2": [],
+        "3": []
+      }
+    },
+    {
+      "class_id": "bard",
+      "spell_ids_by_level": {
+        "0": ["true-strike", "vicious-mockery"],
+        "1": [
+          "charm-person",
+          "detect-magic",
+          "healing-word",
+          "heroism",
+          "sleep",
+          "thunderwave"
+        ],
+        "2": [
+          "hold-person",
+          "invisibility",
+          "see-invisibility",
+          "shatter",
+          "suggestion"
+        ],
+        "3": [
+          "dispel-magic",
+          "fear",
+          "hypnotic-pattern",
+          "sending",
+          "stinking-cloud"
+        ]
+      }
+    },
+    {
+      "class_id": "cleric",
+      "spell_ids_by_level": {
+        "0": ["guidance", "sacred-flame", "thaumaturgy"],
+        "1": [
+          "bless",
+          "command",
+          "cure-wounds",
+          "detect-magic",
+          "guiding-bolt",
+          "healing-word"
+        ],
+        "2": ["hold-person", "spiritual-weapon"],
+        "3": [
+          "dispel-magic",
+          "mass-healing-word",
+          "revivify",
+          "sending",
+          "spirit-guardians"
+        ]
+      }
+    },
+    {
+      "class_id": "druid",
+      "spell_ids_by_level": {
+        "0": ["guidance", "produce-flame"],
+        "1": [
+          "cure-wounds",
+          "detect-magic",
+          "goodberry",
+          "healing-word",
+          "thunderwave"
+        ],
+        "2": ["gust-of-wind", "hold-person"],
+        "3": ["dispel-magic", "revivify"]
+      }
+    },
+    {
+      "class_id": "fighter",
+      "spell_ids_by_level": {
+        "0": [],
+        "1": [],
+        "2": [],
+        "3": []
+      }
+    },
+    {
+      "class_id": "monk",
+      "spell_ids_by_level": {
+        "0": [],
+        "1": [],
+        "2": [],
+        "3": []
+      }
+    },
+    {
+      "class_id": "paladin",
+      "spell_ids_by_level": {
+        "0": [],
+        "1": ["bless", "heroism"],
+        "2": [],
+        "3": ["revivify"]
+      }
+    },
+    {
+      "class_id": "ranger",
+      "spell_ids_by_level": {
+        "0": [],
+        "1": ["goodberry", "hunters-mark", "thunderwave"],
+        "2": ["gust-of-wind"],
+        "3": ["revivify"]
+      }
+    },
+    {
+      "class_id": "rogue",
+      "spell_ids_by_level": {
+        "0": [],
+        "1": [],
+        "2": [],
+        "3": []
+      }
+    },
+    {
+      "class_id": "sorcerer",
+      "spell_ids_by_level": {
+        "0": [
+          "acid-splash",
+          "chill-touch",
+          "fire-bolt",
+          "light",
+          "mage-hand",
+          "minor-illusion",
+          "prestidigitation",
+          "ray-of-frost",
+          "shocking-grasp",
+          "true-strike"
+        ],
+        "1": [
+          "burning-hands",
+          "charm-person",
+          "detect-magic",
+          "magic-missile",
+          "shield"
+        ],
+        "2": [
+          "darkness",
+          "darkvision",
+          "gust-of-wind",
+          "hold-person",
+          "invisibility",
+          "misty-step",
+          "scorching-ray",
+          "see-invisibility",
+          "shatter",
+          "suggestion",
+          "web"
+        ],
+        "3": [
+          "counterspell",
+          "dispel-magic",
+          "fear",
+          "fireball",
+          "fly",
+          "haste",
+          "hypnotic-pattern",
+          "lightning-bolt",
+          "stinking-cloud"
+        ]
+      }
+    },
+    {
+      "class_id": "warlock",
+      "spell_ids_by_level": {
+        "0": ["chill-touch", "eldritch-blast", "true-strike"],
+        "1": ["charm-person", "hex"],
+        "2": ["hold-person", "invisibility", "suggestion"],
+        "3": [
+          "counterspell",
+          "dispel-magic",
+          "fear",
+          "fly",
+          "hypnotic-pattern"
+        ]
+      }
+    },
+    {
+      "class_id": "wizard",
+      "spell_ids_by_level": {
+        "0": [
+          "acid-splash",
+          "chill-touch",
+          "fire-bolt",
+          "light",
+          "mage-hand",
+          "minor-illusion",
+          "prestidigitation",
+          "ray-of-frost",
+          "shocking-grasp",
+          "true-strike"
+        ],
+        "1": [
+          "burning-hands",
+          "detect-magic",
+          "magic-missile",
+          "shield"
+        ],
+        "2": [
+          "darkness",
+          "darkvision",
+          "gust-of-wind",
+          "hold-person",
+          "invisibility",
+          "misty-step",
+          "scorching-ray",
+          "see-invisibility",
+          "shatter",
+          "web"
+        ],
+        "3": [
+          "counterspell",
+          "dispel-magic",
+          "fear",
+          "fireball",
+          "fly",
+          "haste",
+          "hypnotic-pattern",
+          "lightning-bolt",
+          "sending",
+          "stinking-cloud"
+        ]
+      }
+    }
+  ]
+}

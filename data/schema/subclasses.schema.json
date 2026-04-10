@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Subclass Collection",
+  "type": "object",
+  "required": ["subclasses"],
+  "properties": {
+    "subclasses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subclass_id", "class_id", "name"],
+        "properties": {
+          "subclass_id": { "type": "string" },
+          "class_id": { "type": "string" },
+          "name": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

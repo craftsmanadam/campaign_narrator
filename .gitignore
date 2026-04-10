@@ -179,3 +179,4 @@ docs/project
 tmp
 
 **/.DS_Store
+tests/reports/*

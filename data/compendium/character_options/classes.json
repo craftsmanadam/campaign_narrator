@@ -1,0 +1,100 @@
+{
+  "classes": [
+    {
+      "class_id": "barbarian",
+      "name": "Barbarian",
+      "hit_die": "d12",
+      "primary_abilities": ["strength"],
+      "spellcasting_ability": null,
+      "is_spellcaster": false
+    },
+    {
+      "class_id": "bard",
+      "name": "Bard",
+      "hit_die": "d8",
+      "primary_abilities": ["charisma"],
+      "spellcasting_ability": "charisma",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "cleric",
+      "name": "Cleric",
+      "hit_die": "d8",
+      "primary_abilities": ["wisdom"],
+      "spellcasting_ability": "wisdom",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "druid",
+      "name": "Druid",
+      "hit_die": "d8",
+      "primary_abilities": ["wisdom"],
+      "spellcasting_ability": "wisdom",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "fighter",
+      "name": "Fighter",
+      "hit_die": "d10",
+      "primary_abilities": ["strength", "dexterity"],
+      "spellcasting_ability": null,
+      "is_spellcaster": false
+    },
+    {
+      "class_id": "monk",
+      "name": "Monk",
+      "hit_die": "d8",
+      "primary_abilities": ["dexterity", "wisdom"],
+      "spellcasting_ability": null,
+      "is_spellcaster": false
+    },
+    {
+      "class_id": "paladin",
+      "name": "Paladin",
+      "hit_die": "d10",
+      "primary_abilities": ["strength", "charisma"],
+      "spellcasting_ability": "charisma",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "ranger",
+      "name": "Ranger",
+      "hit_die": "d10",
+      "primary_abilities": ["dexterity", "wisdom"],
+      "spellcasting_ability": "wisdom",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "rogue",
+      "name": "Rogue",
+      "hit_die": "d8",
+      "primary_abilities": ["dexterity"],
+      "spellcasting_ability": null,
+      "is_spellcaster": false
+    },
+    {
+      "class_id": "sorcerer",
+      "name": "Sorcerer",
+      "hit_die": "d6",
+      "primary_abilities": ["charisma"],
+      "spellcasting_ability": "charisma",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "warlock",
+      "name": "Warlock",
+      "hit_die": "d8",
+      "primary_abilities": ["charisma"],
+      "spellcasting_ability": "charisma",
+      "is_spellcaster": true
+    },
+    {
+      "class_id": "wizard",
+      "name": "Wizard",
+      "hit_die": "d6",
+      "primary_abilities": ["intelligence"],
+      "spellcasting_ability": "intelligence",
+      "is_spellcaster": true
+    }
+  ]
+}

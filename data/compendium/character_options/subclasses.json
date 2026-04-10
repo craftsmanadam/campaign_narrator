@@ -1,0 +1,64 @@
+{
+  "subclasses": [
+    {
+      "subclass_id": "path-of-the-berserker",
+      "class_id": "barbarian",
+      "name": "Path of the Berserker"
+    },
+    {
+      "subclass_id": "college-of-lore",
+      "class_id": "bard",
+      "name": "College of Lore"
+    },
+    {
+      "subclass_id": "life-domain",
+      "class_id": "cleric",
+      "name": "Life Domain"
+    },
+    {
+      "subclass_id": "circle-of-the-land",
+      "class_id": "druid",
+      "name": "Circle of the Land"
+    },
+    {
+      "subclass_id": "champion",
+      "class_id": "fighter",
+      "name": "Champion"
+    },
+    {
+      "subclass_id": "warrior-of-the-open-hand",
+      "class_id": "monk",
+      "name": "Warrior of the Open Hand"
+    },
+    {
+      "subclass_id": "oath-of-devotion",
+      "class_id": "paladin",
+      "name": "Oath of Devotion"
+    },
+    {
+      "subclass_id": "hunter",
+      "class_id": "ranger",
+      "name": "Hunter"
+    },
+    {
+      "subclass_id": "thief",
+      "class_id": "rogue",
+      "name": "Thief"
+    },
+    {
+      "subclass_id": "draconic-sorcery",
+      "class_id": "sorcerer",
+      "name": "Draconic Sorcery"
+    },
+    {
+      "subclass_id": "fiend-patron",
+      "class_id": "warlock",
+      "name": "Fiend Patron"
+    },
+    {
+      "subclass_id": "evoker",
+      "class_id": "wizard",
+      "name": "Evoker"
+    }
+  ]
+}

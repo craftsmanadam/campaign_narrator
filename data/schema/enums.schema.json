@@ -7,6 +7,10 @@
     "npc_statuses",
     "quest_statuses",
     "campaign_statuses",
+    "monster_types",
+    "item_rarities",
+    "conditions",
+    "damage_types",
     "interaction_outcomes"
   ],
   "properties": {
@@ -23,6 +27,22 @@
       "items": { "type": "string" }
     },
     "campaign_statuses": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "monster_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "item_rarities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "conditions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "damage_types": {
       "type": "array",
       "items": { "type": "string" }
     },

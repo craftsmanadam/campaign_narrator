@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Species Collection",
+  "type": "object",
+  "required": ["species"],
+  "properties": {
+    "species": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["species_id", "name", "playable", "source_section"],
+        "properties": {
+          "species_id": { "type": "string" },
+          "name": { "type": "string" },
+          "playable": { "type": "boolean" },
+          "source_section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

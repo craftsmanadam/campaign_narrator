@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Feat Collection",
+  "type": "object",
+  "required": ["feat_categories", "feats"],
+  "properties": {
+    "feat_categories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "feats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["feat_id", "name", "category"],
+        "properties": {
+          "feat_id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

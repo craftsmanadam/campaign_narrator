@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Origin Collection",
+  "type": "object",
+  "required": ["origins"],
+  "properties": {
+    "origins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["origin_id", "name", "source_section"],
+        "properties": {
+          "origin_id": { "type": "string" },
+          "name": { "type": "string" },
+          "source_section": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

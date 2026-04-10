@@ -1,0 +1,24 @@
+{
+  "origins": [
+    {
+      "origin_id": "acolyte",
+      "name": "Acolyte",
+      "source_section": "Character Backgrounds"
+    },
+    {
+      "origin_id": "criminal",
+      "name": "Criminal",
+      "source_section": "Character Backgrounds"
+    },
+    {
+      "origin_id": "sage",
+      "name": "Sage",
+      "source_section": "Character Backgrounds"
+    },
+    {
+      "origin_id": "soldier",
+      "name": "Soldier",
+      "source_section": "Character Backgrounds"
+    }
+  ]
+}

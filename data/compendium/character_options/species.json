@@ -1,0 +1,58 @@
+{
+  "species": [
+    {
+      "species_id": "dragonborn",
+      "name": "Dragonborn",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "dwarf",
+      "name": "Dwarf",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "elf",
+      "name": "Elf",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "gnome",
+      "name": "Gnome",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "goliath",
+      "name": "Goliath",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "halfling",
+      "name": "Halfling",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "human",
+      "name": "Human",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "orc",
+      "name": "Orc",
+      "playable": true,
+      "source_section": "Character Species"
+    },
+    {
+      "species_id": "tiefling",
+      "name": "Tiefling",
+      "playable": true,
+      "source_section": "Character Species"
+    }
+  ]
+}

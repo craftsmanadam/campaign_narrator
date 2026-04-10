@@ -27,10 +27,20 @@ def test_data_contract_files_exist() -> None:
         Path("data/compendium/magic_items/common.json"),
         Path("data/compendium/magic_items/uncommon.json"),
         Path("data/compendium/magic_items/rare.json"),
+        Path("data/compendium/equipment/weapons.json"),
+        Path("data/compendium/equipment/armor.json"),
+        Path("data/compendium/equipment/tools.json"),
+        Path("data/compendium/equipment/adventuring_gear.json"),
+        Path("data/compendium/character_options/species.json"),
+        Path("data/compendium/character_options/origins.json"),
+        Path("data/compendium/character_options/feats.json"),
+        Path("data/compendium/character_options/classes.json"),
+        Path("data/compendium/character_options/subclasses.json"),
         Path("data/compendium/spells/level_0.json"),
         Path("data/compendium/spells/level_1.json"),
         Path("data/compendium/spells/level_2.json"),
         Path("data/compendium/spells/level_3.json"),
+        Path("data/compendium/spells/class_spell_lists.json"),
         Path("data/rules/source/creation/character_creation_overview.md"),
         Path("data/rules/source/creation/ability_scores.md"),
         Path("data/rules/source/creation/species.md"),
@@ -73,6 +83,8 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
             "quest_statuses",
             "monster_types",
             "item_rarities",
+            "conditions",
+            "damage_types",
         },
         Path("data/narrative/campaign.json"): {
             "campaign_id",
@@ -110,10 +122,23 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
         Path("data/compendium/magic_items/common.json"): {"magic_items"},
         Path("data/compendium/magic_items/uncommon.json"): {"magic_items"},
         Path("data/compendium/magic_items/rare.json"): {"magic_items"},
+        Path("data/compendium/equipment/weapons.json"): {"weapons"},
+        Path("data/compendium/equipment/armor.json"): {"armor"},
+        Path("data/compendium/equipment/tools.json"): {"tools"},
+        Path("data/compendium/equipment/adventuring_gear.json"): {"adventuring_gear"},
+        Path("data/compendium/character_options/species.json"): {"species"},
+        Path("data/compendium/character_options/origins.json"): {"origins"},
+        Path("data/compendium/character_options/feats.json"): {
+            "feat_categories",
+            "feats",
+        },
+        Path("data/compendium/character_options/classes.json"): {"classes"},
+        Path("data/compendium/character_options/subclasses.json"): {"subclasses"},
         Path("data/compendium/spells/level_0.json"): {"spells"},
         Path("data/compendium/spells/level_1.json"): {"spells"},
         Path("data/compendium/spells/level_2.json"): {"spells"},
         Path("data/compendium/spells/level_3.json"): {"spells"},
+        Path("data/compendium/spells/class_spell_lists.json"): {"class_spell_lists"},
     }
 
     for path, required_keys in expected_keys.items():
@@ -133,6 +158,13 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     world_state = json.loads(Path("data/state/world_state.json").read_text())
     campaign_state = json.loads(Path("data/state/campaign_state.json").read_text())
     scenarios = json.loads(Path("data/scenarios/test_scenarios.json").read_text())
+    weapons = json.loads(Path("data/compendium/equipment/weapons.json").read_text())
+    armor = json.loads(Path("data/compendium/equipment/armor.json").read_text())
+    tools = json.loads(Path("data/compendium/equipment/tools.json").read_text())
+    gear = json.loads(
+        Path("data/compendium/equipment/adventuring_gear.json").read_text()
+    )
+    feats = json.loads(Path("data/compendium/character_options/feats.json").read_text())
 
     assert campaign["campaign_id"] == ""
     assert campaign["name"] == ""
@@ -146,6 +178,11 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     assert world_state["active_quest_ids"] == []
     assert campaign_state["npc_relationships"] == {}
     assert scenarios["scenarios"] == []
+    assert weapons["weapons"] == []
+    assert armor["armor"] == []
+    assert tools["tools"] == []
+    assert gear["adventuring_gear"] == []
+    assert feats["feats"] == []
 
 
 def test_live_compendium_files_match_their_wrappers() -> None:
@@ -172,6 +209,20 @@ def test_live_compendium_files_match_their_wrappers() -> None:
         Path("data/compendium/magic_items/uncommon.json"),
         Path("data/compendium/magic_items/rare.json"),
     ]
+    equipment_paths = [
+        Path("data/compendium/equipment/weapons.json"),
+        Path("data/compendium/equipment/armor.json"),
+        Path("data/compendium/equipment/tools.json"),
+        Path("data/compendium/equipment/adventuring_gear.json"),
+    ]
+    option_paths = [
+        Path("data/compendium/character_options/species.json"),
+        Path("data/compendium/character_options/origins.json"),
+        Path("data/compendium/character_options/feats.json"),
+        Path("data/compendium/character_options/classes.json"),
+        Path("data/compendium/character_options/subclasses.json"),
+        Path("data/compendium/spells/class_spell_lists.json"),
+    ]
     spell_paths = [
         Path("data/compendium/spells/level_0.json"),
         Path("data/compendium/spells/level_1.json"),
@@ -190,6 +241,55 @@ def test_live_compendium_files_match_their_wrappers() -> None:
     for path in spell_paths:
         parsed = json.loads(path.read_text())
         assert isinstance(parsed["spells"], list)
+
+    for path in equipment_paths:
+        parsed = json.loads(path.read_text())
+        assert isinstance(next(iter(parsed.values())), list)
+
+    for path in option_paths:
+        parsed = json.loads(path.read_text())
+        for value in parsed.values():
+            assert isinstance(value, list)
+
+
+def test_structured_character_options_and_spell_lists_exist() -> None:
+    """Starter character options should include the top-level playable set."""
+
+    species = json.loads(
+        Path("data/compendium/character_options/species.json").read_text()
+    )
+    origins = json.loads(
+        Path("data/compendium/character_options/origins.json").read_text()
+    )
+    classes = json.loads(
+        Path("data/compendium/character_options/classes.json").read_text()
+    )
+    subclasses = json.loads(
+        Path("data/compendium/character_options/subclasses.json").read_text()
+    )
+    class_spell_lists = json.loads(
+        Path("data/compendium/spells/class_spell_lists.json").read_text()
+    )
+
+    assert any(entry["species_id"] == "human" for entry in species["species"])
+    assert any(entry["species_id"] == "tiefling" for entry in species["species"])
+    assert any(entry["origin_id"] == "acolyte" for entry in origins["origins"])
+    assert any(entry["origin_id"] == "soldier" for entry in origins["origins"])
+    assert any(entry["class_id"] == "wizard" for entry in classes["classes"])
+    assert any(entry["class_id"] == "fighter" for entry in classes["classes"])
+    assert any(
+        entry["subclass_id"] == "path-of-the-berserker"
+        for entry in subclasses["subclasses"]
+    )
+    assert any(
+        entry["class_id"] == "wizard"
+        and "magic-missile" in entry["spell_ids_by_level"]["1"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
+    assert any(
+        entry["class_id"] == "cleric" and "guidance" in entry["spell_ids_by_level"]["0"]
+        for entry in class_spell_lists["class_spell_lists"]
+    )
 
 
 def test_first_ingested_corpus_content_exists() -> None:
