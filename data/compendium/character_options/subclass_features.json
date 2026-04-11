@@ -1,0 +1,165 @@
+{
+  "subclass_features": [
+    {
+      "subclass_id": "path-of-the-berserker",
+      "class_id": "barbarian",
+      "level": 3,
+      "feature_ids": ["frenzy"],
+      "features": [
+        {
+          "feature_id": "frenzy",
+          "name": "Frenzy",
+          "summary": "While raging, the Berserker can deal extra damage once per turn with Reckless Attack."
+        }
+      ]
+    },
+    {
+      "subclass_id": "college-of-lore",
+      "class_id": "bard",
+      "level": 3,
+      "feature_ids": ["cutting-words"],
+      "features": [
+        {
+          "feature_id": "cutting-words",
+          "name": "Cutting Words",
+          "summary": "The Bard can use Bardic Inspiration to reduce a creature's D20 Test or damage roll."
+        }
+      ]
+    },
+    {
+      "subclass_id": "life-domain",
+      "class_id": "cleric",
+      "level": 3,
+      "feature_ids": ["disciple-of-life", "life-domain-spells"],
+      "features": [
+        {
+          "feature_id": "disciple-of-life",
+          "name": "Disciple of Life",
+          "summary": "The Cleric improves healing from spells and gains the Life Domain spell package."
+        }
+      ]
+    },
+    {
+      "subclass_id": "circle-of-the-land",
+      "class_id": "druid",
+      "level": 3,
+      "feature_ids": ["circle-of-the-land-spells", "land-aid"],
+      "features": [
+        {
+          "feature_id": "land-aid",
+          "name": "Land's Aid",
+          "summary": "The Druid channels land magic to harm foes and heal allies in an area."
+        }
+      ]
+    },
+    {
+      "subclass_id": "champion",
+      "class_id": "fighter",
+      "level": 3,
+      "feature_ids": ["improved-critical", "remarkable-athlete"],
+      "features": [
+        {
+          "feature_id": "improved-critical",
+          "name": "Improved Critical",
+          "summary": "The Fighter scores a Critical Hit on a wider attack-roll range."
+        }
+      ]
+    },
+    {
+      "subclass_id": "warrior-of-the-open-hand",
+      "class_id": "monk",
+      "level": 3,
+      "feature_ids": ["open-hand-technique"],
+      "features": [
+        {
+          "feature_id": "open-hand-technique",
+          "name": "Open Hand Technique",
+          "summary": "The Monk adds control riders to Flurry of Blows attacks."
+        }
+      ]
+    },
+    {
+      "subclass_id": "oath-of-devotion",
+      "class_id": "paladin",
+      "level": 3,
+      "feature_ids": ["sacred-weapon", "oath-of-devotion-spells"],
+      "features": [
+        {
+          "feature_id": "sacred-weapon",
+          "name": "Sacred Weapon",
+          "summary": "The Paladin uses Channel Divinity to imbue a weapon with divine power."
+        }
+      ]
+    },
+    {
+      "subclass_id": "hunter",
+      "class_id": "ranger",
+      "level": 3,
+      "feature_ids": ["hunters-lore", "prey"],
+      "features": [
+        {
+          "feature_id": "prey",
+          "name": "Hunter's Prey",
+          "summary": "The Ranger chooses a combat benefit that improves attacks against chosen prey."
+        }
+      ]
+    },
+    {
+      "subclass_id": "thief",
+      "class_id": "rogue",
+      "level": 3,
+      "feature_ids": ["fast-hands", "second-story-work"],
+      "features": [
+        {
+          "feature_id": "fast-hands",
+          "name": "Fast Hands",
+          "summary": "The Rogue expands Cunning Action with quick object and tool interactions."
+        }
+      ]
+    },
+    {
+      "subclass_id": "draconic-sorcery",
+      "class_id": "sorcerer",
+      "level": 3,
+      "feature_ids": ["draconic-resilience", "dragon-speech"],
+      "features": [
+        {
+          "feature_id": "draconic-resilience",
+          "name": "Draconic Resilience",
+          "summary": "The Sorcerer gains draconic durability and improved Armor Class support."
+        }
+      ]
+    },
+    {
+      "subclass_id": "fiend-patron",
+      "class_id": "warlock",
+      "level": 3,
+      "feature_ids": ["dark-ones-blessing", "fiend-spells"],
+      "features": [
+        {
+          "feature_id": "dark-ones-blessing",
+          "name": "Dark One's Blessing",
+          "summary": "When the Warlock or an ally within 10 feet reduces an enemy to 0 Hit Points, the Warlock gains Temporary Hit Points equal to Charisma modifier plus Warlock level, minimum 1."
+        },
+        {
+          "feature_id": "fiend-spells",
+          "name": "Fiend Spells",
+          "summary": "The Fiend Patron always prepares Burning Hands, Command, Scorching Ray, and Suggestion at level 3."
+        }
+      ]
+    },
+    {
+      "subclass_id": "evoker",
+      "class_id": "wizard",
+      "level": 3,
+      "feature_ids": ["evocation-savant", "potent-cantrip"],
+      "features": [
+        {
+          "feature_id": "potent-cantrip",
+          "name": "Potent Cantrip",
+          "summary": "The Evoker improves damaging cantrips when targets avoid their full effect."
+        }
+      ]
+    }
+  ]
+}

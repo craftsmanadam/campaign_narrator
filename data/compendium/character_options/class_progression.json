@@ -1,0 +1,405 @@
+{
+  "class_progression": [
+    {
+      "class_id": "barbarian",
+      "levels": {
+        "1": {
+          "feature_ids": ["rage", "unarmored-defense"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "feature_ids": ["danger-sense", "reckless-attack"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "feature_ids": ["barbarian-subclass", "primal-knowledge"],
+          "subclass_feature_ids": ["frenzy"]
+        },
+        "4": {
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "feature_ids": ["extra-attack", "fast-movement"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "bard",
+      "levels": {
+        "1": {
+          "cantrips_known": 2,
+          "prepared_spells": 4,
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["bardic-inspiration", "spellcasting"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "cantrips_known": 2,
+          "prepared_spells": 5,
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["expertise", "jack-of-all-trades"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "cantrips_known": 2,
+          "prepared_spells": 6,
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["bard-subclass"],
+          "subclass_feature_ids": ["cutting-words"]
+        },
+        "4": {
+          "cantrips_known": 3,
+          "prepared_spells": 7,
+          "spell_slots": { "1": 4, "2": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "cantrips_known": 3,
+          "prepared_spells": 9,
+          "spell_slots": { "1": 4, "2": 3, "3": 2 },
+          "feature_ids": ["font-of-inspiration"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "cleric",
+      "levels": {
+        "1": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "wisdom-modifier + cleric-level",
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["spellcasting", "divine-order"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "wisdom-modifier + cleric-level",
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["channel-divinity", "divine-spark", "turn-undead"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "wisdom-modifier + cleric-level",
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["cleric-subclass"],
+          "subclass_feature_ids": ["disciple-of-life", "life-domain-spells"]
+        },
+        "4": {
+          "cantrips_known": 4,
+          "prepared_spells_formula": "wisdom-modifier + cleric-level",
+          "spell_slots": { "1": 4, "2": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "cantrips_known": 4,
+          "prepared_spells_formula": "wisdom-modifier + cleric-level",
+          "spell_slots": { "1": 4, "2": 3, "3": 2 },
+          "feature_ids": ["destroy-undead"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "druid",
+      "levels": {
+        "1": {
+          "cantrips_known": 2,
+          "prepared_spells_formula": "wisdom-modifier + druid-level",
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["druidic", "primal-order", "spellcasting"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "cantrips_known": 2,
+          "prepared_spells_formula": "wisdom-modifier + druid-level",
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["wild-shape", "wild-companion"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "cantrips_known": 2,
+          "prepared_spells_formula": "wisdom-modifier + druid-level",
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["druid-subclass"],
+          "subclass_feature_ids": ["circle-of-the-land-spells", "land-aid"]
+        },
+        "4": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "wisdom-modifier + druid-level",
+          "spell_slots": { "1": 4, "2": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "wisdom-modifier + druid-level",
+          "spell_slots": { "1": 4, "2": 3, "3": 2 },
+          "feature_ids": ["wild-resurgence"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "fighter",
+      "levels": {
+        "1": {
+          "feature_ids": ["fighting-style", "second-wind", "weapon-mastery"],
+          "subclass_feature_ids": []
+        },
+        "2": { "feature_ids": ["action-surge"], "subclass_feature_ids": [] },
+        "3": {
+          "feature_ids": ["fighter-subclass", "tactical-mind"],
+          "subclass_feature_ids": ["improved-critical"]
+        },
+        "4": {
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": { "feature_ids": ["extra-attack"], "subclass_feature_ids": [] }
+      }
+    },
+    {
+      "class_id": "monk",
+      "levels": {
+        "1": {
+          "feature_ids": ["martial-arts", "unarmored-defense"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "focus_points": 2,
+          "feature_ids": ["monks-focus", "unarmored-movement"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "focus_points": 3,
+          "feature_ids": ["deflect-attacks", "monk-subclass"],
+          "subclass_feature_ids": ["open-hand-technique"]
+        },
+        "4": {
+          "focus_points": 4,
+          "feature_ids": ["ability-score-improvement", "slow-fall"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "focus_points": 5,
+          "feature_ids": ["extra-attack", "stunning-strike"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "paladin",
+      "levels": {
+        "1": {
+          "feature_ids": ["lay-on-hands", "spellcasting", "weapon-mastery"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["fighting-style", "paladins-smite"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["channel-divinity", "paladin-subclass"],
+          "subclass_feature_ids": ["sacred-weapon", "oath-of-devotion-spells"]
+        },
+        "4": {
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["extra-attack", "faithful-steed"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "ranger",
+      "levels": {
+        "1": {
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["favored-enemy", "spellcasting", "weapon-mastery"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["fighting-style", "rangers-expertise"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["ranger-subclass"],
+          "subclass_feature_ids": ["hunters-lore", "prey"]
+        },
+        "4": {
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["extra-attack"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "rogue",
+      "levels": {
+        "1": {
+          "feature_ids": ["expertise", "sneak-attack", "thieves-cant", "weapon-mastery"],
+          "subclass_feature_ids": []
+        },
+        "2": { "feature_ids": ["cunning-action"], "subclass_feature_ids": [] },
+        "3": {
+          "feature_ids": ["cunning-strike", "rogue-subclass"],
+          "subclass_feature_ids": ["fast-hands", "second-story-work"]
+        },
+        "4": {
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": { "feature_ids": ["uncanny-dodge"], "subclass_feature_ids": [] }
+      }
+    },
+    {
+      "class_id": "sorcerer",
+      "levels": {
+        "1": {
+          "cantrips_known": 4,
+          "prepared_spells": 2,
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["spellcasting", "innate-sorcery"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "cantrips_known": 4,
+          "prepared_spells": 3,
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["font-of-magic", "metamagic"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "cantrips_known": 4,
+          "prepared_spells": 4,
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["sorcerer-subclass"],
+          "subclass_feature_ids": ["draconic-resilience", "dragon-speech"]
+        },
+        "4": {
+          "cantrips_known": 5,
+          "prepared_spells": 5,
+          "spell_slots": { "1": 4, "2": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "cantrips_known": 5,
+          "prepared_spells": 7,
+          "spell_slots": { "1": 4, "2": 3, "3": 2 },
+          "feature_ids": ["sorcerous-restoration"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "warlock",
+      "levels": {
+        "1": {
+          "cantrips_known": 2,
+          "prepared_spells": 2,
+          "pact_magic_slots": 1,
+          "pact_magic_slot_level": 1,
+          "invocations_known": 1,
+          "feature_ids": ["eldritch-invocations", "pact-magic"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "cantrips_known": 2,
+          "prepared_spells": 3,
+          "pact_magic_slots": 2,
+          "pact_magic_slot_level": 1,
+          "invocations_known": 2,
+          "feature_ids": ["magical-cunning"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "cantrips_known": 2,
+          "prepared_spells": 4,
+          "pact_magic_slots": 2,
+          "pact_magic_slot_level": 2,
+          "invocations_known": 3,
+          "feature_ids": ["warlock-subclass"],
+          "subclass_feature_ids": ["dark-ones-blessing", "fiend-spells"]
+        },
+        "4": {
+          "cantrips_known": 3,
+          "prepared_spells": 5,
+          "pact_magic_slots": 2,
+          "pact_magic_slot_level": 2,
+          "invocations_known": 3,
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "cantrips_known": 3,
+          "prepared_spells": 6,
+          "pact_magic_slots": 2,
+          "pact_magic_slot_level": 3,
+          "invocations_known": 5,
+          "feature_ids": ["eldritch-invocations"],
+          "subclass_feature_ids": []
+        }
+      }
+    },
+    {
+      "class_id": "wizard",
+      "levels": {
+        "1": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "intelligence-modifier + wizard-level",
+          "spell_slots": { "1": 2 },
+          "feature_ids": ["spellcasting", "arcane-recovery"],
+          "subclass_feature_ids": []
+        },
+        "2": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "intelligence-modifier + wizard-level",
+          "spell_slots": { "1": 3 },
+          "feature_ids": ["scholar"],
+          "subclass_feature_ids": []
+        },
+        "3": {
+          "cantrips_known": 3,
+          "prepared_spells_formula": "intelligence-modifier + wizard-level",
+          "spell_slots": { "1": 4, "2": 2 },
+          "feature_ids": ["wizard-subclass"],
+          "subclass_feature_ids": ["evocation-savant", "potent-cantrip"]
+        },
+        "4": {
+          "cantrips_known": 4,
+          "prepared_spells_formula": "intelligence-modifier + wizard-level",
+          "spell_slots": { "1": 4, "2": 3 },
+          "feature_ids": ["ability-score-improvement"],
+          "subclass_feature_ids": []
+        },
+        "5": {
+          "cantrips_known": 4,
+          "prepared_spells_formula": "intelligence-modifier + wizard-level",
+          "spell_slots": { "1": 4, "2": 3, "3": 2 },
+          "feature_ids": ["memorize-spell"],
+          "subclass_feature_ids": []
+        }
+      }
+    }
+  ]
+}

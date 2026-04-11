@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Class Progression Collection",
+  "type": "object",
+  "required": ["class_progression"],
+  "properties": {
+    "class_progression": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class_id", "levels"],
+        "properties": {
+          "class_id": { "type": "string" },
+          "levels": { "type": "object" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

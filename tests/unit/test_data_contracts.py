@@ -6,6 +6,10 @@ from pathlib import Path
 MEDIUM_SPEED_FEET = 30
 BARD_SKILL_CHOICES = 3
 SUBCLASS_ENTRY_LEVEL = 3
+WARLOCK_LEVEL_THREE_PACT_SLOTS = 2
+WARLOCK_LEVEL_THREE_PACT_SLOT_LEVEL = 2
+WARLOCK_LEVEL_THREE_INVOCATIONS = 3
+WIZARD_STARTING_SPELLBOOK_SPELLS = 6
 BARD_SHORT_REST_TEXT = "regain all your expended uses of Bardic Inspiration"
 MONK_FOCUS_TEXT = "Your focus and martial training allow you to harness"
 LIGHT_WEAPON_TEXT = "When you take the Attack action on your turn and attack"
@@ -92,11 +96,17 @@ def test_data_contract_files_exist() -> None:
         Path("data/compendium/character_options/feats.json"),
         Path("data/compendium/character_options/classes.json"),
         Path("data/compendium/character_options/subclasses.json"),
+        Path("data/compendium/character_options/class_progression.json"),
+        Path("data/compendium/character_options/class_features.json"),
+        Path("data/compendium/character_options/subclass_features.json"),
+        Path("data/compendium/character_options/invocations.json"),
+        Path("data/compendium/character_options/starting_build_options.json"),
         Path("data/compendium/spells/level_0.json"),
         Path("data/compendium/spells/level_1.json"),
         Path("data/compendium/spells/level_2.json"),
         Path("data/compendium/spells/level_3.json"),
         Path("data/compendium/spells/class_spell_lists.json"),
+        Path("data/compendium/spells/spell_effects.json"),
         Path("data/rules/source/creation/choose_character_sheet.md"),
         Path("data/rules/source/creation/character_creation_overview.md"),
         Path("data/rules/source/creation/ability_scores.md"),
@@ -221,11 +231,25 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
         },
         Path("data/compendium/character_options/classes.json"): {"classes"},
         Path("data/compendium/character_options/subclasses.json"): {"subclasses"},
+        Path("data/compendium/character_options/class_progression.json"): {
+            "class_progression"
+        },
+        Path("data/compendium/character_options/class_features.json"): {
+            "class_features"
+        },
+        Path("data/compendium/character_options/subclass_features.json"): {
+            "subclass_features"
+        },
+        Path("data/compendium/character_options/invocations.json"): {"invocations"},
+        Path("data/compendium/character_options/starting_build_options.json"): {
+            "starting_build_options"
+        },
         Path("data/compendium/spells/level_0.json"): {"spells"},
         Path("data/compendium/spells/level_1.json"): {"spells"},
         Path("data/compendium/spells/level_2.json"): {"spells"},
         Path("data/compendium/spells/level_3.json"): {"spells"},
         Path("data/compendium/spells/class_spell_lists.json"): {"class_spell_lists"},
+        Path("data/compendium/spells/spell_effects.json"): {"spell_effects"},
     }
 
     for path, required_keys in expected_keys.items():
@@ -305,7 +329,13 @@ def test_live_compendium_files_match_their_wrappers() -> None:
         Path("data/compendium/character_options/feats.json"),
         Path("data/compendium/character_options/classes.json"),
         Path("data/compendium/character_options/subclasses.json"),
+        Path("data/compendium/character_options/class_progression.json"),
+        Path("data/compendium/character_options/class_features.json"),
+        Path("data/compendium/character_options/subclass_features.json"),
+        Path("data/compendium/character_options/invocations.json"),
+        Path("data/compendium/character_options/starting_build_options.json"),
         Path("data/compendium/spells/class_spell_lists.json"),
+        Path("data/compendium/spells/spell_effects.json"),
     ]
     spell_paths = [
         Path("data/compendium/spells/level_0.json"),
@@ -399,6 +429,85 @@ def test_structured_character_options_and_spell_lists_exist() -> None:
         entry["class_id"] == "cleric" and "guidance" in entry["spell_ids_by_level"]["0"]
         for entry in class_spell_lists["class_spell_lists"]
     )
+
+
+def test_character_rules_todo_schema_gaps_are_structured() -> None:
+    """TODO schema gaps should have queryable first-cut structured contracts."""
+
+    progression = json.loads(
+        Path("data/compendium/character_options/class_progression.json").read_text()
+    )
+    features = json.loads(
+        Path("data/compendium/character_options/class_features.json").read_text()
+    )
+    subclass_features = json.loads(
+        Path("data/compendium/character_options/subclass_features.json").read_text()
+    )
+    invocations = json.loads(
+        Path("data/compendium/character_options/invocations.json").read_text()
+    )
+    build_options = json.loads(
+        Path(
+            "data/compendium/character_options/starting_build_options.json"
+        ).read_text()
+    )
+    spell_effects = json.loads(
+        Path("data/compendium/spells/spell_effects.json").read_text()
+    )
+
+    warlock = next(
+        entry
+        for entry in progression["class_progression"]
+        if entry["class_id"] == "warlock"
+    )
+    warlock_level_three = warlock["levels"]["3"]
+    fiend_level_three = next(
+        entry
+        for entry in subclass_features["subclass_features"]
+        if entry["subclass_id"] == "fiend-patron"
+        and entry["level"] == SUBCLASS_ENTRY_LEVEL
+    )
+    agonizing_blast = next(
+        entry
+        for entry in invocations["invocations"]
+        if entry["invocation_id"] == "agonizing-blast"
+    )
+    wizard_build = next(
+        entry
+        for entry in build_options["starting_build_options"]
+        if entry["class_id"] == "wizard"
+    )
+    fireball_effect = next(
+        entry
+        for entry in spell_effects["spell_effects"]
+        if entry["spell_id"] == "fireball"
+    )
+
+    assert warlock_level_three["pact_magic_slots"] == WARLOCK_LEVEL_THREE_PACT_SLOTS
+    assert (
+        warlock_level_three["pact_magic_slot_level"]
+        == WARLOCK_LEVEL_THREE_PACT_SLOT_LEVEL
+    )
+    assert warlock_level_three["invocations_known"] == WARLOCK_LEVEL_THREE_INVOCATIONS
+    assert warlock_level_three["subclass_feature_ids"] == [
+        "dark-ones-blessing",
+        "fiend-spells",
+    ]
+    assert any(
+        entry["feature_id"] == "pact-magic"
+        and entry["class_id"] == "warlock"
+        and entry["level"] == 1
+        for entry in features["class_features"]
+    )
+    assert "dark-ones-blessing" in fiend_level_three["feature_ids"]
+    assert "eldritch-blast" in agonizing_blast["spell_ids"]
+    assert (
+        wizard_build["spellbook_level_1_spell_count"]
+        == WIZARD_STARTING_SPELLBOOK_SPELLS
+    )
+    assert fireball_effect["save"] == "dexterity"
+    assert fireball_effect["damage"]["dice"] == "8d6"
+    assert fireball_effect["area"] == "20-foot-radius Sphere"
 
 
 def test_class_and_subclass_metadata_support_basic_build_queries() -> None:

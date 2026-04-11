@@ -1,0 +1,54 @@
+{
+  "spell_effects": [
+    {
+      "spell_id": "eldritch-blast",
+      "attack": "ranged spell attack",
+      "damage": { "dice": "1d10", "type": "force" },
+      "scaling": "The spell creates 2 beams at level 5, 3 at level 11, and 4 at level 17."
+    },
+    {
+      "spell_id": "magic-missile",
+      "damage": { "dice": "1d4 + 1", "type": "force" },
+      "targets": "three darts divided among one or more visible creatures",
+      "scaling": "One additional dart for each spell slot level above 1."
+    },
+    {
+      "spell_id": "sleep",
+      "save": "wisdom",
+      "area": "5-foot-radius Sphere",
+      "conditions": ["incapacitated", "unconscious"],
+      "concentration": true
+    },
+    {
+      "spell_id": "fireball",
+      "save": "dexterity",
+      "damage": { "dice": "8d6", "type": "fire" },
+      "area": "20-foot-radius Sphere",
+      "scaling": "Damage increases by 1d6 for each spell slot level above 3."
+    },
+    {
+      "spell_id": "cure-wounds",
+      "healing": { "dice": "2d8", "modifier": "spellcasting ability modifier" },
+      "scaling": "Healing increases by 2d8 for each spell slot level above 1."
+    },
+    {
+      "spell_id": "bless",
+      "bonus_die": "1d4",
+      "applies_to": ["attack rolls", "saving throws"],
+      "concentration": true
+    },
+    {
+      "spell_id": "hex",
+      "damage": { "dice": "1d6", "type": "necrotic" },
+      "rider": "Choose one ability; the target has Disadvantage on checks with that ability.",
+      "concentration": true
+    },
+    {
+      "spell_id": "web",
+      "save": "dexterity",
+      "area": "20-foot Cube",
+      "conditions": ["restrained"],
+      "concentration": true
+    }
+  ]
+}

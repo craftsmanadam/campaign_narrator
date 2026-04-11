@@ -1,0 +1,92 @@
+{
+  "invocations": [
+    {
+      "invocation_id": "agonizing-blast",
+      "name": "Agonizing Blast",
+      "prerequisites": ["warlock-cantrip-that-deals-damage"],
+      "repeatable": true,
+      "spell_ids": ["eldritch-blast"],
+      "summary": "Choose one Warlock cantrip that deals damage. Add your Charisma modifier to that spell's damage rolls."
+    },
+    {
+      "invocation_id": "armor-of-shadows",
+      "name": "Armor of Shadows",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": ["mage-armor"],
+      "summary": "You can cast Mage Armor on yourself without expending a spell slot."
+    },
+    {
+      "invocation_id": "devils-sight",
+      "name": "Devil's Sight",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": [],
+      "summary": "You can see normally in Dim Light and Darkness, both magical and nonmagical."
+    },
+    {
+      "invocation_id": "eldritch-mind",
+      "name": "Eldritch Mind",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": [],
+      "summary": "You have Advantage on Constitution saving throws made to maintain Concentration."
+    },
+    {
+      "invocation_id": "fiendish-vigor",
+      "name": "Fiendish Vigor",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": [],
+      "summary": "You can give yourself Temporary Hit Points through fiendish magic."
+    },
+    {
+      "invocation_id": "mask-of-many-faces",
+      "name": "Mask of Many Faces",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": [],
+      "summary": "You can disguise yourself with magic without expending a spell slot."
+    },
+    {
+      "invocation_id": "misty-visions",
+      "name": "Misty Visions",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": ["silent-image"],
+      "summary": "You can cast Silent Image without expending a spell slot."
+    },
+    {
+      "invocation_id": "pact-of-the-blade",
+      "name": "Pact of the Blade",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": [],
+      "summary": "You gain a pact weapon option that lets you fight using Warlock magic."
+    },
+    {
+      "invocation_id": "pact-of-the-chain",
+      "name": "Pact of the Chain",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": ["find-familiar"],
+      "summary": "You gain a magically improved familiar option tied to your pact."
+    },
+    {
+      "invocation_id": "pact-of-the-tome",
+      "name": "Pact of the Tome",
+      "prerequisites": [],
+      "repeatable": false,
+      "spell_ids": [],
+      "summary": "You gain a grimoire that expands your magical options."
+    },
+    {
+      "invocation_id": "repelling-blast",
+      "name": "Repelling Blast",
+      "prerequisites": ["warlock-cantrip-that-deals-damage"],
+      "repeatable": true,
+      "spell_ids": ["eldritch-blast"],
+      "summary": "When you hit a Large or smaller creature with the chosen cantrip, you can push it up to 10 feet away."
+    }
+  ]
+}

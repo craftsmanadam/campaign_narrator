@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Subclass Feature Collection",
+  "type": "object",
+  "required": ["subclass_features"],
+  "properties": {
+    "subclass_features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subclass_id", "class_id", "level", "feature_ids"],
+        "properties": {
+          "subclass_id": { "type": "string" },
+          "class_id": { "type": "string" },
+          "level": { "type": "integer" },
+          "feature_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}
