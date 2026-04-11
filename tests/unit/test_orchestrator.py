@@ -1,257 +1,607 @@
-"""Unit tests for the campaign orchestrator."""
+"""Unit tests for the encounter-loop campaign orchestrator."""
 
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from collections.abc import Iterable
+from dataclasses import replace
 
 import pytest
 from campaignnarrator.domain.models import (
-    Action,
-    Adjudication,
+    EncounterPhase,
     Narration,
-    PotionOfHealingResolution,
+    NarrationFrame,
     RollRequest,
+    RollVisibility,
+    RulesAdjudication,
+    RulesAdjudicationRequest,
+    StateEffect,
 )
-from campaignnarrator.orchestrator import CampaignOrchestrator
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.orchestrator import CampaignOrchestrator, EncounterRunResult
 from campaignnarrator.repositories.state_repository import StateRepository
 
-
-class _FakeRulesAgent:
-    def __init__(self, adjudication: Adjudication) -> None:
-        self.adjudication = adjudication
-        self.calls: list[str] = []
-
-    def adjudicate_potion_of_healing(self, *, actor: str) -> Adjudication:
-        self.calls.append(actor)
-        return self.adjudication
+_DAMAGED_GOBLIN_HP = 2
 
 
-class _FakeNarratorAgent:
-    def __init__(self, narration: Narration) -> None:
-        self.narration = narration
-        self.calls: list[tuple[Adjudication, PotionOfHealingResolution]] = []
+class FakeDecisionAdapter:
+    def __init__(self, decisions: Iterable[object]) -> None:
+        self.decisions = list(decisions)
+        self.calls: list[tuple[str, dict[str, object]]] = []
 
-    def narrate(
+    def generate_structured_json(
         self,
-        adjudication: Adjudication,
-        resolution: PotionOfHealingResolution,
-    ) -> Narration:
-        self.calls.append((adjudication, resolution))
-        return self.narration
+        *,
+        instructions: str,
+        input_text: str,
+    ) -> object:
+        self.calls.append((instructions, json.loads(input_text)))
+        return self.decisions.pop(0)
 
 
-class _FailingNarratorAgent:
-    def narrate(
-        self,
-        adjudication: Adjudication,
-        resolution: PotionOfHealingResolution,
-    ) -> Narration:
-        raise RuntimeError
+class FakeRulesAgent:
+    def __init__(self, adjudications: Iterable[RulesAdjudication] = ()) -> None:
+        self.adjudications = list(adjudications)
+        self.requests: list[RulesAdjudicationRequest] = []
+
+    def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication:
+        self.requests.append(request)
+        return self.adjudications.pop(0)
 
 
-def _write_state(root: Path) -> StateRepository:
-    (root).mkdir(parents=True)
-    (root / "player_character.json").write_text(
-        json.dumps(
-            {
-                "character_id": "pc-001",
-                "name": "Talia",
-                "hp": {"current": 12, "max": 18},
-                "inventory": ["potion-of-healing", "rope"],
-            }
+class FakeNarratorAgent:
+    def __init__(self) -> None:
+        self.frames: list[NarrationFrame] = []
+
+    def narrate(self, frame: NarrationFrame) -> Narration:
+        self.frames.append(frame)
+        outcomes = " ".join(frame.resolved_outcomes)
+        return Narration(
+            text=f"{frame.purpose}: {outcomes}".strip(),
+            audience="player",
+        )
+
+
+class FakeDice:
+    def __init__(self, totals: Iterable[int]) -> None:
+        self.totals = list(totals)
+        self.expressions: list[str] = []
+
+    def __call__(self, expression: str) -> int:
+        self.expressions.append(expression)
+        return self.totals.pop(0)
+
+
+def _decision(next_step: str, **overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "next_step": next_step,
+        "next_actor": None,
+        "requires_rules_resolution": False,
+        "recommended_check": None,
+        "phase_transition": None,
+        "player_prompt": None,
+        "reason_summary": "test decision",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _orchestrator(
+    *,
+    state_repository: StateRepository | None = None,
+    decision_adapter: FakeDecisionAdapter | None = None,
+    rules_agent: FakeRulesAgent | None = None,
+    narrator_agent: FakeNarratorAgent | None = None,
+    roll_dice: FakeDice | None = None,
+) -> CampaignOrchestrator:
+    return CampaignOrchestrator(
+        state_repository=state_repository or StateRepository.from_default_encounter(),
+        rules_agent=rules_agent or FakeRulesAgent(),
+        narrator_agent=narrator_agent or FakeNarratorAgent(),
+        roll_dice=roll_dice or FakeDice(()),
+        decision_adapter=decision_adapter or FakeDecisionAdapter(()),
+    )
+
+
+def _social_repository() -> StateRepository:
+    repository = StateRepository.from_default_encounter()
+    state = repository.load_encounter("goblin-camp")
+    repository.save_encounter(replace(state, phase=EncounterPhase.SOCIAL))
+    return repository
+
+
+def _combat_repository() -> StateRepository:
+    repository = StateRepository.from_default_encounter()
+    state = repository.load_encounter("goblin-camp")
+    repository.save_encounter(
+        replace(
+            state,
+            phase=EncounterPhase.COMBAT,
+            initiative_order=("pc:talia", "npc:goblin-scout"),
+            outcome="combat",
         )
     )
-    return StateRepository(root)
+    return repository
 
 
-def test_orchestrator_resolves_potion_flow_end_to_end(tmp_path: Path) -> None:
-    """The orchestrator should persist state, log the event, and narrate the result."""
+def test_run_encounter_returns_peaceful_output_status_and_recap() -> None:
+    decision_adapter = FakeDecisionAdapter(
+        (_decision("complete_encounter", outcome="peaceful"),)
+    )
+    rules_agent = FakeRulesAgent()
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        decision_adapter=decision_adapter,
+        rules_agent=rules_agent,
+        narrator_agent=narrator_agent,
+    )
 
-    state_repository = _write_state(tmp_path / "state")
-    memory_repository = MemoryRepository(tmp_path / "memory")
-    adjudication = Adjudication(
-        action=Action(actor="Talia", summary="I drink my potion of healing"),
-        outcome="roll_requested",
-        roll_request=RollRequest(
-            owner="orchestrator",
-            visibility="public",
-            expression="2d4+2",
-            purpose="heal from potion of healing",
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=[
+            "Hello there. I do not want trouble.",
+            "status",
+            "what happened",
+            "exit",
+        ],
+    )
+
+    assert result == EncounterRunResult(
+        encounter_id="goblin-camp",
+        output_text=result.output_text,
+        completed=True,
+    )
+    assert "complete_encounter: peaceful" in result.output_text
+    assert "status_response:" in result.output_text
+    assert "recap_response:" in result.output_text
+    assert orchestrator.current_state("goblin-camp").outcome == "peaceful"
+    assert rules_agent.requests == []
+
+
+def test_run_legacy_wrapper_returns_player_narration() -> None:
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision("complete_encounter", outcome="peaceful"),)
         ),
     )
-    rules_agent = _FakeRulesAgent(adjudication)
-    narration = Narration(
-        text="Talia drinks the potion and regains 7 hit points.",
-        audience="player",
-    )
-    narrator_agent = _FakeNarratorAgent(narration)
-    roll_calls: list[str] = []
 
-    def _roll(expression: str) -> int:
-        roll_calls.append(expression)
-        return 7
+    narration = orchestrator.run("I ask for peace.")
 
-    orchestrator = CampaignOrchestrator(
-        state_repository=state_repository,
+    assert narration.audience == "player"
+    assert "complete_encounter: peaceful" in narration.text
+
+
+def test_status_routes_to_status_frame_without_rules_adjudication() -> None:
+    rules_agent = FakeRulesAgent()
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
         rules_agent=rules_agent,
-        memory_repository=memory_repository,
         narrator_agent=narrator_agent,
-        roll_dice=_roll,
     )
 
-    output = orchestrator.run("I drink my potion of healing")
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["status", "exit"],
+    )
 
-    assert output == narration
-    assert rules_agent.calls == ["Talia"]
-    assert roll_calls == ["2d4+2"]
-    assert narrator_agent.calls == [
+    assert "status_response:" in result.output_text
+    assert rules_agent.requests == []
+    assert narrator_agent.frames[-1].purpose == "status_response"
+    assert any(
+        "Talia HP 12/12" in summary
+        for summary in narrator_agent.frames[-1].public_actor_summaries
+    )
+
+
+def test_empty_input_is_ignored_and_look_around_routes_to_visible_scene() -> None:
+    rules_agent = FakeRulesAgent()
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        rules_agent=rules_agent,
+        narrator_agent=narrator_agent,
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["", "   ", "look around", "exit"],
+    )
+
+    assert "status_response:" in result.output_text
+    assert rules_agent.requests == []
+    assert narrator_agent.frames[-1].resolved_outcomes[0] == "A ruined roadside camp."
+    assert narrator_agent.frames[-1].allowed_disclosures == (
+        "setting",
+        "visible actors",
+    )
+
+
+def test_friendly_social_input_can_complete_peacefully_through_decision() -> None:
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision("complete_encounter", outcome="peaceful"),)
+        ),
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I lower my weapon and ask to pass peacefully."],
+    )
+
+    assert result.completed is True
+    assert "peaceful" in result.output_text
+    assert orchestrator.current_state("goblin-camp").outcome == "peaceful"
+
+
+def test_social_check_uses_rules_agent_and_applies_effects() -> None:
+    rules_agent = FakeRulesAgent(
         (
-            adjudication,
-            PotionOfHealingResolution(
-                roll_total=7,
-                healing_amount=7,
-                hp_before=12,
-                hp_after=18,
-            ),
-        )
-    ]
-    assert state_repository.load_player_character() == {
-        "character_id": "pc-001",
-        "name": "Talia",
-        "hp": {"current": 18, "max": 18},
-        "inventory": ["rope"],
-    }
-    assert memory_repository.load_event_log() == [
-        {
-            "type": "potion_of_healing_resolved",
-            "actor": "Talia",
-            "input": "I drink my potion of healing",
-            "roll_request": {
-                "owner": "orchestrator",
-                "visibility": "public",
-                "expression": "2d4+2",
-                "purpose": "heal from potion of healing",
-            },
-            "roll_total": 7,
-            "healing_amount": 7,
-            "hp_before": 12,
-            "hp_after": 18,
-        }
-    ]
-
-
-def test_orchestrator_rejects_unsupported_player_input(tmp_path: Path) -> None:
-    """Unsupported inputs should fail closed before any side effects happen."""
-
-    state_repository = _write_state(tmp_path / "state")
-    memory_repository = MemoryRepository(tmp_path / "memory")
-    rules_agent = _FakeRulesAgent(
-        Adjudication(
-            action=Action(actor="Talia", summary="I drink my potion of healing"),
-            outcome="roll_requested",
-            roll_request=RollRequest(
-                owner="orchestrator",
-                visibility="public",
-                expression="2d4+2",
-                purpose="heal from potion of healing",
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="The goblins accept the offer.",
+                roll_requests=(
+                    RollRequest(
+                        owner="player",
+                        visibility=RollVisibility.PUBLIC,
+                        expression="1d20+1",
+                        purpose="calm goblins",
+                    ),
+                ),
+                state_effects=(
+                    StateEffect(
+                        "set_encounter_outcome",
+                        "encounter:goblin-camp",
+                        "de-escalated",
+                    ),
+                ),
+                reasoning_summary="The check succeeds.",
             ),
         )
     )
-    narrator_agent = _FakeNarratorAgent(Narration(text="unused", audience="player"))
-    orchestrator = CampaignOrchestrator(
-        state_repository=state_repository,
+    roll_dice = FakeDice((16,))
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter(
+            (
+                _decision(
+                    "adjudicate_social_check",
+                    requires_rules_resolution=True,
+                    recommended_check="Persuasion",
+                ),
+            )
+        ),
         rules_agent=rules_agent,
-        memory_repository=memory_repository,
         narrator_agent=narrator_agent,
-        roll_dice=lambda expression: 7,
+        roll_dice=roll_dice,
     )
 
-    with pytest.raises(ValueError, match="unsupported"):
-        orchestrator.run("I cast a spell")
-
-    assert rules_agent.calls == []
-    assert memory_repository.load_event_log() == []
-    assert state_repository.load_player_character()["hp"] == {"current": 12, "max": 18}
-
-
-def test_orchestrator_rejects_missing_potion_in_inventory(tmp_path: Path) -> None:
-    """Missing required inventory state should stop the flow."""
-
-    state_repository = _write_state(tmp_path / "state")
-    state_repository.save_player_character(
-        {
-            "character_id": "pc-001",
-            "name": "Talia",
-            "hp": {"current": 12, "max": 18},
-            "inventory": ["rope"],
-        }
-    )
-    memory_repository = MemoryRepository(tmp_path / "memory")
-    rules_agent = _FakeRulesAgent(
-        Adjudication(
-            action=Action(actor="Talia", summary="I drink my potion of healing"),
-            outcome="roll_requested",
-            roll_request=RollRequest(
-                owner="orchestrator",
-                visibility="public",
-                expression="2d4+2",
-                purpose="heal from potion of healing",
-            ),
-        )
-    )
-    narrator_agent = _FakeNarratorAgent(Narration(text="unused", audience="player"))
-    orchestrator = CampaignOrchestrator(
-        state_repository=state_repository,
-        rules_agent=rules_agent,
-        memory_repository=memory_repository,
-        narrator_agent=narrator_agent,
-        roll_dice=lambda expression: 7,
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I try to calm them down."],
     )
 
-    with pytest.raises(ValueError, match="potion"):
-        orchestrator.run("I drink my potion of healing")
+    request = rules_agent.requests[0]
+    state = orchestrator.current_state("goblin-camp")
+    assert request.allowed_outcomes == (
+        "success",
+        "failure",
+        "complication",
+        "peaceful",
+    )
+    assert request.rules_context == ("Persuasion",)
+    assert roll_dice.expressions == ["1d20+1"]
+    assert state.outcome == "de-escalated"
+    assert "Roll: calm goblins = 16." in narrator_agent.frames[-1].resolved_outcomes
+    assert "social_resolution:" in result.output_text
 
-    assert rules_agent.calls == []
-    assert memory_repository.load_event_log() == []
-    assert state_repository.load_player_character()["inventory"] == ["rope"]
 
-
-def test_orchestrator_does_not_persist_when_narration_fails(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    ("next_step", "purpose"),
+    [("npc_dialogue", "npc_dialogue"), ("narrate_scene", "scene_response")],
+)
+def test_non_combat_narrative_decisions_route_to_narrator(
+    next_step: str, purpose: str
 ) -> None:
-    """Narration failure must leave state and memory unchanged."""
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision(next_step, reason_summary="The goblin answers."),)
+        ),
+        narrator_agent=narrator_agent,
+    )
 
-    state_repository = _write_state(tmp_path / "state")
-    memory_repository = MemoryRepository(tmp_path / "memory")
-    rules_agent = _FakeRulesAgent(
-        Adjudication(
-            action=Action(actor="Talia", summary="I drink my potion of healing"),
-            outcome="roll_requested",
-            roll_request=RollRequest(
-                owner="orchestrator",
-                visibility="public",
-                expression="2d4+2",
-                purpose="heal from potion of healing",
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I ask what they want."],
+    )
+
+    assert narrator_agent.frames[-1].purpose == purpose
+    assert narrator_agent.frames[-1].resolved_outcomes == ("The goblin answers.",)
+    assert f"{purpose}: The goblin answers." in result.output_text
+
+
+def test_aggressive_input_rolls_initiative_enters_combat_and_records_event() -> None:
+    roll_dice = FakeDice((18, 12))
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter((_decision("roll_initiative"),)),
+        narrator_agent=narrator_agent,
+        roll_dice=roll_dice,
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I draw steel and rush the goblin."],
+    )
+
+    state = orchestrator.current_state("goblin-camp")
+    assert result.completed is False
+    assert state.phase is EncounterPhase.COMBAT
+    assert state.outcome == "combat"
+    assert state.initiative_order == ("pc:talia", "npc:goblin-scout")
+    assert state.public_events[-1].startswith("Initiative: Talia 18, Goblin Scout 12.")
+    assert roll_dice.expressions == ["1d20+2", "1d20+2"]
+    assert narrator_agent.frames[-1].purpose == "combat_start"
+
+
+def test_invalid_orchestration_decision_raises_without_saving_mutated_state() -> None:
+    repository = _social_repository()
+    original_state = repository.load_encounter("goblin-camp")
+    orchestrator = _orchestrator(
+        state_repository=repository,
+        decision_adapter=FakeDecisionAdapter((_decision("summon_dragon"),)),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="invalid orchestration next_step: summon_dragon",
+    ):
+        orchestrator.run_encounter(
+            encounter_id="goblin-camp",
+            player_inputs=["I try something confusing."],
+        )
+
+    assert repository.load_encounter("goblin-camp") == original_state
+
+
+def test_invalid_decision_after_scene_opening_leaves_default_state_unchanged() -> None:
+    repository = StateRepository.from_default_encounter()
+    original_state = repository.load_encounter("goblin-camp")
+    orchestrator = _orchestrator(
+        state_repository=repository,
+        decision_adapter=FakeDecisionAdapter((_decision("summon_dragon"),)),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="invalid orchestration next_step: summon_dragon",
+    ):
+        orchestrator.run_encounter(
+            encounter_id="goblin-camp",
+            player_inputs=["I try something confusing."],
+        )
+
+    assert repository.load_encounter("goblin-camp") == original_state
+
+
+def test_missing_decision_adapter_fails_fast() -> None:
+    orchestrator = CampaignOrchestrator(
+        state_repository=_social_repository(),
+        rules_agent=FakeRulesAgent(),
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=None,
+    )
+
+    with pytest.raises(ValueError, match="missing decision adapter"):
+        orchestrator.run_encounter(
+            encounter_id="goblin-camp",
+            player_inputs=["I talk to the goblins."],
+        )
+
+
+def test_non_mapping_decision_payload_is_rejected() -> None:
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter(("not-json-object",)),
+    )
+
+    with pytest.raises(TypeError, match="invalid orchestration decision payload"):
+        orchestrator.run_encounter(
+            encounter_id="goblin-camp",
+            player_inputs=["I talk to the goblins."],
+        )
+
+
+@pytest.mark.parametrize(
+    ("payload", "error_type", "match"),
+    [
+        (
+            {
+                "next_actor": None,
+                "requires_rules_resolution": False,
+                "recommended_check": None,
+                "phase_transition": None,
+                "player_prompt": None,
+                "reason_summary": "missing step",
+            },
+            TypeError,
+            "next_step",
+        ),
+        (
+            _decision("narrate_scene", next_actor=42),
+            TypeError,
+            "next_actor",
+        ),
+        (
+            _decision("narrate_scene", requires_rules_resolution="false"),
+            ValueError,
+            "requires_rules_resolution",
+        ),
+    ],
+)
+def test_malformed_decision_fields_are_rejected(
+    payload: dict[str, object],
+    error_type: type[Exception],
+    match: str,
+) -> None:
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter((payload,)),
+    )
+
+    with pytest.raises(error_type, match=match):
+        orchestrator.run_encounter(
+            encounter_id="goblin-camp",
+            player_inputs=["I talk to the goblins."],
+        )
+
+
+@pytest.mark.parametrize(
+    ("decision", "player_input", "expected_outcome"),
+    [
+        (
+            _decision(
+                "complete_encounter",
+                outcome="",
+                phase_transition="de-escalated",
+            ),
+            "I lower my weapon.",
+            "de-escalated",
+        ),
+        (
+            _decision(
+                "complete_encounter",
+                reason_summary="The offer of peace works.",
+                outcome="",
+            ),
+            "I negotiate.",
+            "peaceful",
+        ),
+        (
+            _decision("complete_encounter", outcome=""),
+            "I leave the ravine.",
+            "complete",
+        ),
+    ],
+)
+def test_completion_outcome_fallbacks(
+    decision: dict[str, object],
+    player_input: str,
+    expected_outcome: str,
+) -> None:
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter((decision,)),
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=[player_input],
+    )
+
+    assert result.completed is True
+    assert orchestrator.current_state("goblin-camp").outcome == expected_outcome
+    assert f"complete_encounter: {expected_outcome}" in result.output_text
+
+
+def test_combat_attack_adjudicates_roll_effects_and_narrates_turn_result() -> None:
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="attack",
+                summary="Talia hits the goblin scout for 5 damage.",
+                roll_requests=(
+                    RollRequest(
+                        owner="player",
+                        visibility=RollVisibility.PUBLIC,
+                        expression="1d20+5",
+                        purpose="longsword attack",
+                    ),
+                ),
+                state_effects=(
+                    StateEffect(
+                        "append_public_event",
+                        "encounter:goblin-camp",
+                        "Talia hits the goblin scout for 5 damage.",
+                    ),
+                    StateEffect("change_hp", "npc:goblin-scout", -5),
+                ),
+                reasoning_summary="attack resolved",
             ),
         )
     )
-    orchestrator = CampaignOrchestrator(
-        state_repository=state_repository,
+    roll_dice = FakeDice((17,))
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = _orchestrator(
+        state_repository=_combat_repository(),
         rules_agent=rules_agent,
-        memory_repository=memory_repository,
-        narrator_agent=_FailingNarratorAgent(),
-        roll_dice=lambda expression: 7,
+        narrator_agent=narrator_agent,
+        roll_dice=roll_dice,
     )
 
-    with pytest.raises(RuntimeError):
-        orchestrator.run("I drink my potion of healing")
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I attack the goblin scout."],
+    )
 
-    assert state_repository.load_player_character() == {
-        "character_id": "pc-001",
-        "name": "Talia",
-        "hp": {"current": 12, "max": 18},
-        "inventory": ["potion-of-healing", "rope"],
-    }
-    assert memory_repository.load_event_log() == []
+    request = rules_agent.requests[0]
+    state = orchestrator.current_state("goblin-camp")
+    assert request.actor_id == "pc:talia"
+    assert request.intent == "I attack the goblin scout."
+    assert request.phase is EncounterPhase.COMBAT
+    assert request.allowed_outcomes == ("hit", "miss", "damage", "defeated")
+    assert roll_dice.expressions == ["1d20+5"]
+    assert state.actors["npc:goblin-scout"].hp_current == _DAMAGED_GOBLIN_HP
+    assert "Roll: longsword attack = 17." in state.public_events
+    assert "Talia hits the goblin scout for 5 damage." in state.public_events
+    assert narrator_agent.frames[-1].purpose == "combat_turn_result"
+    assert "combat_turn_result:" in result.output_text
+
+
+def test_combat_swing_routes_to_attack_adjudication() -> None:
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="attack",
+                summary="Talia swings at the goblin scout.",
+                reasoning_summary="attack resolved",
+            ),
+        )
+    )
+    orchestrator = _orchestrator(
+        state_repository=_combat_repository(),
+        rules_agent=rules_agent,
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I swing my sword."],
+    )
+
+    assert rules_agent.requests[0].intent == "I swing my sword."
+    assert "combat_turn_result:" in result.output_text
+
+
+def test_unsupported_combat_input_fails_closed_without_decision_adapter() -> None:
+    decision_adapter = FakeDecisionAdapter((_decision("complete_encounter"),))
+    orchestrator = _orchestrator(
+        state_repository=_combat_repository(),
+        decision_adapter=decision_adapter,
+    )
+
+    with pytest.raises(ValueError, match="unsupported combat input"):
+        orchestrator.run_encounter(
+            encounter_id="goblin-camp",
+            player_inputs=["I wait and watch."],
+        )
+
+    assert decision_adapter.calls == []

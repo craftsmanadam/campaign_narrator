@@ -1,0 +1,28 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.instructions",
+          "contains": "rules adjudication engine"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "let me pass"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "rules-social-failed-response.json"
+  }
+}

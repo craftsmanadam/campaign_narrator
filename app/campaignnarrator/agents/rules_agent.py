@@ -1,149 +1,115 @@
-"""Rules agent for the potion of healing steel thread."""
+"""Generic rules agent for encounter adjudication."""
 
 from __future__ import annotations
 
 import json
 from typing import Any
 
-from campaignnarrator.adapters.openai_adapter import OpenAIAdapter
 from campaignnarrator.domain.models import (
-    Action,
-    Adjudication,
     RollRequest,
-    RuleReference,
+    RollVisibility,
+    RulesAdjudication,
+    RulesAdjudicationRequest,
+    StateEffect,
 )
-from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.rules_repository import RulesRepository
 
-_SUPPORTED_ACTION = "I drink my potion of healing"
-_POTION_ITEM_ID = "potion-of-healing"
-_ADJUDICATION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "outcome": {"type": "string"},
-        "roll_request": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string"},
-                "visibility": {"type": "string"},
-                "expression": {"type": "string"},
-                "purpose": {"type": "string"},
-            },
-            "required": ["owner", "visibility", "expression", "purpose"],
-            "additionalProperties": False,
-        },
-    },
-    "required": ["outcome", "roll_request"],
-    "additionalProperties": False,
-}
+_VALID_ROLL_OWNERS = {"player", "narrator", "system"}
 
 
 class RulesAgent:
-    """Adjudicate the potion-of-healing action with a narrow rules slice."""
+    """Adjudicate encounter actions into structured rules output."""
 
     def __init__(
         self,
         *,
-        adapter: OpenAIAdapter,
-        rules_repository: RulesRepository,
-        compendium_repository: CompendiumRepository,
+        adapter: object,
+        rules_repository: object | None = None,
+        compendium_repository: object | None = None,
     ) -> None:
+        # Temporary compatibility bridge while orchestration/retrieval wiring is
+        # being replaced; the generic adjudication path does not use these.
+        _ = rules_repository, compendium_repository
         self._adapter = adapter
-        self._rules_repository = rules_repository
-        self._compendium_repository = compendium_repository
 
-    def adjudicate_potion_of_healing(self, *, actor: str) -> Adjudication:
-        """Return a structured adjudication for drinking a potion of healing."""
+    def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication:
+        """Return a structured adjudication for the supplied request."""
 
-        potion = self._compendium_repository.load_magic_item_by_id(_POTION_ITEM_ID)
-        rule_index = self._rules_repository.load_rule_index()
-        actions_markdown = self._rules_repository.load_topic_markdown(
-            "source/adjudication/actions.md"
-        )
-        healing_markdown = self._rules_repository.load_topic_markdown(
-            "source/adjudication/damage_healing.md"
-        )
-        action_references = (
-            RuleReference(
-                path="source/adjudication/actions.md",
-                title="Actions",
-                excerpt=_excerpt(actions_markdown),
-            ),
-            RuleReference(
-                path="source/adjudication/damage_healing.md",
-                title="Damage and Healing",
-                excerpt=_excerpt(healing_markdown),
-            ),
-        )
-        action = Action(
-            actor=actor,
-            summary=_SUPPORTED_ACTION,
-            rule_references=action_references,
-        )
         payload = self._adapter.generate_structured_json(
             instructions=(
-                "You adjudicate only one supported action: I drink my "
-                "potion of healing. "
-                "Return a JSON object that matches the supplied schema. "
-                "Keep the roll request explicit and public."
+                "You are a rules adjudication engine. Return only a single "
+                "machine-readable JSON object. Do not include prose, markdown, "
+                "or code fences. The object must contain is_legal, action_type, "
+                "summary, reasoning_summary, and optional roll_requests, "
+                "state_effects, and rule_references."
             ),
-            input_text=json.dumps(
-                {
-                    "action": {
-                        "actor": actor,
-                        "summary": _SUPPORTED_ACTION,
-                    },
-                    "potion": potion,
-                    "rule_index_topics": sorted(rule_index),
-                    "rule_context": {
-                        "actions": actions_markdown,
-                        "damage_healing": healing_markdown,
-                    },
-                },
-                indent=2,
-                sort_keys=True,
-            ),
-            schema_name="potion_of_healing_adjudication",
-            json_schema=_ADJUDICATION_SCHEMA,
+            input_text=json.dumps(self._build_input(request), indent=2, sort_keys=True),
         )
-        return self._parse_adjudication(action, payload, action_references)
+        return self._parse_adjudication(payload)
 
-    def _parse_adjudication(
-        self,
-        action: Action,
-        payload: dict[str, Any],
-        rule_references: tuple[RuleReference, ...],
-    ) -> Adjudication:
-        outcome = payload.get("outcome")
-        roll_request_payload = payload.get("roll_request")
-        if not isinstance(outcome, str) or not isinstance(roll_request_payload, dict):
-            raise TypeError("malformed payload")  # noqa: TRY003
-        if outcome != "roll_requested":
-            raise ValueError("invalid outcome")  # noqa: TRY003
-        roll_request = self._parse_roll_request(roll_request_payload)
-        return Adjudication(
-            action=action,
-            outcome=outcome,
-            roll_request=roll_request,
+    def _build_input(self, request: RulesAdjudicationRequest) -> dict[str, object]:
+        return {
+            "actor_id": request.actor_id,
+            "intent": request.intent,
+            "phase": request.phase.value,
+            "allowed_outcomes": list(request.allowed_outcomes),
+            "rules_context": list(request.rules_context),
+            "compendium_context": list(request.compendium_context),
+        }
+
+    def _parse_adjudication(self, payload: object) -> RulesAdjudication:
+        if not isinstance(payload, dict):
+            raise ValueError("invalid payload")  # noqa: TRY003, TRY004
+
+        is_legal = self._require_bool(payload, "is_legal")
+        action_type = self._require_text(payload, "action_type")
+        summary = self._require_text(payload, "summary")
+        reasoning_summary = self._require_text(payload, "reasoning_summary")
+        roll_requests = self._parse_roll_requests(payload.get("roll_requests"))
+        state_effects = self._parse_state_effects(payload.get("state_effects"))
+        rule_references = self._parse_rule_references(payload.get("rule_references"))
+
+        return RulesAdjudication(
+            is_legal=is_legal,
+            action_type=action_type,
+            summary=summary,
+            roll_requests=roll_requests,
+            state_effects=state_effects,
             rule_references=rule_references,
+            reasoning_summary=reasoning_summary,
         )
 
-    def _parse_roll_request(self, payload: dict[str, Any]) -> RollRequest:
-        owner = payload.get("owner")
-        visibility = payload.get("visibility")
-        expression = payload.get("expression")
-        purpose = payload.get("purpose")
-        if not all(
-            isinstance(value, str) and value.strip()
-            for value in (owner, visibility, expression, purpose)
-        ):
-            raise TypeError("malformed payload")  # noqa: TRY003
-        if owner != "orchestrator":
-            raise ValueError("invalid owner")  # noqa: TRY003
-        if visibility != "public":
-            raise ValueError("invalid visibility")  # noqa: TRY003
-        if expression != "2d4+2":
-            raise ValueError("invalid expression")  # noqa: TRY003
+    def _parse_roll_requests(self, payload: object) -> tuple[RollRequest, ...]:
+        if payload is None:
+            return ()
+        if not isinstance(payload, list):
+            raise ValueError("invalid roll_requests")  # noqa: TRY003, TRY004
+        return tuple(self._parse_roll_request(entry) for entry in payload)
+
+    def _parse_roll_request(self, payload: object) -> RollRequest:
+        if not isinstance(payload, dict):
+            raise ValueError("invalid roll request")  # noqa: TRY003, TRY004
+
+        owner = self._require_text(payload, "owner")
+        if owner not in _VALID_ROLL_OWNERS:
+            raise ValueError(  # noqa: TRY003
+                f"invalid roll owner: {owner}"
+            )
+
+        visibility_value = self._require_text(payload, "visibility")
+        try:
+            visibility = RollVisibility(visibility_value)
+        except ValueError as exc:
+            message = f"invalid roll visibility: {visibility_value}"
+            raise ValueError(message) from exc
+
+        expression = self._require_text(payload, "expression")
+        purpose_value = payload.get("purpose")
+        purpose: str | None
+        if purpose_value is None:
+            purpose = None
+        else:
+            purpose = self._require_text(payload, "purpose")
+
         return RollRequest(
             owner=owner,
             visibility=visibility,
@@ -151,9 +117,42 @@ class RulesAgent:
             purpose=purpose,
         )
 
+    def _parse_state_effects(self, payload: object) -> tuple[StateEffect, ...]:
+        if payload is None:
+            return ()
+        if not isinstance(payload, list):
+            raise ValueError("invalid state_effects")  # noqa: TRY003, TRY004
+        return tuple(self._parse_state_effect(entry) for entry in payload)
 
-def _excerpt(markdown: str) -> str:
-    lines = [line.strip() for line in markdown.splitlines() if line.strip()]
-    if not lines:
-        raise ValueError("empty output")  # noqa: TRY003
-    return lines[1] if len(lines) > 1 else lines[0]
+    def _parse_state_effect(self, payload: object) -> StateEffect:
+        if not isinstance(payload, dict):
+            raise ValueError("invalid state effect")  # noqa: TRY003, TRY004
+
+        effect_type = self._require_text(payload, "effect_type")
+        target = self._require_text(payload, "target")
+        value = payload.get("value")
+        return StateEffect(effect_type=effect_type, target=target, value=value)
+
+    def _parse_rule_references(self, payload: object) -> tuple[str, ...]:
+        if payload is None:
+            return ()
+        if not isinstance(payload, list):
+            raise ValueError("invalid rule_references")  # noqa: TRY003, TRY004
+        references: list[str] = []
+        for entry in payload:
+            if not isinstance(entry, str) or not entry.strip():
+                raise ValueError("invalid rule reference")  # noqa: TRY003
+            references.append(entry)
+        return tuple(references)
+
+    def _require_bool(self, payload: dict[str, Any], field: str) -> bool:
+        value = payload.get(field)
+        if not isinstance(value, bool):
+            raise ValueError(f"invalid {field}")  # noqa: TRY003, TRY004
+        return value
+
+    def _require_text(self, payload: dict[str, Any], field: str) -> str:
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"invalid {field}")  # noqa: TRY003
+        return value

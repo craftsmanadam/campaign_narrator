@@ -1,0 +1,22 @@
+{
+  "priority": 20,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "\"purpose\": \"combat_start\""
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "narration-combat-start-response.json"
+  }
+}

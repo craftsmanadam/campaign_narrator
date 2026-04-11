@@ -2,209 +2,380 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
-    Action,
-    Adjudication,
+    EncounterPhase,
     RollRequest,
-    RuleReference,
+    RollVisibility,
+    RulesAdjudication,
+    RulesAdjudicationRequest,
+    StateEffect,
 )
-from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.rules_repository import RulesRepository
 
 
-class _FakeAdapter:
+class FakeAdapter:
+    """Capture structured-json calls for assertions."""
+
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
         self.calls: list[dict[str, object]] = []
 
-    def generate_structured_json(self, **kwargs: object) -> dict[str, object]:
-        self.calls.append(kwargs)
+    def generate_structured_json(
+        self, *, instructions: str, input_text: str
+    ) -> dict[str, object]:
+        self.calls.append(
+            {
+                "instructions": instructions,
+                "input_text": input_text,
+            }
+        )
         return self.payload
 
 
-def _write_rules_fixture(root: Path) -> RulesRepository:
-    (root / "generated").mkdir(parents=True)
-    (root / "source" / "adjudication").mkdir(parents=True)
-    (root / "generated" / "rule_index.json").write_text(
-        json.dumps({"actions": ["actions.md"], "damage_healing": ["damage_healing.md"]})
-    )
-    (root / "source" / "adjudication" / "actions.md").write_text(
-        "# Actions\n\nDrinking a potion is an action."
-    )
-    (root / "source" / "adjudication" / "damage_healing.md").write_text(
-        "# Damage and Healing\n\nA potion of healing restores hit points."
-    )
-    return RulesRepository(root)
+class FakeRawAdapter:
+    """Return a non-dict payload to exercise adapter-boundary validation."""
+
+    def __init__(self, payload: object) -> None:
+        self.payload = payload
+
+    def generate_structured_json(self, *, instructions: str, input_text: str) -> object:
+        _ = instructions, input_text
+        return self.payload
 
 
-def _write_compendium_fixture(root: Path) -> CompendiumRepository:
-    (root / "magic_items").mkdir(parents=True)
-    (root / "magic_items" / "common.json").write_text(
-        json.dumps(
+def test_rules_agent_returns_generic_adjudication() -> None:
+    payload = {
+        "is_legal": True,
+        "action_type": "social_check",
+        "summary": "The goblins hesitate and lower their weapons.",
+        "roll_requests": [
             {
-                "magic_items": [
-                    {
-                        "item_id": "potion-of-healing",
-                        "name": "Potion of Healing",
-                        "rarity": "common",
-                        "description": (
-                            "A restorative potion that replenishes hit points."
-                        ),
-                    }
-                ]
-            }
-        )
-    )
-    (root / "magic_items" / "rare.json").write_text(
-        json.dumps(
-            {
-                "magic_items": [
-                    {
-                        "item_id": "bag-of-beans",
-                        "name": "Bag of Beans",
-                        "rarity": "rare",
-                    }
-                ]
-            }
-        )
-    )
-    return CompendiumRepository(root)
-
-
-def test_rules_agent_returns_a_structured_potion_adjudication(
-    tmp_path: Path,
-) -> None:
-    """The rules agent should adjudicate the potion action explicitly."""
-
-    rules = _write_rules_fixture(tmp_path / "rules")
-    compendium = _write_compendium_fixture(tmp_path / "compendium")
-    adapter = _FakeAdapter(
-        {
-            "outcome": "roll_requested",
-            "roll_request": {
-                "owner": "orchestrator",
+                "owner": "player",
                 "visibility": "public",
-                "expression": "2d4+2",
-                "purpose": "heal from potion of healing",
-            },
-        }
-    )
-    agent = RulesAgent(
-        adapter=adapter,
-        rules_repository=rules,
-        compendium_repository=compendium,
+                "expression": "1d20+2",
+                "purpose": "Persuasion check",
+            }
+        ],
+        "state_effects": [
+            {
+                "effect_type": "set_encounter_outcome",
+                "target": "encounter:goblin-camp",
+                "value": "de-escalated",
+            }
+        ],
+        "rule_references": ["source/rules/social.md", "source/rules/outcomes.md"],
+        "reasoning_summary": "The intent is peaceful and supported by the scene.",
+    }
+    adapter = FakeAdapter(payload)
+    agent = RulesAgent(adapter=adapter)
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+        rules_context=("social rules",),
+        compendium_context=("goblin camp lore",),
     )
 
-    adjudication = agent.adjudicate_potion_of_healing(actor="Talia")
+    adjudication = agent.adjudicate(request)
 
-    assert adjudication == Adjudication(
-        action=Action(
-            actor="Talia",
-            summary="I drink my potion of healing",
-            rule_references=(
-                RuleReference(
-                    path="source/adjudication/actions.md",
-                    title="Actions",
-                    excerpt="Drinking a potion is an action.",
-                ),
-                RuleReference(
-                    path="source/adjudication/damage_healing.md",
-                    title="Damage and Healing",
-                    excerpt="A potion of healing restores hit points.",
-                ),
+    assert adjudication == RulesAdjudication(
+        is_legal=True,
+        action_type="social_check",
+        summary="The goblins hesitate and lower their weapons.",
+        roll_requests=(
+            RollRequest(
+                owner="player",
+                visibility=RollVisibility.PUBLIC,
+                expression="1d20+2",
+                purpose="Persuasion check",
             ),
         ),
-        outcome="roll_requested",
-        roll_request=RollRequest(
-            owner="orchestrator",
-            visibility="public",
-            expression="2d4+2",
-            purpose="heal from potion of healing",
-        ),
-        rule_references=(
-            RuleReference(
-                path="source/adjudication/actions.md",
-                title="Actions",
-                excerpt="Drinking a potion is an action.",
-            ),
-            RuleReference(
-                path="source/adjudication/damage_healing.md",
-                title="Damage and Healing",
-                excerpt="A potion of healing restores hit points.",
+        state_effects=(
+            StateEffect(
+                effect_type="set_encounter_outcome",
+                target="encounter:goblin-camp",
+                value="de-escalated",
             ),
         ),
+        rule_references=("source/rules/social.md", "source/rules/outcomes.md"),
+        reasoning_summary="The intent is peaceful and supported by the scene.",
     )
-    assert adapter.calls[0]["schema_name"] == "potion_of_healing_adjudication"
-    assert "I drink my potion of healing" in adapter.calls[0]["input_text"]
-    assert "Potion of Healing" in adapter.calls[0]["input_text"]
-
-
-def test_rules_agent_rejects_malformed_adapter_output(
-    tmp_path: Path,
-) -> None:
-    """Malformed structured output should fail closed."""
-
-    rules = _write_rules_fixture(tmp_path / "rules")
-    compendium = _write_compendium_fixture(tmp_path / "compendium")
-    adapter = _FakeAdapter({"outcome": "roll_requested"})
-    agent = RulesAgent(
-        adapter=adapter,
-        rules_repository=rules,
-        compendium_repository=compendium,
-    )
-
-    with pytest.raises(TypeError, match="malformed"):
-        agent.adjudicate_potion_of_healing(actor="Talia")
+    assert len(adapter.calls) == 1
+    assert adapter.calls[0]["input_text"].count("intent") == 1
 
 
 @pytest.mark.parametrize(
-    ("roll_request", "match"),
+    ("payload", "match"),
     [
         (
             {
-                "owner": "orchestrator",
-                "visibility": "private",
-                "expression": "2d4+2",
-                "purpose": "heal from potion of healing",
+                "is_legal": True,
+                "action_type": "social_check",
+                "summary": "A response is required.",
+                "roll_requests": [
+                    {
+                        "owner": "player",
+                        "visibility": "everyone",
+                        "expression": "1d20+2",
+                        "purpose": "Persuasion check",
+                    }
+                ],
+                "state_effects": [],
+                "rule_references": [],
+                "reasoning_summary": "Visibility must be validated.",
             },
-            "visibility",
+            "invalid roll visibility: everyone",
         ),
         (
             {
-                "owner": "orchestrator",
-                "visibility": "public",
-                "expression": "1d8+1",
-                "purpose": "heal from potion of healing",
+                "is_legal": True,
+                "action_type": "social_check",
+                "summary": "A response is required.",
+                "roll_requests": [
+                    {
+                        "owner": "witness",
+                        "visibility": "public",
+                        "expression": "1d20+2",
+                        "purpose": "Persuasion check",
+                    }
+                ],
+                "state_effects": [],
+                "rule_references": [],
+                "reasoning_summary": "Owner must be validated.",
             },
-            "expression",
+            "invalid roll owner: witness",
         ),
     ],
 )
-def test_rules_agent_rejects_semantically_invalid_roll_requests(
-    tmp_path: Path,
-    roll_request: dict[str, str],
-    match: str,
+def test_rules_agent_rejects_invalid_roll_metadata(
+    payload: dict[str, object], match: str
 ) -> None:
-    """The potion slice must keep the roll request explicit and exact."""
-
-    rules = _write_rules_fixture(tmp_path / "rules")
-    compendium = _write_compendium_fixture(tmp_path / "compendium")
-    adapter = _FakeAdapter(
-        {
-            "outcome": "roll_requested",
-            "roll_request": roll_request,
-        }
-    )
-    agent = RulesAgent(
-        adapter=adapter,
-        rules_repository=rules,
-        compendium_repository=compendium,
+    adapter = FakeAdapter(payload)
+    agent = RulesAgent(adapter=adapter)
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
     )
 
     with pytest.raises(ValueError, match=match):
-        agent.adjudicate_potion_of_healing(actor="Talia")
+        agent.adjudicate(request)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("roll_requests", "not-a-list", "invalid roll_requests"),
+        ("roll_requests", ["not-a-dict"], "invalid roll request"),
+        ("roll_requests", [{"owner": "player"}], "visibility"),
+        ("roll_requests", [{"owner": "player", "visibility": "public"}], "expression"),
+        (
+            "roll_requests",
+            [
+                {
+                    "owner": "player",
+                    "visibility": "public",
+                    "expression": "1d20",
+                    "purpose": 7,
+                }
+            ],
+            "purpose",
+        ),
+        ("state_effects", "not-a-list", "invalid state_effects"),
+        ("state_effects", ["not-a-dict"], "invalid state effect"),
+        ("rule_references", "not-a-list", "invalid rule_references"),
+        ("rule_references", [""], "invalid rule reference"),
+    ],
+)
+def test_rules_agent_rejects_invalid_optional_collections(
+    field: str,
+    value: object,
+    match: str,
+) -> None:
+    payload: dict[str, object] = {
+        "is_legal": True,
+        "action_type": "social_check",
+        "summary": "A response is required.",
+        "roll_requests": [],
+        "state_effects": [],
+        "rule_references": [],
+        "reasoning_summary": "Optional collections must be validated.",
+    }
+    payload[field] = value
+    agent = RulesAgent(adapter=FakeAdapter(payload))
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+    )
+
+    with pytest.raises(ValueError, match=match):
+        agent.adjudicate(request)
+
+
+def test_rules_agent_rejects_non_object_payload() -> None:
+    agent = RulesAgent(adapter=FakeRawAdapter("not-json-object"))
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+    )
+
+    with pytest.raises(ValueError, match="invalid payload"):
+        agent.adjudicate(request)
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        (
+            {
+                "action_type": "social_check",
+                "summary": "A response is required.",
+                "roll_requests": [],
+                "state_effects": [],
+                "rule_references": [],
+                "reasoning_summary": "Missing legality.",
+            },
+            "is_legal",
+        ),
+        (
+            {
+                "is_legal": True,
+                "action_type": "",
+                "summary": "A response is required.",
+                "roll_requests": [],
+                "state_effects": [],
+                "rule_references": [],
+                "reasoning_summary": "Missing action type.",
+            },
+            "action_type",
+        ),
+        (
+            {
+                "is_legal": True,
+                "action_type": "social_check",
+                "summary": "",
+                "roll_requests": [],
+                "state_effects": [],
+                "rule_references": [],
+                "reasoning_summary": "Missing summary.",
+            },
+            "summary",
+        ),
+        (
+            {
+                "is_legal": True,
+                "action_type": "social_check",
+                "summary": "A response is required.",
+                "roll_requests": [],
+                "state_effects": [],
+                "rule_references": [],
+                "reasoning_summary": "",
+            },
+            "reasoning_summary",
+        ),
+    ],
+)
+def test_rules_agent_rejects_missing_required_top_level_values(
+    payload: dict[str, object], match: str
+) -> None:
+    adapter = FakeAdapter(payload)
+    agent = RulesAgent(adapter=adapter)
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+    )
+
+    with pytest.raises(ValueError, match=match):
+        agent.adjudicate(request)
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        (
+            {
+                "is_legal": True,
+                "action_type": "social_check",
+                "summary": "A response is required.",
+                "roll_requests": [],
+                "state_effects": [
+                    {
+                        "target": "encounter:goblin-camp",
+                        "value": "de-escalated",
+                    }
+                ],
+                "rule_references": [],
+                "reasoning_summary": "Effect type missing.",
+            },
+            "effect_type",
+        ),
+        (
+            {
+                "is_legal": True,
+                "action_type": "social_check",
+                "summary": "A response is required.",
+                "roll_requests": [],
+                "state_effects": [
+                    {
+                        "effect_type": "set_encounter_outcome",
+                        "value": "de-escalated",
+                    }
+                ],
+                "rule_references": [],
+                "reasoning_summary": "Target missing.",
+            },
+            "target",
+        ),
+    ],
+)
+def test_rules_agent_rejects_invalid_state_effects(
+    payload: dict[str, object], match: str
+) -> None:
+    adapter = FakeAdapter(payload)
+    agent = RulesAgent(adapter=adapter)
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+    )
+
+    with pytest.raises(ValueError, match=match):
+        agent.adjudicate(request)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("action_type", ""), ("summary", " "), ("reasoning_summary", "\t")],
+)
+def test_rules_agent_rejects_empty_text_fields(field: str, value: str) -> None:
+    payload: dict[str, object] = {
+        "is_legal": True,
+        "action_type": "social_check",
+        "summary": "A response is required.",
+        "roll_requests": [],
+        "state_effects": [],
+        "rule_references": [],
+        "reasoning_summary": "The goblins are listening.",
+    }
+    payload[field] = value
+    adapter = FakeAdapter(payload)
+    agent = RulesAgent(adapter=adapter)
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="calm the goblin camp",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+    )
+
+    with pytest.raises(ValueError, match=field):
+        agent.adjudicate(request)

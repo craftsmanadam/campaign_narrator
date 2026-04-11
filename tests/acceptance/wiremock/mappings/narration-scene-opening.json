@@ -1,0 +1,22 @@
+{
+  "priority": 50,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "\"purpose\": \"scene_opening\""
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "narration-scene-opening-response.json"
+  }
+}

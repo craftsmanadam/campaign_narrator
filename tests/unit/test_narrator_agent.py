@@ -4,13 +4,7 @@ from __future__ import annotations
 
 import pytest
 from campaignnarrator.agents.narrator_agent import NarratorAgent
-from campaignnarrator.domain.models import (
-    Action,
-    Adjudication,
-    Narration,
-    PotionOfHealingResolution,
-    RollRequest,
-)
+from campaignnarrator.domain.models import EncounterPhase, Narration, NarrationFrame
 
 
 class _FakeAdapter:
@@ -18,66 +12,105 @@ class _FakeAdapter:
         self.text = text
         self.calls: list[dict[str, object]] = []
 
-    def generate_text(self, **kwargs: object) -> str:
-        self.calls.append(kwargs)
+    def generate_text(self, *, instructions: str, input_text: str) -> str:
+        self.calls.append({"instructions": instructions, "input_text": input_text})
         return self.text
 
 
-def test_narrator_agent_turns_adjudication_into_player_facing_text() -> None:
-    """Narration should be rendered from the adjudication details."""
+def test_narrator_uses_generic_narration_frame() -> None:
+    """Narration should be rendered from the generic frame context."""
 
-    adapter = _FakeAdapter("Talia drinks the potion and waits for the result.")
-    agent = NarratorAgent(adapter=adapter)
-    adjudication = Adjudication(
-        action=Action(actor="Talia", summary="I drink my potion of healing"),
-        outcome="roll_requested",
-        roll_request=RollRequest(
-            owner="orchestrator",
-            visibility="public",
-            expression="2d4+2",
-            purpose="heal from potion of healing",
-        ),
-    )
-    resolution = PotionOfHealingResolution(
-        roll_total=7,
-        healing_amount=7,
-        hp_before=12,
-        hp_after=18,
-    )
+    adapter = _FakeAdapter("The goblins lower their weapons.")
+    narrator = NarratorAgent(adapter=adapter)
 
-    narration = agent.narrate(adjudication, resolution)
+    narration = narrator.narrate(
+        NarrationFrame(
+            purpose="social_resolution",
+            phase=EncounterPhase.SOCIAL,
+            setting="A ruined roadside camp.",
+            public_actor_summaries=("Talia has 12 of 12 hit points.",),
+            visible_npc_summaries=("Goblin Scout is wary.",),
+            recent_public_events=("Talia offers peace.",),
+            resolved_outcomes=("Encounter outcome: peaceful",),
+            allowed_disclosures=("visible_npcs", "public_events"),
+        )
+    )
 
     assert narration == Narration(
-        text="Talia drinks the potion and waits for the result.",
+        text="The goblins lower their weapons.",
         audience="player",
     )
-    assert '"outcome"' not in adapter.calls[0]["input_text"]
-    assert '"roll_request"' not in adapter.calls[0]["input_text"]
-    assert '"rule_references"' not in adapter.calls[0]["input_text"]
-    assert '"healing_amount": 7' in adapter.calls[0]["input_text"]
+    assert adapter.calls[0]["input_text"] is not None
+    assert "social_resolution" in adapter.calls[0]["input_text"]
 
 
-def test_narrator_agent_rejects_blank_text() -> None:
+def test_narrator_rejects_empty_output() -> None:
     """Blank text output should fail closed."""
 
-    adapter = _FakeAdapter("")
-    agent = NarratorAgent(adapter=adapter)
-    adjudication = Adjudication(
-        action=Action(actor="Talia", summary="I drink my potion of healing"),
-        outcome="roll_requested",
-        roll_request=RollRequest(
-            owner="orchestrator",
-            visibility="public",
-            expression="2d4+2",
-            purpose="heal from potion of healing",
-        ),
-    )
-    resolution = PotionOfHealingResolution(
-        roll_total=7,
-        healing_amount=7,
-        hp_before=12,
-        hp_after=18,
+    adapter = _FakeAdapter("   ")
+    narrator = NarratorAgent(adapter=adapter)
+
+    with pytest.raises(ValueError, match="empty narration output"):
+        narrator.narrate(
+            NarrationFrame(
+                purpose="social_resolution",
+                phase=EncounterPhase.SOCIAL,
+                setting="A ruined roadside camp.",
+                public_actor_summaries=("Talia has 12 of 12 hit points.",),
+                visible_npc_summaries=("Goblin Scout is wary.",),
+                recent_public_events=("Talia offers peace.",),
+                resolved_outcomes=("Encounter outcome: peaceful",),
+                allowed_disclosures=("visible_npcs", "public_events"),
+            )
+        )
+
+
+def test_narrator_prompt_includes_safety_guardrails() -> None:
+    """The instructions should constrain the narrator from inventing details."""
+
+    adapter = _FakeAdapter("The goblins lower their weapons.")
+    narrator = NarratorAgent(adapter=adapter)
+
+    narrator.narrate(
+        NarrationFrame(
+            purpose="recap_response",
+            phase=EncounterPhase.SOCIAL,
+            setting="A ruined roadside camp.",
+            public_actor_summaries=("Talia has 12 of 12 hit points.",),
+            visible_npc_summaries=("Goblin Scout is wary.",),
+            recent_public_events=("Talia offers peace.",),
+            resolved_outcomes=("Encounter outcome: peaceful",),
+            allowed_disclosures=("visible_npcs", "public_events"),
+        )
     )
 
-    with pytest.raises(ValueError, match="empty"):
-        agent.narrate(adjudication, resolution)
+    instructions = adapter.calls[0]["instructions"]
+    assert (
+        "Do not invent mechanics, rolls, HP changes, inventory changes, or hidden "
+        "facts."
+    ) in instructions
+    assert "Use only provided public and allowed context." in instructions
+
+
+def test_narrator_input_includes_disclosures_and_outcomes() -> None:
+    """The narrator input should include the full frame context."""
+
+    adapter = _FakeAdapter("The goblins lower their weapons.")
+    narrator = NarratorAgent(adapter=adapter)
+
+    narrator.narrate(
+        NarrationFrame(
+            purpose="status_response",
+            phase=EncounterPhase.SOCIAL,
+            setting="A ruined roadside camp.",
+            public_actor_summaries=("Talia has 12 of 12 hit points.",),
+            visible_npc_summaries=("Goblin Scout is wary.",),
+            recent_public_events=("Talia offers peace.",),
+            resolved_outcomes=("Encounter outcome: peaceful",),
+            allowed_disclosures=("visible_npcs", "public_events"),
+        )
+    )
+
+    input_text = adapter.calls[0]["input_text"]
+    assert '"allowed_disclosures": [' in input_text
+    assert '"resolved_outcomes": [' in input_text

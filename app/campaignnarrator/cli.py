@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TextIO
 
 from campaignnarrator.adapters.openai_adapter import OpenAIAdapter
 from campaignnarrator.agents.narrator_agent import NarratorAgent
@@ -23,7 +25,7 @@ def _build_application_graph(data_root: Path) -> CampaignOrchestrator:
     adapter = OpenAIAdapter.from_env()
     rules_repository = RulesRepository(data_root / "rules")
     compendium_repository = CompendiumRepository(data_root / "compendium")
-    state_repository = StateRepository(data_root / "state")
+    state_repository = StateRepository.from_default_encounter()
     memory_repository = MemoryRepository(data_root / "memory")
     rules_agent = RulesAgent(
         adapter=adapter,
@@ -37,20 +39,34 @@ def _build_application_graph(data_root: Path) -> CampaignOrchestrator:
         memory_repository=memory_repository,
         narrator_agent=narrator_agent,
         roll_dice=roll_dice,
+        decision_adapter=adapter,
     )
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    stdin: TextIO | None = None,
+    stdout: TextIO | None = None,
+) -> int:
     """Parse CLI arguments, run the orchestrator, and print narration."""
 
+    stdin = sys.stdin if stdin is None else stdin
+    stdout = sys.stdout if stdout is None else stdout
+
     parser = argparse.ArgumentParser(prog="campaignnarrator")
-    parser.add_argument("--input", required=True)
     parser.add_argument("--data-root", required=True, type=Path)
+    parser.add_argument("--encounter-id", default="goblin-camp")
     args = parser.parse_args(argv)
 
     orchestrator = _build_application_graph(args.data_root)
-    narration = orchestrator.run(args.input)
-    print(narration.text)
+    result = orchestrator.run_encounter(
+        encounter_id=args.encounter_id,
+        player_inputs=stdin,
+    )
+    stdout.write(result.output_text)
+    if not result.output_text.endswith("\n"):
+        stdout.write("\n")
     return 0
 
 

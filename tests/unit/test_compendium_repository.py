@@ -92,3 +92,44 @@ def test_compendium_repository_rejects_unknown_item_ids(
     except ValueError:
         return
     raise AssertionError
+
+
+def test_compendium_repository_loads_equipment_and_monster_context(
+    tmp_path: Path,
+) -> None:
+    """Equipment and monster context should be loaded from simple JSON fixtures."""
+
+    compendium_root = tmp_path / "compendium"
+    (compendium_root / "equipment").mkdir(parents=True)
+    (compendium_root / "monsters").mkdir(parents=True)
+    (compendium_root / "equipment" / "weapons.json").write_text(
+        '{"weapons": [{"item_id": "longsword", "name": "Longsword"}]}'
+    )
+    (compendium_root / "monsters" / "goblins.json").write_text(
+        '{"monsters": [{"monster_id": "goblin", "name": "Goblin"}]}'
+    )
+
+    repository = CompendiumRepository(compendium_root)
+
+    assert repository.load_equipment_context(("longsword",)) == (
+        '{"item_id": "longsword", "name": "Longsword"}',
+    )
+    assert repository.load_monster_context(("goblin",)) == (
+        '{"monster_id": "goblin", "name": "Goblin"}',
+    )
+
+
+def test_compendium_repository_marks_missing_context(tmp_path: Path) -> None:
+    """Missing equipment and monster IDs should return explicit markers."""
+
+    compendium_root = tmp_path / "compendium"
+    (compendium_root / "equipment").mkdir(parents=True)
+    (compendium_root / "monsters").mkdir(parents=True)
+    repository = CompendiumRepository(compendium_root)
+
+    assert repository.load_equipment_context(("longsword",)) == (
+        "Missing compendium context: longsword",
+    )
+    assert repository.load_monster_context(("goblin",)) == (
+        "Missing compendium context: goblin",
+    )

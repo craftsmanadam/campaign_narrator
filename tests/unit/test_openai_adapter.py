@@ -77,8 +77,8 @@ def test_generate_structured_json_shapes_the_responses_request(
 
     payload = adapter.generate_structured_json(
         instructions="You are a rules adjudicator.",
-        input_text="I drink my potion of healing.",
-        schema_name="potion_of_healing_adjudication",
+        input_text="I try to calm the goblin scout.",
+        schema_name="rules_adjudication",
         json_schema={
             "type": "object",
             "properties": {"outcome": {"type": "string"}},
@@ -92,11 +92,11 @@ def test_generate_structured_json_shapes_the_responses_request(
         {
             "model": "gpt-5.4",
             "instructions": "You are a rules adjudicator.",
-            "input": "I drink my potion of healing.",
+            "input": "I try to calm the goblin scout.",
             "text": {
                 "format": {
                     "type": "json_schema",
-                    "name": "potion_of_healing_adjudication",
+                    "name": "rules_adjudication",
                     "schema": {
                         "type": "object",
                         "properties": {"outcome": {"type": "string"}},
@@ -111,13 +111,42 @@ def test_generate_structured_json_shapes_the_responses_request(
     ]
 
 
+def test_generate_structured_json_can_request_a_generic_json_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Structured output should allow callers without a dedicated schema."""
+
+    fake_client = _FakeOpenAI(api_key="test-key")
+    fake_client.responses.response_text = json.dumps(
+        {"next_step": "complete_encounter"}
+    )
+    monkeypatch.setattr(openai_adapter_module, "OpenAI", lambda **kwargs: fake_client)
+
+    adapter = OpenAIAdapter(api_key="test-key", model="gpt-5.4")
+
+    payload = adapter.generate_structured_json(
+        instructions="Choose the next encounter orchestration step.",
+        input_text='{"latest_input":"Hello there."}',
+    )
+
+    assert payload == {"next_step": "complete_encounter"}
+    assert fake_client.responses.calls == [
+        {
+            "model": "gpt-5.4",
+            "instructions": "Choose the next encounter orchestration step.",
+            "input": '{"latest_input":"Hello there."}',
+            "text": {"format": {"type": "json_object"}},
+        }
+    ]
+
+
 def test_generate_text_returns_plain_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Text generation should expose the model output verbatim."""
 
     fake_client = _FakeOpenAI(api_key="test-key")
-    fake_client.responses.response_text = "Talia drinks the potion."
+    fake_client.responses.response_text = "Talia addresses the wary goblin."
     monkeypatch.setattr(openai_adapter_module, "OpenAI", lambda **kwargs: fake_client)
 
     adapter = OpenAIAdapter(api_key="test-key", model="gpt-5.4")
@@ -127,7 +156,7 @@ def test_generate_text_returns_plain_output(
         input_text="Summarize the result.",
     )
 
-    assert output == "Talia drinks the potion."
+    assert output == "Talia addresses the wary goblin."
     assert fake_client.responses.calls == [
         {
             "model": "gpt-5.4",
@@ -152,8 +181,8 @@ def test_generate_structured_json_rejects_malformed_output(
     with pytest.raises(ValueError, match="Expecting value"):
         adapter.generate_structured_json(
             instructions="You are a rules adjudicator.",
-            input_text="I drink my potion of healing.",
-            schema_name="potion_of_healing_adjudication",
+            input_text="I try to calm the goblin scout.",
+            schema_name="rules_adjudication",
             json_schema={
                 "type": "object",
                 "properties": {"outcome": {"type": "string"}},

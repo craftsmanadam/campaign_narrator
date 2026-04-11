@@ -1,0 +1,25 @@
+{
+  "id": "resp_rules_social_failed_001",
+  "object": "response",
+  "created_at": 1710000201,
+  "model": "gpt-5.4",
+  "output": [
+    {
+      "id": "msg_rules_social_failed_001",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"is_legal\":true,\"action_type\":\"persuasion\",\"summary\":\"The goblins reject Talia's plea and move to fight.\",\"reasoning_summary\":\"The request is plausible, but the check fails against aggressive goblins.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+2\",\"purpose\":\"Persuasion check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp\",\"value\":\"The goblins reject Talia's plea and move to fight.\"},{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp\",\"value\":\"Initiative: Talia 9, Goblin Scout 16.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp\",\"value\":\"combat\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp\",\"value\":\"combat\"}],\"rule_references\":[]}",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": false,
+  "tool_choice": "auto",
+  "tools": [],
+  "status": "completed"
+}

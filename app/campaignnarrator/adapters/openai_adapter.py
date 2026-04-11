@@ -52,23 +52,25 @@ class OpenAIAdapter:
         *,
         instructions: str,
         input_text: str,
-        schema_name: str,
-        json_schema: dict[str, object],
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
     ) -> dict[str, Any]:
         """Request JSON output that must match the supplied JSON schema."""
 
+        if schema_name is None or json_schema is None:
+            response_format = {"type": "json_object"}
+        else:
+            response_format = {
+                "type": "json_schema",
+                "name": schema_name,
+                "schema": json_schema,
+                "strict": True,
+            }
         response = self._client.responses.create(
             model=self.model,
             instructions=instructions,
             input=input_text,
-            text={
-                "format": {
-                    "type": "json_schema",
-                    "name": schema_name,
-                    "schema": json_schema,
-                    "strict": True,
-                }
-            },
+            text={"format": response_format},
             **self._timeout_kwargs(),
         )
         return self._parse_json_response(response.output_text)

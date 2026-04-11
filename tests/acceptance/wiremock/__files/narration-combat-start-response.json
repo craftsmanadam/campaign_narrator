@@ -1,0 +1,25 @@
+{
+  "id": "resp_narration_combat_start_001",
+  "object": "response",
+  "created_at": 1710000102,
+  "model": "gpt-5.4",
+  "output": [
+    {
+      "id": "msg_narration_combat_start_001",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Talia attacks with the longsword.\nInitiative: Talia 12, Goblin Scout 8.\nEncounter outcome: combat",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": false,
+  "tool_choice": "auto",
+  "tools": [],
+  "status": "completed"
+}

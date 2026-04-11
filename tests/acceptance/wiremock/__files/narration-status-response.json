@@ -1,18 +1,18 @@
 {
-  "id": "resp_adjudication_001",
+  "id": "resp_narration_status_001",
   "object": "response",
-  "created_at": 1710000000,
+  "created_at": 1710000110,
   "model": "gpt-5.4",
   "output": [
     {
-      "id": "msg_adjudication_001",
+      "id": "msg_narration_status_001",
       "type": "message",
       "role": "assistant",
       "status": "completed",
       "content": [
         {
           "type": "output_text",
-          "text": "{\"outcome\":\"roll_requested\",\"roll_request\":{\"owner\":\"orchestrator\",\"visibility\":\"public\",\"expression\":\"2d4+2\",\"purpose\":\"heal from potion of healing\"}}",
+          "text": "Status: Talia has 12 of 12 hit points\nVisible creatures: Talia, Goblin Scout",
           "annotations": []
         }
       ]

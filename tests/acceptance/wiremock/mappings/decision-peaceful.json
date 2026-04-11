@@ -1,0 +1,28 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.instructions",
+          "contains": "Choose the next encounter orchestration step"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "Hello there. I do not want trouble."
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "decision-peaceful-response.json"
+  }
+}

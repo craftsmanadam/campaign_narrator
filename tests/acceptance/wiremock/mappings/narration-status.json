@@ -1,0 +1,22 @@
+{
+  "priority": 80,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "\"purpose\": \"status_response\""
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "narration-status-response.json"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "priority": 20,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "\"purpose\": \"recap_response\""
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "Outcome: peaceful"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "narration-recap-peaceful-response.json"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "resp_narration_recap_combat_001",
+  "object": "response",
+  "created_at": 1710000113,
+  "model": "gpt-5.4",
+  "output": [
+    {
+      "id": "msg_narration_recap_combat_001",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Encounter outcome: combat",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": false,
+  "tool_choice": "auto",
+  "tools": [],
+  "status": "completed"
+}
