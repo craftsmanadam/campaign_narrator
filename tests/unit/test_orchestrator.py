@@ -159,9 +159,7 @@ def test_orchestrator_rejects_unsupported_player_input(tmp_path: Path) -> None:
             ),
         )
     )
-    narrator_agent = _FakeNarratorAgent(
-        Narration(text="unused", audience="player")
-    )
+    narrator_agent = _FakeNarratorAgent(Narration(text="unused", audience="player"))
     orchestrator = CampaignOrchestrator(
         state_repository=state_repository,
         rules_agent=rules_agent,
@@ -203,9 +201,7 @@ def test_orchestrator_rejects_missing_potion_in_inventory(tmp_path: Path) -> Non
             ),
         )
     )
-    narrator_agent = _FakeNarratorAgent(
-        Narration(text="unused", audience="player")
-    )
+    narrator_agent = _FakeNarratorAgent(Narration(text="unused", audience="player"))
     orchestrator = CampaignOrchestrator(
         state_repository=state_repository,
         rules_agent=rules_agent,

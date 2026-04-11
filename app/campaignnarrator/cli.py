@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from campaignnarrator.adapters.openai_adapter import OpenAIAdapter
 from campaignnarrator.agents.narrator_agent import NarratorAgent

@@ -13,22 +13,16 @@ def test_compendium_repository_loads_magic_items_by_rarity_and_id(
     compendium_root = tmp_path / "compendium"
     (compendium_root / "magic_items").mkdir(parents=True)
     (compendium_root / "magic_items" / "common.json").write_text(
-        (
-            '{"magic_items": [{"item_id": "potion-of-healing", "name": '
-            '"Potion of Healing", "rarity": "common"}]}'
-        )
+        '{"magic_items": [{"item_id": "potion-of-healing", "name": '
+        '"Potion of Healing", "rarity": "common"}]}'
     )
     (compendium_root / "magic_items" / "uncommon.json").write_text(
-        (
-            '{"magic_items": [{"item_id": "alchemy-jug", "name": "Alchemy Jug", '
-            '"rarity": "uncommon"}]}'
-        )
+        '{"magic_items": [{"item_id": "alchemy-jug", "name": "Alchemy Jug", '
+        '"rarity": "uncommon"}]}'
     )
     (compendium_root / "magic_items" / "rare.json").write_text(
-        (
-            '{"magic_items": [{"item_id": "bag-of-beans", "name": "Bag of Beans", '
-            '"rarity": "rare"}]}'
-        )
+        '{"magic_items": [{"item_id": "bag-of-beans", "name": "Bag of Beans", '
+        '"rarity": "rare"}]}'
     )
 
     repository = CompendiumRepository(compendium_root)
@@ -63,16 +57,12 @@ def test_compendium_repository_rejects_invalid_rarity_inputs(
     compendium_root = tmp_path / "compendium"
     (compendium_root / "magic_items").mkdir(parents=True)
     (compendium_root / "magic_items" / "common.json").write_text(
-        (
-            '{"magic_items": [{"item_id": "potion-of-healing", "name": '
-            '"Potion of Healing", "rarity": "common"}]}'
-        )
+        '{"magic_items": [{"item_id": "potion-of-healing", "name": '
+        '"Potion of Healing", "rarity": "common"}]}'
     )
     (tmp_path / "rare.json").write_text(
-        (
-            '{"magic_items": [{"item_id": "bag-of-beans", "name": "Bag of Beans", '
-            '"rarity": "rare"}]}'
-        )
+        '{"magic_items": [{"item_id": "bag-of-beans", "name": "Bag of Beans", '
+        '"rarity": "rare"}]}'
     )
     repository = CompendiumRepository(compendium_root)
 
@@ -92,10 +82,8 @@ def test_compendium_repository_rejects_unknown_item_ids(
     compendium_root = tmp_path / "compendium"
     (compendium_root / "magic_items").mkdir(parents=True)
     (compendium_root / "magic_items" / "common.json").write_text(
-        (
-            '{"magic_items": [{"item_id": "potion-of-healing", "name": '
-            '"Potion of Healing", "rarity": "common"}]}'
-        )
+        '{"magic_items": [{"item_id": "potion-of-healing", "name": '
+        '"Potion of Healing", "rarity": "common"}]}'
     )
     repository = CompendiumRepository(compendium_root)
 

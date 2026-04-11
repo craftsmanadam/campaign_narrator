@@ -9,9 +9,9 @@ import socket
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 from subprocess import CompletedProcess, run
-from typing import Callable
 
 import pytest
 
@@ -107,9 +107,7 @@ def compose_environment(
     monkeypatch.setenv("OPENAI_API_KEY", env["OPENAI_API_KEY"])
     monkeypatch.setenv("OPENAI_MODEL", env["OPENAI_MODEL"])
     monkeypatch.setenv("OPENAI_BASE_URL", env["OPENAI_BASE_URL"])
-    monkeypatch.setenv(
-        "CAMPAIGNNARRATOR_DICE_SEED", env["CAMPAIGNNARRATOR_DICE_SEED"]
-    )
+    monkeypatch.setenv("CAMPAIGNNARRATOR_DICE_SEED", env["CAMPAIGNNARRATOR_DICE_SEED"])
     return env
 
 

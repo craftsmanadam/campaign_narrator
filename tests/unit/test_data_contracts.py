@@ -53,6 +53,13 @@ STARTER_SPELL_IDS = {
 }
 
 
+def _spell_map(path: str) -> dict[str, dict]:
+    """Load a spell compendium file keyed by spell ID."""
+
+    spells = json.loads(Path(path).read_text())["spells"]
+    return {spell["spell_id"]: spell for spell in spells}
+
+
 def test_data_contract_files_exist() -> None:
     """Core schema and docs artifacts should exist."""
 
@@ -552,7 +559,9 @@ def test_first_ingested_corpus_content_exists() -> None:
     assert any(
         spell["spell_id"] == "feather-fall" for spell in level_one_spells["spells"]
     )
-    assert any(spell["spell_id"] == "mage-armor" for spell in level_one_spells["spells"])
+    assert any(
+        spell["spell_id"] == "mage-armor" for spell in level_one_spells["spells"]
+    )
     assert any(spell["spell_id"] == "command" for spell in level_one_spells["spells"])
     assert any(spell["spell_id"] == "sleep" for spell in level_one_spells["spells"])
     assert any(
@@ -743,59 +752,13 @@ def test_equipment_and_spellcasting_rule_files_capture_core_srd_details() -> Non
     assert MATERIAL_HAND_TEXT in spellcasting
 
 
-def test_spell_compendium_entries_capture_exact_spell_details() -> None:
-    """Representative spell entries should preserve actionable SRD mechanics."""
+def test_cantrip_compendium_entries_capture_exact_spell_details() -> None:
+    """Representative cantrips should preserve actionable SRD mechanics."""
 
-    cantrips = json.loads(Path("data/compendium/spells/level_0.json").read_text())
-    level_one = json.loads(Path("data/compendium/spells/level_1.json").read_text())
-    level_two = json.loads(Path("data/compendium/spells/level_2.json").read_text())
-    level_three = json.loads(Path("data/compendium/spells/level_3.json").read_text())
-
-    acid_splash = next(
-        spell for spell in cantrips["spells"] if spell["spell_id"] == "acid-splash"
-    )
-    guidance = next(
-        spell for spell in cantrips["spells"] if spell["spell_id"] == "guidance"
-    )
-    eldritch_blast = next(
-        spell for spell in cantrips["spells"] if spell["spell_id"] == "eldritch-blast"
-    )
-    charm_person = next(
-        spell for spell in level_one["spells"] if spell["spell_id"] == "charm-person"
-    )
-    bless = next(spell for spell in level_one["spells"] if spell["spell_id"] == "bless")
-    burning_hands = next(
-        spell for spell in level_one["spells"] if spell["spell_id"] == "burning-hands"
-    )
-    shield = next(
-        spell for spell in level_one["spells"] if spell["spell_id"] == "shield"
-    )
-    sleep = next(
-        spell for spell in level_one["spells"] if spell["spell_id"] == "sleep"
-    )
-    web = next(spell for spell in level_two["spells"] if spell["spell_id"] == "web")
-    spiritual_weapon = next(
-        spell
-        for spell in level_two["spells"]
-        if spell["spell_id"] == "spiritual-weapon"
-    )
-    counterspell = next(
-        spell for spell in level_three["spells"] if spell["spell_id"] == "counterspell"
-    )
-    dispel_magic = next(
-        spell for spell in level_three["spells"] if spell["spell_id"] == "dispel-magic"
-    )
-    fireball = next(
-        spell for spell in level_three["spells"] if spell["spell_id"] == "fireball"
-    )
-    lightning_bolt = next(
-        spell for spell in level_three["spells"] if spell["spell_id"] == "lightning-bolt"
-    )
-    spirit_guardians = next(
-        spell
-        for spell in level_three["spells"]
-        if spell["spell_id"] == "spirit-guardians"
-    )
+    cantrips = _spell_map("data/compendium/spells/level_0.json")
+    acid_splash = cantrips["acid-splash"]
+    guidance = cantrips["guidance"]
+    eldritch_blast = cantrips["eldritch-blast"]
 
     assert acid_splash["save"] == "dexterity"
     assert "within 5 feet of each other" in acid_splash["description"]
@@ -806,6 +769,17 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
 
     assert eldritch_blast["attack"] == "ranged spell attack"
     assert "2 beams" in eldritch_blast["higher_level"]
+
+
+def test_level_one_spell_compendium_entries_capture_exact_details() -> None:
+    """Representative level 1 spells should preserve actionable SRD mechanics."""
+
+    level_one = _spell_map("data/compendium/spells/level_1.json")
+    bless = level_one["bless"]
+    burning_hands = level_one["burning-hands"]
+    charm_person = level_one["charm-person"]
+    shield = level_one["shield"]
+    sleep = level_one["sleep"]
 
     assert bless["concentration"] is True
 
@@ -826,13 +800,20 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
     assert sleep["concentration"] is True
     assert sleep["save"] == "wisdom"
     assert (
-        "Incapacitated condition until the end of its next turn"
-        in sleep["description"]
+        "Incapacitated condition until the end of its next turn" in sleep["description"]
     )
     assert (
         "have Immunity to the Exhaustion condition automatically succeed"
         in sleep["description"]
     )
+
+
+def test_level_two_spell_compendium_entries_capture_exact_details() -> None:
+    """Representative level 2 spells should preserve actionable SRD mechanics."""
+
+    level_two = _spell_map("data/compendium/spells/level_2.json")
+    spiritual_weapon = level_two["spiritual-weapon"]
+    web = level_two["web"]
 
     assert web["concentration"] is True
     assert web["area"] == "20-foot Cube"
@@ -843,14 +824,25 @@ def test_spell_compendium_entries_capture_exact_spell_details() -> None:
         "1d8 plus your spellcasting ability modifier" in spiritual_weapon["description"]
     )
 
+
+def test_level_three_spell_compendium_entries_capture_exact_details() -> None:
+    """Representative level 3 spells should preserve actionable SRD mechanics."""
+
+    level_three = _spell_map("data/compendium/spells/level_3.json")
+    counterspell = level_three["counterspell"]
+    dispel_magic = level_three["dispel-magic"]
+    fireball = level_three["fireball"]
+    spirit_guardians = level_three["spirit-guardians"]
+
     assert counterspell["save"] == "constitution"
     assert COUNTERSPELL_TEXT in counterspell["description"]
 
     assert "Any ongoing spell of level 3 or lower" in dispel_magic["description"]
     assert "For each ongoing spell of level 4 or higher" in dispel_magic["description"]
-    assert "equal to or less than the level of the spell slot you use" in dispel_magic[
-        "higher_level"
-    ]
+    assert (
+        "equal to or less than the level of the spell slot you use"
+        in dispel_magic["higher_level"]
+    )
 
     assert fireball["area"] == "20-foot-radius Sphere"
     assert FIREBALL_TEXT in fireball["description"]

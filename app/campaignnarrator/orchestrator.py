@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.rules_agent import RulesAgent

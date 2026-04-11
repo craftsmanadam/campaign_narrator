@@ -11,10 +11,8 @@ def test_state_repository_loads_and_saves_player_character(tmp_path: Path) -> No
     state_root = tmp_path / "state"
     state_root.mkdir(parents=True)
     (state_root / "player_character.json").write_text(
-        (
-            '{"character_id": "pc-001", "hp": {"current": 18, "max": 18}, '
-            '"inventory": ["rope"]}'
-        )
+        '{"character_id": "pc-001", "hp": {"current": 18, "max": 18}, '
+        '"inventory": ["rope"]}'
     )
 
     repository = StateRepository(state_root)
