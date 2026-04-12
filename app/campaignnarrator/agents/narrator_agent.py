@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 
-from campaignnarrator.adapters.openai_adapter import OpenAIAdapter
+from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.domain.models import Narration, NarrationFrame
 
 
 class NarratorAgent:
     """Convert public encounter frames into short player-facing narration."""
 
-    def __init__(self, *, adapter: OpenAIAdapter) -> None:
+    def __init__(self, *, adapter: PydanticAIAdapter) -> None:
         self._adapter = adapter
 
     def narrate(self, frame: NarrationFrame) -> Narration:

@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TextIO
 
-from campaignnarrator.adapters.openai_adapter import OpenAIAdapter
+from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.orchestrator import CampaignOrchestrator
@@ -22,7 +22,7 @@ from campaignnarrator.tools.dice import roll as roll_dice
 def _build_application_graph(data_root: Path) -> CampaignOrchestrator:
     """Build the production application graph from the configured data root."""
 
-    adapter = OpenAIAdapter.from_env()
+    adapter = PydanticAIAdapter.from_env()
     rules_repository = RulesRepository(data_root / "rules")
     compendium_repository = CompendiumRepository(data_root / "compendium")
     state_repository = StateRepository.from_default_encounter()

@@ -159,7 +159,7 @@ def test_build_application_graph_wires_real_dependencies(
             captured["orchestrator"] = self
 
     monkeypatch.setattr(
-        "campaignnarrator.cli.OpenAIAdapter.from_env",
+        "campaignnarrator.cli.PydanticAIAdapter.from_env",
         _fake_from_env,
     )
     monkeypatch.setattr(
