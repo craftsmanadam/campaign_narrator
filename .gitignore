@@ -178,5 +178,7 @@ pyrightconfig.json
 docs/project
 tmp
 
+.worktrees/
+
 **/.DS_Store
 tests/reports/*
