@@ -113,7 +113,7 @@ def test_rules_adjudication_carries_rolls_and_state_effects() -> None:
         intent="persuade the scout",
         phase=EncounterPhase.SOCIAL,
         allowed_outcomes=("de-escalated", "hostile"),
-        rules_context=("social_check",),
+        check_hints=("social_check",),
         compendium_context=("goblins",),
     )
     adjudication = RulesAdjudication(
@@ -130,7 +130,7 @@ def test_rules_adjudication_carries_rolls_and_state_effects() -> None:
     assert request.intent == "persuade the scout"
     assert request.phase is EncounterPhase.SOCIAL
     assert request.allowed_outcomes == ("de-escalated", "hostile")
-    assert request.rules_context == ("social_check",)
+    assert request.check_hints == ("social_check",)
     assert request.compendium_context == ("goblins",)
     assert adjudication.is_legal is True
     assert adjudication.action_type == "social_check"

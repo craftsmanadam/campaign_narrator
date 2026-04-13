@@ -56,3 +56,15 @@ Feature: Encounter loop
     Then the CLI output includes "Persuasion check:"
     And the CLI output includes "Initiative:"
     And the CLI output includes "Encounter outcome: combat"
+
+  Scenario: Player saves and quits during combat
+    Given the OpenAI API is configured for a hostile goblin encounter
+    When the player runs the encounter with scripted input:
+      """
+      I charge the goblins and attack with my longsword.
+      save and quit
+      """
+    Then the CLI output includes "Game saved"
+    And the event log includes an encounter_saved event for "goblin-camp" in phase "combat"
+    And the persisted encounter "goblin-camp" is in phase "combat"
+    And the persisted encounter "goblin-camp" has initiative order

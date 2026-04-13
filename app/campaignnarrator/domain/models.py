@@ -134,7 +134,7 @@ class RulesAdjudicationRequest:
     intent: str
     phase: EncounterPhase
     allowed_outcomes: tuple[str, ...]
-    rules_context: tuple[str, ...] = field(default_factory=tuple)
+    check_hints: tuple[str, ...] = field(default_factory=tuple)
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
 
 

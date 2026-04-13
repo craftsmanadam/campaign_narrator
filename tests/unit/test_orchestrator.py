@@ -289,7 +289,7 @@ def test_social_check_uses_rules_agent_and_applies_effects() -> None:
         "complication",
         "peaceful",
     )
-    assert request.rules_context == ("Persuasion",)
+    assert request.check_hints == ("Persuasion",)
     assert roll_dice.expressions == ["1d20+1"]
     assert state.outcome == "de-escalated"
     assert "Roll: calm goblins = 16." in narrator_agent.frames[-1].resolved_outcomes

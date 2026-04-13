@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from campaignnarrator.domain.models import (
+    EncounterPhase,
     RollRequest,
     RollVisibility,
     RulesAdjudication,
@@ -14,6 +15,15 @@ from campaignnarrator.domain.models import (
 )
 
 _VALID_ROLL_OWNERS = {"player", "narrator", "system"}
+
+# Maps each encounter phase to the rule topics loaded from disk before adjudication.
+# Topic strings must match keys in data/rules/generated/rule_index.json.
+_TOPICS_BY_PHASE: dict[EncounterPhase, tuple[str, ...]] = {
+    EncounterPhase.SOCIAL: ("core_resolution", "social_interaction"),
+    EncounterPhase.COMBAT: ("core_resolution", "combat"),
+}
+# Defensive default for phases not yet in _TOPICS_BY_PHASE (e.g. future enum values).
+_FALLBACK_TOPICS: tuple[str, ...] = ("core_resolution",)
 
 
 class RulesAgent:
@@ -26,14 +36,14 @@ class RulesAgent:
         rules_repository: object | None = None,
         compendium_repository: object | None = None,
     ) -> None:
-        # Temporary compatibility bridge while orchestration/retrieval wiring is
-        # being replaced; the generic adjudication path does not use these.
-        _ = rules_repository, compendium_repository
+        _ = compendium_repository  # reserved for spellcasting/compendium slice
         self._adapter = adapter
+        self._rules_repository = rules_repository
 
     def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication:
         """Return a structured adjudication for the supplied request."""
 
+        rule_texts = self._load_rule_texts(request.phase)
         payload = self._adapter.generate_structured_json(
             instructions=(
                 "You are a rules adjudication engine. Return only a single "
@@ -42,18 +52,32 @@ class RulesAgent:
                 "summary, reasoning_summary, and optional roll_requests, "
                 "state_effects, and rule_references."
             ),
-            input_text=json.dumps(self._build_input(request), indent=2, sort_keys=True),
+            input_text=json.dumps(
+                self._build_input(request, rule_texts), indent=2, sort_keys=True
+            ),
         )
         return self._parse_adjudication(payload)
 
-    def _build_input(self, request: RulesAdjudicationRequest) -> dict[str, object]:
+    def _load_rule_texts(self, phase: EncounterPhase) -> tuple[str, ...]:
+        if self._rules_repository is None:
+            return ()
+        topics = _TOPICS_BY_PHASE.get(phase, _FALLBACK_TOPICS)
+        return self._rules_repository.load_context_for_topics(topics)
+
+    def _build_input(
+        self,
+        request: RulesAdjudicationRequest,
+        rule_texts: tuple[str, ...],
+    ) -> dict[str, object]:
+        rules_context = list(rule_texts) if rule_texts else []
         return {
             "actor_id": request.actor_id,
+            "check_hint": list(request.check_hints),
+            "compendium_context": list(request.compendium_context),
             "intent": request.intent,
             "phase": request.phase.value,
             "allowed_outcomes": list(request.allowed_outcomes),
-            "rules_context": list(request.rules_context),
-            "compendium_context": list(request.compendium_context),
+            "rules_context": rules_context,
         }
 
     def _parse_adjudication(self, payload: object) -> RulesAdjudication:

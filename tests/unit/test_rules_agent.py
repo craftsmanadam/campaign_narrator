@@ -74,7 +74,7 @@ def test_rules_agent_returns_generic_adjudication() -> None:
         intent="calm the goblin camp",
         phase=EncounterPhase.SOCIAL,
         allowed_outcomes=("de-escalated", "combat"),
-        rules_context=("social rules",),
+        check_hints=("social rules",),
         compendium_context=("goblin camp lore",),
     )
 
@@ -104,6 +104,36 @@ def test_rules_agent_returns_generic_adjudication() -> None:
     )
     assert len(adapter.calls) == 1
     assert adapter.calls[0]["input_text"].count("intent") == 1
+
+
+def test_rules_agent_roll_request_without_purpose_produces_none() -> None:
+    payload = {
+        "is_legal": True,
+        "action_type": "attack",
+        "summary": "Talia swings.",
+        "roll_requests": [
+            {
+                "owner": "player",
+                "visibility": "public",
+                "expression": "1d20+3",
+            }
+        ],
+        "state_effects": [],
+        "rule_references": [],
+        "reasoning_summary": "Purpose is optional.",
+    }
+    agent = RulesAgent(adapter=FakeAdapter(payload))
+    request = RulesAdjudicationRequest(
+        actor_id="player-1",
+        intent="attack the goblin",
+        phase=EncounterPhase.COMBAT,
+        allowed_outcomes=("hit", "miss"),
+    )
+
+    adjudication = agent.adjudicate(request)
+
+    assert len(adjudication.roll_requests) == 1
+    assert adjudication.roll_requests[0].purpose is None
 
 
 @pytest.mark.parametrize(
@@ -379,3 +409,92 @@ def test_rules_agent_rejects_empty_text_fields(field: str, value: str) -> None:
 
     with pytest.raises(ValueError, match=field):
         agent.adjudicate(request)
+
+
+class FakeRulesRepository:
+    """Return known rule text for requested topics."""
+
+    def __init__(self, content_by_topic: dict[str, str]) -> None:
+        self._content = content_by_topic
+
+    def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        return tuple(
+            self._content.get(topic, f"Missing rules context: {topic}")
+            for topic in topics
+        )
+
+
+_CANNED_ADJUDICATION: dict[str, object] = {
+    "is_legal": True,
+    "action_type": "social_check",
+    "summary": "The goblins back away.",
+    "roll_requests": [],
+    "state_effects": [],
+    "rule_references": [],
+    "reasoning_summary": "The check succeeds.",
+}
+
+
+def test_adjudicate_social_phase_injects_loaded_rule_text() -> None:
+    repo = FakeRulesRepository(
+        {
+            "core_resolution": "CORE RESOLUTION RULES",
+            "social_interaction": "SOCIAL INTERACTION RULES",
+        }
+    )
+    adapter = FakeAdapter(_CANNED_ADJUDICATION)
+    agent = RulesAgent(adapter=adapter, rules_repository=repo)
+    request = RulesAdjudicationRequest(
+        actor_id="pc:talia",
+        intent="I try to calm them down.",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+        check_hints=("Persuasion check",),
+    )
+
+    agent.adjudicate(request)
+
+    input_text = adapter.calls[0]["input_text"]
+    assert "CORE RESOLUTION RULES" in input_text
+    assert "SOCIAL INTERACTION RULES" in input_text
+    assert "Persuasion check" in input_text
+
+
+def test_adjudicate_combat_phase_injects_loaded_rule_text() -> None:
+    repo = FakeRulesRepository(
+        {
+            "core_resolution": "CORE RESOLUTION RULES",
+            "combat": "COMBAT RULES",
+        }
+    )
+    adapter = FakeAdapter(_CANNED_ADJUDICATION)
+    agent = RulesAgent(adapter=adapter, rules_repository=repo)
+    request = RulesAdjudicationRequest(
+        actor_id="pc:talia",
+        intent="I attack the goblin with my longsword.",
+        phase=EncounterPhase.COMBAT,
+        allowed_outcomes=("hit", "miss"),
+    )
+
+    agent.adjudicate(request)
+
+    input_text = adapter.calls[0]["input_text"]
+    assert "CORE RESOLUTION RULES" in input_text
+    assert "COMBAT RULES" in input_text
+
+
+def test_adjudicate_without_rules_repository_falls_back_to_hint_strings() -> None:
+    adapter = FakeAdapter(_CANNED_ADJUDICATION)
+    agent = RulesAgent(adapter=adapter, rules_repository=None)
+    request = RulesAdjudicationRequest(
+        actor_id="pc:talia",
+        intent="I try to calm them down.",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("de-escalated", "combat"),
+        check_hints=("Persuasion check",),
+    )
+
+    agent.adjudicate(request)
+
+    input_text = adapter.calls[0]["input_text"]
+    assert "Persuasion check" in input_text

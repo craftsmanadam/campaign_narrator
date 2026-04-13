@@ -1,0 +1,43 @@
+{
+  "encounter_id": "goblin-camp",
+  "setting": "A ruined roadside camp.",
+  "phase": "scene_opening",
+  "public_events": [],
+  "hidden_facts": {
+    "goblin_disposition": "neutral"
+  },
+  "initiative_order": [],
+  "outcome": null,
+  "actors": {
+    "pc:talia": {
+      "actor_id": "pc:talia",
+      "name": "Talia",
+      "kind": "pc",
+      "hp_current": 12,
+      "hp_max": 12,
+      "armor_class": 18,
+      "inventory": [
+        "longsword",
+        "chain-mail",
+        "shield",
+        "potion-of-healing"
+      ],
+      "conditions": [],
+      "is_visible": true
+    },
+    "npc:goblin-scout": {
+      "actor_id": "npc:goblin-scout",
+      "name": "Goblin Scout",
+      "kind": "npc",
+      "hp_current": 7,
+      "hp_max": 7,
+      "armor_class": 15,
+      "inventory": [
+        "scimitar",
+        "shortbow"
+      ],
+      "conditions": [],
+      "is_visible": true
+    }
+  }
+}

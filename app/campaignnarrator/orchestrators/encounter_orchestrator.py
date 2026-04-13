@@ -194,7 +194,7 @@ class EncounterOrchestrator:
             intent=player_input.raw_text,
             phase=state.phase,
             allowed_outcomes=("success", "failure", "complication", "peaceful"),
-            rules_context=_non_empty_tuple((decision.recommended_check,)),
+            check_hints=_non_empty_tuple((decision.recommended_check,)),
         )
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
