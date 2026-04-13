@@ -10,7 +10,7 @@
     "status": "completed",
     "content": [{
       "type": "output_text",
-      "text": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia lunges from the shadows. Sneak Attack: the dagger finds its mark.\",\"reasoning_summary\":\"Sneak Attack applies because Talia has advantage.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"2d20kh1+3\",\"purpose\":\"Attack roll (advantage)\"},{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"2d6\",\"purpose\":\"Sneak Attack\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"Talia strikes from the shadows with a Sneak Attack.\"}],\"rule_references\":[]}",
+      "text": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia lunges from the shadows. Sneak Attack: the dagger finds its mark.\",\"reasoning_summary\":\"Sneak Attack applies because Talia has advantage.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"2d20k1+3\",\"purpose\":\"Attack roll (advantage)\"},{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"2d6\",\"purpose\":\"Sneak Attack\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"Talia strikes from the shadows with a Sneak Attack.\"}],\"rule_references\":[]}",
       "annotations": []
     }]
   }],

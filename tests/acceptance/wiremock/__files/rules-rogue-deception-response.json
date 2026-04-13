@@ -10,7 +10,7 @@
     "status": "completed",
     "content": [{
       "type": "output_text",
-      "text": "{\"is_legal\":true,\"action_type\":\"deception\",\"summary\":\"Talia's merchant tale convinces the goblins to stand down.\",\"reasoning_summary\":\"Expertise and advantage apply.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"2d20kh1+5\",\"purpose\":\"Deception check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"The goblins are taken in by the merchant story.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"encounter_complete\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"de-escalated\"}],\"rule_references\":[]}",
+      "text": "{\"is_legal\":true,\"action_type\":\"deception\",\"summary\":\"Talia's merchant tale convinces the goblins to stand down.\",\"reasoning_summary\":\"Expertise and advantage apply.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"2d20k1+5\",\"purpose\":\"Deception check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"The goblins are taken in by the merchant story.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"encounter_complete\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"de-escalated\"}],\"rule_references\":[]}",
       "annotations": []
     }]
   }],
