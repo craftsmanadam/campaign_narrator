@@ -11,7 +11,10 @@ from typing import TextIO
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
-from campaignnarrator.orchestrator import CampaignOrchestrator
+from campaignnarrator.orchestrators.application_orchestrator import (
+    ApplicationOrchestrator,
+)
+from campaignnarrator.orchestrators.encounter_orchestrator import EncounterOrchestrator
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.rules_repository import RulesRepository
@@ -19,13 +22,13 @@ from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.tools.dice import roll as roll_dice
 
 
-def _build_application_graph(data_root: Path) -> CampaignOrchestrator:
+def _build_application_graph(data_root: Path) -> ApplicationOrchestrator:
     """Build the production application graph from the configured data root."""
 
     adapter = PydanticAIAdapter.from_env()
     rules_repository = RulesRepository(data_root / "rules")
     compendium_repository = CompendiumRepository(data_root / "compendium")
-    state_repository = StateRepository.from_default_encounter()
+    state_repository = StateRepository(data_root / "state")
     memory_repository = MemoryRepository(data_root / "memory")
     rules_agent = RulesAgent(
         adapter=adapter,
@@ -33,7 +36,7 @@ def _build_application_graph(data_root: Path) -> CampaignOrchestrator:
         compendium_repository=compendium_repository,
     )
     narrator_agent = NarratorAgent(adapter=adapter)
-    return CampaignOrchestrator(
+    encounter_orchestrator = EncounterOrchestrator(
         state_repository=state_repository,
         rules_agent=rules_agent,
         memory_repository=memory_repository,
@@ -41,6 +44,7 @@ def _build_application_graph(data_root: Path) -> CampaignOrchestrator:
         roll_dice=roll_dice,
         decision_adapter=adapter,
     )
+    return ApplicationOrchestrator(encounter_orchestrator=encounter_orchestrator)
 
 
 def main(

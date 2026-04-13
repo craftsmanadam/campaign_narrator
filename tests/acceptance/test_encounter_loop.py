@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from subprocess import CompletedProcess, run
 
@@ -41,6 +42,26 @@ def test_successful_de_escalation_encounter() -> None:
 )
 def test_failed_de_escalation_encounter() -> None:
     """Run the failed de-escalation scenario."""
+
+
+@scenario(
+    "features/encounter_loop.feature",
+    "Player saves and quits during combat",
+)
+def test_save_and_quit_during_combat() -> None:
+    """Run the save-and-quit during combat scenario."""
+
+
+def _read_event_log(runtime_data_root: Path) -> list[dict[str, object]]:
+    path = runtime_data_root / "memory" / "event_log.jsonl"
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def _read_encounter(runtime_data_root: Path, encounter_id: str) -> dict[str, object]:
+    path = runtime_data_root / "state" / "encounters" / f"{encounter_id}.json"
+    return json.loads(path.read_text())
 
 
 @given(
@@ -120,3 +141,96 @@ def cli_output_excludes(
     """The CLI output should not contain the unexpected text."""
 
     assert unexpected not in cli_result.stdout
+
+
+@then(
+    parsers.parse(
+        'the event log includes an encounter_completed event for "{encounter_id}"'
+        ' with outcome "{outcome}"'
+    )
+)
+def event_log_includes_encounter_completed(
+    runtime_data_root: Path,
+    encounter_id: str,
+    outcome: str,
+) -> None:
+    """The event log should contain a matching encounter_completed event."""
+
+    events = _read_event_log(runtime_data_root)
+    matching = [
+        e
+        for e in events
+        if e.get("type") == "encounter_completed"
+        and e.get("encounter_id") == encounter_id
+        and e.get("outcome") == outcome
+    ]
+    assert matching, (
+        f"No encounter_completed event for {encounter_id!r} with outcome {outcome!r}. "
+        f"Events: {events}"
+    )
+
+
+@then(
+    parsers.parse(
+        'the event log includes an encounter_saved event for "{encounter_id}"'
+        ' in phase "{phase}"'
+    )
+)
+def event_log_includes_encounter_saved(
+    runtime_data_root: Path,
+    encounter_id: str,
+    phase: str,
+) -> None:
+    """The event log should contain an encounter_saved event in the given phase."""
+
+    events = _read_event_log(runtime_data_root)
+    matching = [
+        e
+        for e in events
+        if e.get("type") == "encounter_saved"
+        and e.get("encounter_id") == encounter_id
+        and e.get("phase") == phase
+    ]
+    assert matching, (
+        f"No encounter_saved event for {encounter_id!r} in phase {phase!r}. "
+        f"Events: {events}"
+    )
+
+
+@then(parsers.parse('the persisted encounter "{encounter_id}" is in phase "{phase}"'))
+def persisted_encounter_is_in_phase(
+    runtime_data_root: Path,
+    encounter_id: str,
+    phase: str,
+) -> None:
+    """The on-disk encounter state should reflect the expected phase."""
+
+    state = _read_encounter(runtime_data_root, encounter_id)
+    assert state.get("phase") == phase, (
+        f"Expected phase {phase!r} but got {state.get('phase')!r}"
+    )
+
+
+@then(parsers.parse('the persisted encounter "{encounter_id}" has initiative order'))
+def persisted_encounter_has_initiative_order(
+    runtime_data_root: Path,
+    encounter_id: str,
+) -> None:
+    """The on-disk encounter state should have a non-empty initiative order."""
+
+    state = _read_encounter(runtime_data_root, encounter_id)
+    order = state.get("initiative_order", [])
+    assert order, f"Expected non-empty initiative_order but got {order!r}"
+
+
+@then(parsers.parse("the player state has current hit points {hp:d}"))
+def player_state_has_current_hit_points(
+    runtime_data_root: Path,
+    hp: int,
+) -> None:
+    """The on-disk player character state should reflect the expected HP."""
+
+    path = runtime_data_root / "state" / "player_character.json"
+    player = json.loads(path.read_text())
+    actual = player.get("hp", {}).get("current")
+    assert actual == hp, f"Expected current HP {hp} but got {actual}"

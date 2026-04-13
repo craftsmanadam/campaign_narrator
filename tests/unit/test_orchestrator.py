@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import replace
 
 import pytest
@@ -17,10 +17,21 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
 )
-from campaignnarrator.orchestrator import CampaignOrchestrator, EncounterRunResult
+from campaignnarrator.orchestrators.encounter_orchestrator import (
+    EncounterOrchestrator,
+    EncounterRunResult,
+)
 from campaignnarrator.repositories.state_repository import StateRepository
 
 _DAMAGED_GOBLIN_HP = 2
+
+
+class FakeMemoryRepository:
+    def __init__(self) -> None:
+        self.events: list[dict[str, object]] = []
+
+    def append_event(self, event: Mapping[str, object]) -> None:
+        self.events.append(dict(event))
 
 
 class FakeDecisionAdapter:
@@ -92,8 +103,8 @@ def _orchestrator(
     rules_agent: FakeRulesAgent | None = None,
     narrator_agent: FakeNarratorAgent | None = None,
     roll_dice: FakeDice | None = None,
-) -> CampaignOrchestrator:
-    return CampaignOrchestrator(
+) -> EncounterOrchestrator:
+    return EncounterOrchestrator(
         state_repository=state_repository or StateRepository.from_default_encounter(),
         rules_agent=rules_agent or FakeRulesAgent(),
         narrator_agent=narrator_agent or FakeNarratorAgent(),
@@ -155,20 +166,6 @@ def test_run_encounter_returns_peaceful_output_status_and_recap() -> None:
     assert "recap_response:" in result.output_text
     assert orchestrator.current_state("goblin-camp").outcome == "peaceful"
     assert rules_agent.requests == []
-
-
-def test_run_legacy_wrapper_returns_player_narration() -> None:
-    orchestrator = _orchestrator(
-        state_repository=_social_repository(),
-        decision_adapter=FakeDecisionAdapter(
-            (_decision("complete_encounter", outcome="peaceful"),)
-        ),
-    )
-
-    narration = orchestrator.run("I ask for peace.")
-
-    assert narration.audience == "player"
-    assert "complete_encounter: peaceful" in narration.text
 
 
 def test_status_routes_to_status_frame_without_rules_adjudication() -> None:
@@ -299,6 +296,81 @@ def test_social_check_uses_rules_agent_and_applies_effects() -> None:
     assert "social_resolution:" in result.output_text
 
 
+def test_social_check_with_outcome_emits_encounter_completed_event() -> None:
+    memory = FakeMemoryRepository()
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="The goblins back away.",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(
+                        "set_encounter_outcome",
+                        "encounter:goblin-camp",
+                        "de-escalated",
+                    ),
+                ),
+                reasoning_summary="The check succeeds.",
+            ),
+        )
+    )
+    orchestrator = EncounterOrchestrator(
+        state_repository=_social_repository(),
+        rules_agent=rules_agent,
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision("adjudicate_social_check", requires_rules_resolution=True),)
+        ),
+        memory_repository=memory,
+    )
+
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I try to calm them down."],
+    )
+
+    completed = [e for e in memory.events if e.get("type") == "encounter_completed"]
+    assert len(completed) == 1
+    assert completed[0]["outcome"] == "de-escalated"
+
+
+def test_social_check_without_outcome_does_not_emit_encounter_completed_event() -> None:
+    memory = FakeMemoryRepository()
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="They look uncertain.",
+                roll_requests=(),
+                state_effects=(),
+                reasoning_summary="Neutral outcome.",
+            ),
+        )
+    )
+    orchestrator = EncounterOrchestrator(
+        state_repository=_social_repository(),
+        rules_agent=rules_agent,
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision("adjudicate_social_check", requires_rules_resolution=True),)
+        ),
+        memory_repository=memory,
+    )
+
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I try to calm them down."],
+    )
+
+    completed = [e for e in memory.events if e.get("type") == "encounter_completed"]
+    assert completed == []
+
+
 @pytest.mark.parametrize(
     ("next_step", "purpose"),
     [("npc_dialogue", "npc_dialogue"), ("narrate_scene", "scene_response")],
@@ -350,6 +422,30 @@ def test_aggressive_input_rolls_initiative_enters_combat_and_records_event() -> 
     assert narrator_agent.frames[-1].purpose == "combat_start"
 
 
+def test_enter_combat_emits_encounter_completed_event() -> None:
+    memory = FakeMemoryRepository()
+    orchestrator = EncounterOrchestrator(
+        state_repository=_social_repository(),
+        rules_agent=FakeRulesAgent(),
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice((18, 12)),
+        decision_adapter=FakeDecisionAdapter((_decision("roll_initiative"),)),
+        memory_repository=memory,
+    )
+
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I draw steel and rush the goblin."],
+    )
+
+    completed_events = [
+        e for e in memory.events if e.get("type") == "encounter_completed"
+    ]
+    assert len(completed_events) == 1
+    assert completed_events[0]["outcome"] == "combat"
+    assert completed_events[0]["encounter_id"] == "goblin-camp"
+
+
 def test_invalid_orchestration_decision_raises_without_saving_mutated_state() -> None:
     repository = _social_repository()
     original_state = repository.load_encounter("goblin-camp")
@@ -391,7 +487,7 @@ def test_invalid_decision_after_scene_opening_leaves_default_state_unchanged() -
 
 
 def test_missing_decision_adapter_fails_fast() -> None:
-    orchestrator = CampaignOrchestrator(
+    orchestrator = EncounterOrchestrator(
         state_repository=_social_repository(),
         rules_agent=FakeRulesAgent(),
         narrator_agent=FakeNarratorAgent(),
@@ -605,3 +701,81 @@ def test_unsupported_combat_input_fails_closed_without_decision_adapter() -> Non
         )
 
     assert decision_adapter.calls == []
+
+
+def test_save_and_quit_persists_active_encounter_and_records_event() -> None:
+    memory_repository = FakeMemoryRepository()
+    repository = _combat_repository()
+    orchestrator = EncounterOrchestrator(
+        state_repository=repository,
+        rules_agent=FakeRulesAgent(),
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(()),
+        memory_repository=memory_repository,
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["save and quit"],
+    )
+
+    state = repository.load_encounter("goblin-camp")
+    assert result.completed is False
+    assert "saved" in result.output_text.lower()
+    assert state.phase is EncounterPhase.COMBAT
+    assert memory_repository.events == [
+        {
+            "type": "encounter_saved",
+            "encounter_id": "goblin-camp",
+            "phase": "combat",
+            "outcome": "combat",
+        }
+    ]
+
+
+def test_save_and_quit_without_memory_repository_does_not_raise() -> None:
+    repository = _combat_repository()
+    orchestrator = EncounterOrchestrator(
+        state_repository=repository,
+        rules_agent=FakeRulesAgent(),
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(()),
+        memory_repository=None,
+    )
+
+    result = orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["save and quit"],
+    )
+
+    assert result.completed is False
+    assert "saved" in result.output_text.lower()
+
+
+def test_completed_encounter_records_durable_event() -> None:
+    memory_repository = FakeMemoryRepository()
+    orchestrator = EncounterOrchestrator(
+        state_repository=_social_repository(),
+        rules_agent=FakeRulesAgent(),
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision("complete_encounter", outcome="peaceful"),)
+        ),
+        memory_repository=memory_repository,
+    )
+
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I offer peace."],
+    )
+
+    assert memory_repository.events == [
+        {
+            "type": "encounter_completed",
+            "encounter_id": "goblin-camp",
+            "outcome": "peaceful",
+        }
+    ]

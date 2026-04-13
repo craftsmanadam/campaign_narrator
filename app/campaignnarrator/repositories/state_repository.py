@@ -12,11 +12,17 @@ from campaignnarrator.domain.models import ActorState, EncounterPhase, Encounter
 
 
 class StateRepository:
-    """Store encounter state in memory, with legacy player-character file support."""
+    """Store encounter state in memory, with file-backed persistence support."""
 
     def __init__(self, root: Path | str | None = None) -> None:
+        self._state_root = Path(root) if root is not None else None
+        self._encounter_dir = (
+            self._state_root / "encounters" if self._state_root is not None else None
+        )
         self._player_character_path = (
-            Path(root) / "player_character.json" if root is not None else None
+            self._state_root / "player_character.json"
+            if self._state_root is not None
+            else None
         )
         self._encounters: dict[str, EncounterState] = {}
 
@@ -38,18 +44,38 @@ class StateRepository:
         return cls.from_seed(_default_seed())
 
     def load_encounter(self, encounter_id: str) -> EncounterState:
-        """Return a copy of the requested encounter state."""
+        """Return a copy of the requested encounter state.
 
-        try:
-            state = self._encounters[encounter_id]
-        except KeyError as error:
-            raise ValueError(f"unknown encounter: {encounter_id}") from error  # noqa: TRY003
-        return _copy_encounter_state(state)
+        Checks the in-memory cache first. Falls back to reading from
+        state/encounters/{encounter_id}.json if a state root is configured.
+        """
+
+        if encounter_id in self._encounters:
+            return _copy_encounter_state(self._encounters[encounter_id])
+        if self._encounter_dir is not None:
+            path = self._encounter_dir / f"{encounter_id}.json"
+            if path.exists():
+                state = _encounter_state_from_seed(json.loads(path.read_text()))
+                self._encounters[encounter_id] = state
+                return _copy_encounter_state(state)
+        raise ValueError(f"unknown encounter: {encounter_id}")  # noqa: TRY003
 
     def save_encounter(self, state: EncounterState) -> None:
-        """Persist a copy of the supplied encounter state."""
+        """Persist a copy of the supplied encounter state.
 
-        self._encounters[state.encounter_id] = _copy_encounter_state(state)
+        Always updates the in-memory cache. Also writes to
+        state/encounters/{encounter_id}.json if a state root is configured.
+        """
+
+        copied = _copy_encounter_state(state)
+        self._encounters[state.encounter_id] = copied
+        if self._encounter_dir is not None:
+            self._encounter_dir.mkdir(parents=True, exist_ok=True)
+            path = self._encounter_dir / f"{state.encounter_id}.json"
+            path.write_text(
+                json.dumps(_encounter_state_to_json(copied), indent=2, sort_keys=True)
+                + "\n"
+            )
 
     def load_player_character(self) -> dict[str, Any]:
         """Read the legacy player character snapshot from disk."""
@@ -66,6 +92,36 @@ class StateRepository:
         self._player_character_path.write_text(
             json.dumps(player_character, indent=2, sort_keys=True) + "\n"
         )
+
+
+def _encounter_state_to_json(state: EncounterState) -> dict[str, object]:
+    return {
+        "encounter_id": state.encounter_id,
+        "phase": state.phase.value,
+        "setting": state.setting,
+        "public_events": list(state.public_events),
+        "hidden_facts": dict(state.hidden_facts),
+        "initiative_order": list(state.initiative_order),
+        "outcome": state.outcome,
+        "actors": {
+            actor_id: _actor_state_to_json(actor)
+            for actor_id, actor in state.actors.items()
+        },
+    }
+
+
+def _actor_state_to_json(actor: ActorState) -> dict[str, object]:
+    return {
+        "actor_id": actor.actor_id,
+        "name": actor.name,
+        "kind": actor.kind,
+        "hp_current": actor.hp_current,
+        "hp_max": actor.hp_max,
+        "armor_class": actor.armor_class,
+        "inventory": list(actor.inventory),
+        "conditions": list(actor.conditions),
+        "is_visible": actor.is_visible,
+    }
 
 
 def _default_seed() -> dict[str, object]:

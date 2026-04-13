@@ -5,9 +5,14 @@ from __future__ import annotations
 from collections.abc import Iterable
 from io import StringIO
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 from campaignnarrator.cli import _build_application_graph, main
+
+# ---------------------------------------------------------------------------
+# Shared fakes
+# ---------------------------------------------------------------------------
 
 
 class _FakeRunResult:
@@ -30,6 +35,56 @@ class _FakeOrchestrator:
         self.encounter_id = encounter_id
         self.player_inputs = tuple(player_inputs)
         return _FakeRunResult(output_text="Encounter output\n", completed=True)
+
+
+# ---------------------------------------------------------------------------
+# Fakes for wiring test
+# ---------------------------------------------------------------------------
+
+
+class _FakeStateRepository:
+    captured_paths: ClassVar[list[Path]] = []
+
+    def __init__(self, path: Path) -> None:
+        _FakeStateRepository.captured_paths.append(path)
+
+
+class _FakeRulesAgent:
+    def __init__(
+        self,
+        *,
+        adapter: object,
+        rules_repository: object | None = None,
+        compendium_repository: object | None = None,
+    ) -> None:
+        self.adapter = adapter
+        self.rules_repository = rules_repository
+        self.compendium_repository = compendium_repository
+
+
+class _FakeNarratorAgent:
+    def __init__(self, *, adapter: object) -> None:
+        self.adapter = adapter
+
+
+class _FakeEncounterOrchestrator:
+    def __init__(self, **kwargs: object) -> None:
+        self.state_repository = kwargs["state_repository"]
+        self.rules_agent = kwargs["rules_agent"]
+        self.narrator_agent = kwargs["narrator_agent"]
+        self.roll_dice = kwargs["roll_dice"]
+        self.decision_adapter = kwargs["decision_adapter"]
+        self.memory_repository = kwargs["memory_repository"]
+
+
+class _FakeApplicationOrchestrator:
+    def __init__(self, *, encounter_orchestrator: object) -> None:
+        self.encounter_orchestrator = encounter_orchestrator
+
+
+# ---------------------------------------------------------------------------
+# CLI behaviour tests
+# ---------------------------------------------------------------------------
 
 
 def test_cli_uses_stdin_stdout_loop(monkeypatch, tmp_path: Path) -> None:
@@ -96,112 +151,87 @@ def test_cli_rejects_legacy_input_flag(tmp_path: Path) -> None:
         main(["--data-root", str(tmp_path), "--input", "I drink a potion"])
 
 
-def test_build_application_graph_wires_real_dependencies(
+# ---------------------------------------------------------------------------
+# Wiring tests
+# ---------------------------------------------------------------------------
+
+
+def test_build_application_graph_wires_repository_paths(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    """The application graph should pass the shared adapter through the real wiring."""
+    """The application graph should build repositories from data-root sub-paths."""
 
-    captured: dict[str, object] = {}
-    adapter = object()
-    state_repository = object()
-    rules_repository = object()
-    compendium_repository = object()
-    memory_repository = object()
     rules_paths: list[Path] = []
     compendium_paths: list[Path] = []
     memory_paths: list[Path] = []
+    _FakeStateRepository.captured_paths.clear()
 
-    def roll_dice(_expr: str) -> int:
-        return 7
-
-    def _fake_from_env() -> object:
-        return adapter
-
-    def _fake_rules_repository(path: Path) -> object:
-        rules_paths.append(path)
-        return rules_repository
-
-    def _fake_compendium_repository(path: Path) -> object:
-        compendium_paths.append(path)
-        return compendium_repository
-
-    def _fake_memory_repository(path: Path) -> object:
-        memory_paths.append(path)
-        return memory_repository
-
-    class _FakeRulesAgent:
-        def __init__(
-            self,
-            *,
-            adapter: object,
-            rules_repository: object | None = None,
-            compendium_repository: object | None = None,
-        ) -> None:
-            self.adapter = adapter
-            self.rules_repository = rules_repository
-            self.compendium_repository = compendium_repository
-            captured["rules_agent"] = self
-
-    class _FakeNarratorAgent:
-        def __init__(self, *, adapter: object) -> None:
-            self.adapter = adapter
-            captured["narrator_agent"] = self
-
-    class _FakeCampaignOrchestrator:
-        def __init__(self, **kwargs: object) -> None:
-            self.state_repository = kwargs["state_repository"]
-            self.rules_agent = kwargs["rules_agent"]
-            self.narrator_agent = kwargs["narrator_agent"]
-            self.roll_dice = kwargs["roll_dice"]
-            self.decision_adapter = kwargs["decision_adapter"]
-            self.memory_repository = kwargs["memory_repository"]
-            captured["orchestrator"] = self
-
-    monkeypatch.setattr(
-        "campaignnarrator.cli.PydanticAIAdapter.from_env",
-        _fake_from_env,
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.StateRepository.from_default_encounter",
-        lambda: state_repository,
-    )
+    monkeypatch.setattr("campaignnarrator.cli.PydanticAIAdapter.from_env", object)
+    monkeypatch.setattr("campaignnarrator.cli.StateRepository", _FakeStateRepository)
     monkeypatch.setattr(
         "campaignnarrator.cli.RulesRepository",
-        _fake_rules_repository,
+        lambda path: rules_paths.append(path) or object(),
     )
     monkeypatch.setattr(
         "campaignnarrator.cli.CompendiumRepository",
-        _fake_compendium_repository,
+        lambda path: compendium_paths.append(path) or object(),
     )
     monkeypatch.setattr(
         "campaignnarrator.cli.MemoryRepository",
-        _fake_memory_repository,
+        lambda path: memory_paths.append(path) or object(),
     )
     monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr("campaignnarrator.cli.NarratorAgent", _FakeNarratorAgent)
     monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignOrchestrator",
-        _FakeCampaignOrchestrator,
+        "campaignnarrator.cli.EncounterOrchestrator", _FakeEncounterOrchestrator
     )
-    monkeypatch.setattr("campaignnarrator.cli.roll_dice", roll_dice)
+    monkeypatch.setattr(
+        "campaignnarrator.cli.ApplicationOrchestrator", _FakeApplicationOrchestrator
+    )
 
-    result = _build_application_graph(tmp_path)
+    _build_application_graph(tmp_path)
 
-    rules_agent = captured["rules_agent"]
-    narrator_agent = captured["narrator_agent"]
-    orchestrator = captured["orchestrator"]
-    assert rules_agent.adapter == adapter
-    assert rules_agent.rules_repository == rules_repository
-    assert rules_agent.compendium_repository == compendium_repository
-    assert narrator_agent.adapter == adapter
+    assert _FakeStateRepository.captured_paths == [tmp_path / "state"]
     assert rules_paths == [tmp_path / "rules"]
     assert compendium_paths == [tmp_path / "compendium"]
     assert memory_paths == [tmp_path / "memory"]
-    assert orchestrator.state_repository == state_repository
-    assert orchestrator.rules_agent == rules_agent
-    assert orchestrator.narrator_agent == narrator_agent
-    assert orchestrator.roll_dice == roll_dice
-    assert orchestrator.decision_adapter == adapter
-    assert orchestrator.memory_repository == memory_repository
-    assert isinstance(result, _FakeCampaignOrchestrator)
+
+
+def test_build_application_graph_wires_agents_and_orchestrators(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """The application graph should pass shared adapter through all components."""
+
+    adapter = object()
+    _FakeStateRepository.captured_paths.clear()
+
+    monkeypatch.setattr(
+        "campaignnarrator.cli.PydanticAIAdapter.from_env", lambda: adapter
+    )
+    monkeypatch.setattr("campaignnarrator.cli.StateRepository", _FakeStateRepository)
+    monkeypatch.setattr("campaignnarrator.cli.RulesRepository", lambda _path: object())
+    monkeypatch.setattr(
+        "campaignnarrator.cli.CompendiumRepository", lambda _path: object()
+    )
+    monkeypatch.setattr("campaignnarrator.cli.MemoryRepository", lambda _path: object())
+    monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
+    monkeypatch.setattr("campaignnarrator.cli.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(
+        "campaignnarrator.cli.EncounterOrchestrator", _FakeEncounterOrchestrator
+    )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.ApplicationOrchestrator", _FakeApplicationOrchestrator
+    )
+
+    result = _build_application_graph(tmp_path)
+
+    assert isinstance(result, _FakeApplicationOrchestrator)
+    enc = result.encounter_orchestrator
+    assert isinstance(enc, _FakeEncounterOrchestrator)
+    assert isinstance(enc.rules_agent, _FakeRulesAgent)
+    assert isinstance(enc.narrator_agent, _FakeNarratorAgent)
+    assert enc.rules_agent.adapter is adapter
+    assert enc.narrator_agent.adapter is adapter
+    assert enc.decision_adapter is adapter

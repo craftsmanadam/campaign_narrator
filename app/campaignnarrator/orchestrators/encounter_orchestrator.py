@@ -1,4 +1,4 @@
-"""Campaign encounter-loop orchestrator."""
+"""Encounter-loop orchestrator."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ class EncounterRunResult:
     completed: bool
 
 
-class CampaignOrchestrator:
+class EncounterOrchestrator:
     """Coordinate player input, rules adjudication, state, and narration."""
 
     def __init__(  # noqa: PLR0913
@@ -69,15 +69,6 @@ class CampaignOrchestrator:
         )
         self._memory_repository = memory_repository
 
-    def run(self, player_input: str) -> Narration:
-        """Temporary compatibility wrapper for the legacy CLI entry point."""
-
-        result = self.run_encounter(
-            encounter_id="goblin-camp",
-            player_inputs=(player_input,),
-        )
-        return Narration(text=result.output_text, audience="player")
-
     def run_encounter(
         self,
         *,
@@ -99,22 +90,10 @@ class CampaignOrchestrator:
             normalized = player_input.normalized
             if not normalized:
                 continue
-            if normalized == "exit":
+            directive = self._handle_utility_command(normalized, state, output)
+            if directive == "break":
                 break
-
-            if normalized == "status":
-                narration = self._narrate(_status_frame(state))
-                output.append(narration.text)
-                continue
-
-            if normalized == "what happened":
-                narration = self._narrate(_recap_frame(state))
-                output.append(narration.text)
-                continue
-
-            if normalized == "look around":
-                narration = self._narrate(_look_frame(state))
-                output.append(narration.text)
+            if directive == "continue":
                 continue
 
             if state.phase is EncounterPhase.COMBAT:
@@ -132,6 +111,39 @@ class CampaignOrchestrator:
             output_text="\n".join(output),
             completed=state.phase is EncounterPhase.ENCOUNTER_COMPLETE,
         )
+
+    def _handle_utility_command(
+        self,
+        normalized: str,
+        state: EncounterState,
+        output: list[str],
+    ) -> str | None:
+        """Handle built-in player commands. Returns 'break', 'continue', or None."""
+
+        if normalized == "exit":
+            return "break"
+        if normalized == "save and quit":
+            self._state_repository.save_encounter(state)
+            self._append_event(
+                {
+                    "type": "encounter_saved",
+                    "encounter_id": state.encounter_id,
+                    "phase": state.phase.value,
+                    "outcome": state.outcome,
+                }
+            )
+            output.append("Game saved. You can resume this encounter later.")
+            return "break"
+        if normalized == "status":
+            output.append(self._narrate(_status_frame(state)).text)
+            return "continue"
+        if normalized == "what happened":
+            output.append(self._narrate(_recap_frame(state)).text)
+            return "continue"
+        if normalized == "look around":
+            output.append(self._narrate(_look_frame(state)).text)
+            return "continue"
+        return None
 
     def current_state(self, encounter_id: str) -> EncounterState:
         """Return the current persisted encounter state."""
@@ -187,6 +199,14 @@ class CampaignOrchestrator:
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
         self._state_repository.save_encounter(updated_state)
+        if updated_state.outcome is not None:
+            self._append_event(
+                {
+                    "type": "encounter_completed",
+                    "encounter_id": updated_state.encounter_id,
+                    "outcome": updated_state.outcome,
+                }
+            )
         narration = self._narrate(
             _frame(
                 updated_state,
@@ -220,6 +240,13 @@ class CampaignOrchestrator:
             public_events=(*state.public_events, event),
         )
         self._state_repository.save_encounter(updated_state)
+        self._append_event(
+            {
+                "type": "encounter_completed",
+                "encounter_id": updated_state.encounter_id,
+                "outcome": "combat",
+            }
+        )
         narration = self._narrate(
             _frame(updated_state, "combat_start", resolved_outcomes=(event,))
         )
@@ -244,6 +271,13 @@ class CampaignOrchestrator:
             ),
         )
         self._state_repository.save_encounter(updated_state)
+        self._append_event(
+            {
+                "type": "encounter_completed",
+                "encounter_id": updated_state.encounter_id,
+                "outcome": outcome,
+            }
+        )
         narration = self._narrate(
             _frame(
                 updated_state,
@@ -333,6 +367,10 @@ class CampaignOrchestrator:
 
     def _narrate(self, frame: NarrationFrame) -> Narration:
         return self._narrator_agent.narrate(frame)
+
+    def _append_event(self, event: dict[str, object]) -> None:
+        if self._memory_repository is not None:
+            self._memory_repository.append_event(event)
 
 
 def _parse_decision(payload: Mapping[str, object]) -> OrchestrationDecision:
