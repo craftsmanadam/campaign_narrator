@@ -187,15 +187,16 @@ def test_load_reference_text_returns_file_content_for_rogue() -> None:
     assert "Sneak Attack" in text
 
 
-def test_load_reference_text_strips_anchor_before_path_resolution() -> None:
+def test_load_reference_text_returns_section_for_real_wiki_anchor() -> None:
+    """load_reference_text extracts the Sneak Attack section from Rogue.md."""
     repo = _repository()
-    text_with_anchor = repo.load_reference_text(
-        "DND.SRD.Wiki-0.5.2/Classes/Rogue.md#Sneak-Attack"
+    full = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Classes/Rogue.md")
+    section = repo.load_reference_text(
+        "DND.SRD.Wiki-0.5.2/Classes/Rogue.md#Sneak Attack"
     )
-    text_without_anchor = repo.load_reference_text(
-        "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
-    )
-    assert text_with_anchor == text_without_anchor
+    assert "Sneak Attack" in section
+    assert len(section) < len(full)
+    assert "Thieves' Cant" not in section
 
 
 def test_load_reference_text_raises_for_missing_file() -> None:
@@ -295,3 +296,117 @@ def test_monster_entries_have_reference_field() -> None:
     for entry in payload["monsters"]:
         monster_id = entry.get("monster_id")
         assert "reference" in entry, f"monster {monster_id} missing reference"
+
+
+def test_load_reference_text_returns_section_when_anchor_matches(
+    tmp_path: Path,
+) -> None:
+    wiki = tmp_path / "DND.SRD.Wiki-0.5.2"
+    wiki.mkdir(parents=True)
+    (wiki / "Fighter.md").write_text(
+        "# Fighter\n\n"
+        "### Action Surge\n\n"
+        "Push yourself beyond your limits.\n\n"
+        "### Second Wind\n\n"
+        "Regain hit points.\n"
+    )
+    repo = CompendiumRepository(tmp_path)
+    result = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Fighter.md#Action Surge")
+    assert "Action Surge" in result
+    assert "Push yourself beyond your limits." in result
+    assert "Second Wind" not in result
+
+
+def test_load_reference_text_anchor_match_is_case_insensitive(
+    tmp_path: Path,
+) -> None:
+    wiki = tmp_path / "DND.SRD.Wiki-0.5.2"
+    wiki.mkdir(parents=True)
+    (wiki / "Fighter.md").write_text(
+        "# Fighter\n\n"
+        "### Action Surge\n\n"
+        "Push yourself beyond your limits.\n\n"
+        "### Second Wind\n\n"
+        "Regain hit points.\n"
+    )
+    repo = CompendiumRepository(tmp_path)
+    result = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Fighter.md#action surge")
+    assert "Action Surge" in result
+    assert "Push yourself beyond your limits." in result
+    assert "Second Wind" not in result
+
+
+def test_load_reference_text_section_ends_at_same_level_heading(
+    tmp_path: Path,
+) -> None:
+    wiki = tmp_path / "DND.SRD.Wiki-0.5.2"
+    wiki.mkdir(parents=True)
+    (wiki / "Feats.md").write_text(
+        "# Feats\n\n## Grappler\n\nGrappling rules.\n\n## Alert\n\nInitiative rules.\n"
+    )
+    repo = CompendiumRepository(tmp_path)
+    result = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Feats.md#Grappler")
+    assert "Grappler" in result
+    assert "Grappling rules." in result
+    assert "Alert" not in result
+
+
+def test_load_reference_text_section_ends_at_higher_level_heading(
+    tmp_path: Path,
+) -> None:
+    wiki = tmp_path / "DND.SRD.Wiki-0.5.2"
+    wiki.mkdir(parents=True)
+    (wiki / "Classes.md").write_text(
+        "# Classes\n\n"
+        "## Fighter\n\n"
+        "### Action Surge\n\n"
+        "Push yourself.\n\n"
+        "## Rogue\n\n"
+        "Sneaky.\n"
+    )
+    repo = CompendiumRepository(tmp_path)
+    result = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Classes.md#Action Surge")
+    assert "Action Surge" in result
+    assert "Push yourself." in result
+    assert "Rogue" not in result
+
+
+def test_load_reference_text_section_includes_deeper_headings(
+    tmp_path: Path,
+) -> None:
+    wiki = tmp_path / "DND.SRD.Wiki-0.5.2"
+    wiki.mkdir(parents=True)
+    (wiki / "Fighter.md").write_text(
+        "# Fighter\n\n"
+        "## Martial Archetypes\n\n"
+        "Overview text.\n\n"
+        "### Champion\n\n"
+        "Champion details.\n\n"
+        "#### Improved Critical\n\n"
+        "Crit on 19 or 20.\n\n"
+        "## Rogue\n\n"
+        "Sneak attack.\n"
+    )
+    repo = CompendiumRepository(tmp_path)
+    result = repo.load_reference_text(
+        "DND.SRD.Wiki-0.5.2/Fighter.md#Martial Archetypes"
+    )
+    assert "Martial Archetypes" in result
+    assert "Champion" in result
+    assert "Improved Critical" in result
+    assert "Crit on 19 or 20." in result
+    assert "Rogue" not in result
+
+
+def test_load_reference_text_falls_back_to_full_file_when_anchor_not_found(
+    tmp_path: Path,
+) -> None:
+    wiki = tmp_path / "DND.SRD.Wiki-0.5.2"
+    wiki.mkdir(parents=True)
+    content = "# Fighter\n\nSome content.\n"
+    (wiki / "Fighter.md").write_text(content)
+    repo = CompendiumRepository(tmp_path)
+    result = repo.load_reference_text(
+        "DND.SRD.Wiki-0.5.2/Fighter.md#Nonexistent Heading"
+    )
+    assert result == content

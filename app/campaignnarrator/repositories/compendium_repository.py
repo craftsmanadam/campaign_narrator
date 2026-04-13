@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,15 +164,65 @@ class CompendiumRepository:
         return None
 
     def load_reference_text(self, reference: str) -> str:
-        """Load the full text of a compendium reference file.
+        """Load compendium reference text, extracting the anchored section if present.
 
-        Strips any #anchor suffix before resolving the path.
+        When the reference contains a '#anchor', returns only the section under
+        the first case-insensitive heading match. Falls back to the full file
+        (with a WARNING log) if the anchor is not found.
         Raises FileNotFoundError if the file does not exist.
         """
 
-        path_part = reference.split("#", maxsplit=1)[0]
+        parts = reference.split("#", maxsplit=1)
+        path_part = parts[0]
+        anchor = parts[1] if len(parts) > 1 else None
+
         resolved = self._root / path_part
-        return resolved.read_text()
+        text = resolved.read_text()
+
+        if anchor is None:
+            return text
+
+        section = self._extract_section(text, anchor)
+        if section is not None:
+            return section
+
+        _logger.warning(
+            "anchor '%s' not found in '%s'; returning full file", anchor, path_part
+        )
+        return text
+
+    def _extract_section(self, text: str, anchor: str) -> str | None:
+        """Return the section under the first heading that matches anchor.
+
+        Matching is case-insensitive. Collects lines from the matching heading
+        until a heading at the same or higher level (same or fewer '#'
+        characters), or end of file. Returns None if no heading matches.
+        """
+
+        anchor_lower = anchor.lower()
+        lines = text.splitlines(keepends=True)
+        start_idx: int | None = None
+        start_level: int | None = None
+
+        for i, line in enumerate(lines):
+            stripped = line.lstrip()
+            if not stripped.startswith("#"):
+                continue
+            level = len(stripped) - len(stripped.lstrip("#"))
+            if level >= len(stripped) or stripped[level] != " ":
+                continue  # not a valid ATX heading (needs space after #s)
+            heading_text = stripped[level:].strip()
+
+            if start_idx is None:
+                if heading_text.lower() == anchor_lower:
+                    start_idx = i
+                    start_level = level
+            elif start_level is not None and level <= start_level:
+                return "".join(lines[start_idx:i])
+
+        if start_idx is not None:
+            return "".join(lines[start_idx:])
+        return None
 
     def _load_compendium_entries(
         self,

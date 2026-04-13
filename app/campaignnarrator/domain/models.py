@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from types import MappingProxyType
-from typing import Mapping
 
 
 class EncounterPhase(str, Enum):
@@ -90,7 +90,7 @@ class EncounterState:
 
         return tuple(actor.name for actor in self.actors.values() if actor.is_visible)
 
-    def with_phase(self, phase: EncounterPhase) -> "EncounterState":
+    def with_phase(self, phase: EncounterPhase) -> EncounterState:
         """Return a copy of the state with an updated phase."""
 
         return replace(self, phase=phase)
