@@ -52,6 +52,30 @@ def test_save_and_quit_during_combat() -> None:
     """Run the save-and-quit during combat scenario."""
 
 
+@scenario(
+    "features/encounter_loop.feature",
+    "Rogue deceives goblins from concealment with advantage",
+)
+def test_rogue_deception_with_advantage() -> None:
+    """Run the rogue deception with advantage scenario."""
+
+
+@scenario(
+    "features/encounter_loop.feature",
+    "Rogue stealth past the goblin camp",
+)
+def test_rogue_stealth_past_goblins() -> None:
+    """Run the rogue stealth scenario."""
+
+
+@scenario(
+    "features/encounter_loop.feature",
+    "Rogue ambushes goblin scout with Sneak Attack",
+)
+def test_rogue_sneak_attack() -> None:
+    """Run the rogue sneak attack scenario."""
+
+
 def _read_event_log(runtime_data_root: Path) -> list[dict[str, object]]:
     path = runtime_data_root / "memory" / "event_log.jsonl"
     if not path.exists():
@@ -66,17 +90,35 @@ def _read_encounter(runtime_data_root: Path, encounter_id: str) -> dict[str, obj
 
 @given(
     parsers.parse("the OpenAI API is configured for {scenario_name}"),
-    target_fixture="encounter_scenario_name",
+    target_fixture="encounter_config",
 )
 def configure_openai_api_for_scenario(
     scenario_name: str,
     request: pytest.FixtureRequest,
     wiremock_stack: None,
-) -> str:
+) -> dict[str, str]:
     """Start the acceptance stack and record which scenario is under test."""
 
     request.node._encounter_scenario_name = scenario_name
-    return scenario_name
+    return {"scenario_name": scenario_name, "encounter_id": "goblin-camp"}
+
+
+@given(
+    parsers.parse(
+        "the OpenAI API is configured for {scenario_name} on encounter {encounter_id}"
+    ),
+    target_fixture="encounter_config",
+)
+def configure_openai_api_for_scenario_with_encounter(
+    scenario_name: str,
+    encounter_id: str,
+    request: pytest.FixtureRequest,
+    wiremock_stack: None,
+) -> dict[str, str]:
+    """Start the acceptance stack with a specific encounter ID."""
+
+    request.node._encounter_scenario_name = scenario_name
+    return {"scenario_name": scenario_name, "encounter_id": encounter_id}
 
 
 @when(
@@ -85,14 +127,14 @@ def configure_openai_api_for_scenario(
 )
 def run_encounter_with_scripted_input(
     compose_environment: dict[str, str],
-    encounter_scenario_name: str,
+    encounter_config: dict[str, str],
     docstring: str,
     request: pytest.FixtureRequest,
     wiremock_stack: None,
 ) -> CompletedProcess[str]:
     """Run the production CLI through Docker Compose with scripted stdin."""
 
-    request.node._encounter_scenario_name = encounter_scenario_name
+    request.node._encounter_scenario_name = encounter_config["scenario_name"]
     scripted_input = docstring
     completed_process = run(
         [
@@ -108,7 +150,7 @@ def run_encounter_with_scripted_input(
             "--data-root",
             "/runtime/data",
             "--encounter-id",
-            "goblin-camp",
+            encounter_config["encounter_id"],
         ],
         input=scripted_input,
         text=True,

@@ -51,6 +51,8 @@ class ActorState:
     inventory: tuple[str, ...] = field(default_factory=tuple)
     is_visible: bool = True
     conditions: tuple[str, ...] = field(default_factory=tuple)
+    character_class: str | None = None
+    character_background: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +166,7 @@ class NarrationFrame:
     resolved_outcomes: tuple[str, ...]
     allowed_disclosures: tuple[str, ...]
     tone_guidance: str | None = None
+    compendium_context: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True, slots=True)

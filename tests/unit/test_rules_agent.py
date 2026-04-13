@@ -498,3 +498,95 @@ def test_adjudicate_without_rules_repository_falls_back_to_hint_strings() -> Non
 
     input_text = adapter.calls[0]["input_text"]
     assert "Persuasion check" in input_text
+
+
+def _canned_adapter() -> object:
+    class _Adapter:
+        def generate_structured_json(
+            self, *, instructions: str, input_text: str
+        ) -> dict:
+            _ = instructions, input_text
+            return {
+                "is_legal": True,
+                "action_type": "check",
+                "summary": "ok",
+                "reasoning_summary": "ok",
+                "roll_requests": [],
+                "state_effects": [],
+                "rule_references": [],
+            }
+
+    return _Adapter()
+
+
+def test_stealth_hint_loads_stealth_topic_in_addition_to_social_topics() -> None:
+    """Hint 'Stealth' triggers the stealth topic on top of SOCIAL phase topics."""
+    captured: list[tuple[str, ...]] = []
+
+    class CapturingRulesRepository:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            captured.append(topics)
+            return ()
+
+    adapter = _canned_adapter()
+    agent = RulesAgent(adapter=adapter, rules_repository=CapturingRulesRepository())
+    request = RulesAdjudicationRequest(
+        actor_id="pc:talia",
+        intent="I try to sneak past.",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("success", "failure"),
+        check_hints=("Stealth",),
+    )
+    agent.adjudicate(request)
+
+    assert len(captured) == 1
+    assert "stealth" in captured[0]
+    assert "core_resolution" in captured[0]
+
+
+def test_hide_hint_also_loads_stealth_topic() -> None:
+    """Hint 'hide' is an alias for the stealth topic expansion."""
+    captured: list[tuple[str, ...]] = []
+
+    class CapturingRulesRepository:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            captured.append(topics)
+            return ()
+
+    adapter = _canned_adapter()
+    agent = RulesAgent(adapter=adapter, rules_repository=CapturingRulesRepository())
+    request = RulesAdjudicationRequest(
+        actor_id="pc:talia",
+        intent="I try to hide.",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("success", "failure"),
+        check_hints=("hide",),
+    )
+    agent.adjudicate(request)
+
+    assert len(captured) == 1
+    assert "stealth" in captured[0]
+
+
+def test_unknown_hint_does_not_expand_topics() -> None:
+    """Hints with no matching entry in _EXTRA_TOPICS_BY_HINT have no effect."""
+    captured: list[tuple[str, ...]] = []
+
+    class CapturingRulesRepository:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            captured.append(topics)
+            return ()
+
+    adapter = _canned_adapter()
+    agent = RulesAgent(adapter=adapter, rules_repository=CapturingRulesRepository())
+    request = RulesAdjudicationRequest(
+        actor_id="pc:talia",
+        intent="I do something unusual.",
+        phase=EncounterPhase.SOCIAL,
+        allowed_outcomes=("success", "failure"),
+        check_hints=("UnrecognisedHint",),
+    )
+    agent.adjudicate(request)
+
+    assert len(captured) == 1
+    assert "stealth" not in captured[0]

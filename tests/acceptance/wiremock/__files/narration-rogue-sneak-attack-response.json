@@ -1,0 +1,21 @@
+{
+  "id": "resp_narration_rogue_sneak_attack_001",
+  "object": "response",
+  "created_at": 1710001023,
+  "model": "gpt-5.4",
+  "output": [{
+    "id": "msg_narration_rogue_sneak_attack_001",
+    "type": "message",
+    "role": "assistant",
+    "status": "completed",
+    "content": [{
+      "type": "output_text",
+      "text": "Sneak Attack! Talia's dagger bites deep from the darkness.\nThe goblin staggers from the wound.",
+      "annotations": []
+    }]
+  }],
+  "parallel_tool_calls": false,
+  "tool_choice": "auto",
+  "tools": [],
+  "status": "completed"
+}

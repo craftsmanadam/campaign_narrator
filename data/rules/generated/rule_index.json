@@ -58,6 +58,9 @@
   "social_interaction": [
     "source/adjudication/social_interaction.md"
   ],
+  "stealth": [
+    "source/adjudication/hiding.md"
+  ],
   "exploration": [
     "source/adjudication/exploration.md",
     "source/adjudication/vision_and_light.md",

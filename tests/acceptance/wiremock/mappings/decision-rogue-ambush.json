@@ -1,0 +1,26 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.instructions",
+          "contains": "Choose the next encounter orchestration step"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "ambush"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "bodyFileName": "decision-rogue-ambush-response.json"
+  }
+}

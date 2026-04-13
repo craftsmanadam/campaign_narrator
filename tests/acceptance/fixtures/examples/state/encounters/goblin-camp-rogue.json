@@ -1,6 +1,6 @@
 {
-  "encounter_id": "goblin-camp",
-  "setting": "A ruined roadside camp.",
+  "encounter_id": "goblin-camp-rogue",
+  "setting": "A ruined roadside camp in a dark forest.",
   "phase": "scene_opening",
   "public_events": [],
   "hidden_facts": {
@@ -13,16 +13,16 @@
       "actor_id": "pc:talia",
       "name": "Talia",
       "kind": "pc",
-      "character_class": "fighter",
-      "character_background": "soldier",
-      "hp_current": 12,
-      "hp_max": 12,
-      "armor_class": 18,
+      "character_class": "rogue",
+      "character_background": "charlatan",
+      "hp_current": 18,
+      "hp_max": 18,
+      "armor_class": 14,
       "inventory": [
-        "longsword",
-        "chain-mail",
-        "shield",
-        "potion-of-healing"
+        "dagger",
+        "shortsword",
+        "leather-armor",
+        "thieves-tools"
       ],
       "conditions": [],
       "is_visible": true

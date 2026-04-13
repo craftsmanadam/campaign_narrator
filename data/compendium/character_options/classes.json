@@ -3,6 +3,7 @@
     {
       "class_id": "barbarian",
       "name": "Barbarian",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Barbarian.md",
       "hit_die": "d12",
       "primary_abilities": ["strength"],
       "saving_throws": ["strength", "constitution"],
@@ -24,6 +25,7 @@
     {
       "class_id": "bard",
       "name": "Bard",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Bard.md",
       "hit_die": "d8",
       "primary_abilities": ["charisma"],
       "saving_throws": ["dexterity", "charisma"],
@@ -38,6 +40,7 @@
     {
       "class_id": "cleric",
       "name": "Cleric",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Cleric.md",
       "hit_die": "d8",
       "primary_abilities": ["wisdom"],
       "saving_throws": ["wisdom", "charisma"],
@@ -58,6 +61,7 @@
     {
       "class_id": "druid",
       "name": "Druid",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Druid.md",
       "hit_die": "d8",
       "primary_abilities": ["wisdom"],
       "saving_throws": ["intelligence", "wisdom"],
@@ -81,6 +85,7 @@
     {
       "class_id": "fighter",
       "name": "Fighter",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Fighter.md",
       "hit_die": "d10",
       "primary_abilities": ["strength", "dexterity"],
       "saving_throws": ["strength", "constitution"],
@@ -104,6 +109,7 @@
     {
       "class_id": "monk",
       "name": "Monk",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Monk.md",
       "hit_die": "d8",
       "primary_abilities": ["dexterity", "wisdom"],
       "saving_throws": ["strength", "dexterity"],
@@ -125,6 +131,7 @@
     {
       "class_id": "paladin",
       "name": "Paladin",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Paladin.md",
       "hit_die": "d10",
       "primary_abilities": ["strength", "charisma"],
       "saving_throws": ["wisdom", "charisma"],
@@ -146,6 +153,7 @@
     {
       "class_id": "ranger",
       "name": "Ranger",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Ranger.md",
       "hit_die": "d10",
       "primary_abilities": ["dexterity", "wisdom"],
       "saving_throws": ["strength", "dexterity"],
@@ -169,6 +177,7 @@
     {
       "class_id": "rogue",
       "name": "Rogue",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Rogue.md",
       "hit_die": "d8",
       "primary_abilities": ["dexterity"],
       "saving_throws": ["dexterity", "intelligence"],
@@ -194,6 +203,7 @@
     {
       "class_id": "sorcerer",
       "name": "Sorcerer",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Sorcerer.md",
       "hit_die": "d6",
       "primary_abilities": ["charisma"],
       "saving_throws": ["constitution", "charisma"],
@@ -215,6 +225,7 @@
     {
       "class_id": "warlock",
       "name": "Warlock",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md",
       "hit_die": "d8",
       "primary_abilities": ["charisma"],
       "saving_throws": ["wisdom", "charisma"],
@@ -237,6 +248,7 @@
     {
       "class_id": "wizard",
       "name": "Wizard",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Wizard.md",
       "hit_die": "d6",
       "primary_abilities": ["intelligence"],
       "saving_throws": ["intelligence", "wisdom"],

@@ -29,7 +29,7 @@ from campaignnarrator.tools.state_updates import apply_state_effects
 _ALLOWED_SOCIAL_NEXT_STEPS = {
     "npc_dialogue",
     "narrate_scene",
-    "adjudicate_social_check",
+    "adjudicate_action",
     "roll_initiative",
     "enter_combat",
     "complete_encounter",
@@ -57,6 +57,7 @@ class EncounterOrchestrator:
         roll_dice: Callable[[str], int],
         decision_adapter: object | None = None,
         memory_repository: MemoryRepository | None = None,
+        compendium_repository: object | None = None,
     ) -> None:
         self._state_repository = state_repository
         self._rules_agent = rules_agent
@@ -68,6 +69,7 @@ class EncounterOrchestrator:
             None,
         )
         self._memory_repository = memory_repository
+        self._compendium_repository = compendium_repository
 
     def run_encounter(
         self,
@@ -155,6 +157,8 @@ class EncounterOrchestrator:
         state: EncounterState,
         player_input: PlayerInput,
     ) -> tuple[EncounterState, Narration]:
+        actor = state.actors[state.player_actor_id]
+        compendium_context = self._load_compendium_context(actor)
         payload = self._generate_orchestration_decision(state, player_input)
         decision = _parse_decision(payload)
         if decision.next_step not in _ALLOWED_SOCIAL_NEXT_STEPS:
@@ -162,8 +166,10 @@ class EncounterOrchestrator:
                 f"invalid orchestration next_step: {decision.next_step}"
             )
 
-        if decision.next_step == "adjudicate_social_check":
-            return self._handle_social_check(state, player_input, decision)
+        if decision.next_step == "adjudicate_action":
+            return self._handle_action(
+                state, player_input, decision, compendium_context
+            )
 
         if decision.next_step in {"roll_initiative", "enter_combat"}:
             return self._enter_combat(state)
@@ -183,11 +189,12 @@ class EncounterOrchestrator:
         )
         return state, narration
 
-    def _handle_social_check(
+    def _handle_action(
         self,
         state: EncounterState,
         player_input: PlayerInput,
         decision: OrchestrationDecision,
+        compendium_context: tuple[str, ...],
     ) -> tuple[EncounterState, Narration]:
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
@@ -195,6 +202,7 @@ class EncounterOrchestrator:
             phase=state.phase,
             allowed_outcomes=("success", "failure", "complication", "peaceful"),
             check_hints=_non_empty_tuple((decision.recommended_check,)),
+            compendium_context=compendium_context,
         )
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
@@ -212,6 +220,7 @@ class EncounterOrchestrator:
                 updated_state,
                 "social_resolution",
                 resolved_outcomes=(*roll_events, adjudication.summary),
+                compendium_context=compendium_context,
             )
         )
         return updated_state, narration
@@ -292,11 +301,14 @@ class EncounterOrchestrator:
         state: EncounterState,
         player_input: PlayerInput,
     ) -> tuple[EncounterState, Narration]:
+        actor = state.actors[state.player_actor_id]
+        compendium_context = self._load_compendium_context(actor)
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
             intent=player_input.raw_text,
             phase=EncounterPhase.COMBAT,
             allowed_outcomes=("hit", "miss", "damage", "defeated"),
+            compendium_context=compendium_context,
         )
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
@@ -306,6 +318,7 @@ class EncounterOrchestrator:
                 updated_state,
                 "combat_turn_result",
                 resolved_outcomes=(*roll_events, adjudication.summary),
+                compendium_context=compendium_context,
             )
         )
         return updated_state, narration
@@ -333,6 +346,36 @@ class EncounterOrchestrator:
             roll_events,
         )
 
+    def _load_compendium_context(self, actor: ActorState) -> tuple[str, ...]:
+        """Load class and background reference text for the given actor."""
+
+        if self._compendium_repository is None:
+            return ()
+        context: list[str] = []
+        if actor.character_class:
+            class_entry = self._compendium_repository.load_class(actor.character_class)
+            if class_entry and class_entry.reference:
+                try:
+                    text = self._compendium_repository.load_reference_text(
+                        class_entry.reference
+                    )
+                    context.append(text)
+                except FileNotFoundError:
+                    pass
+        if actor.character_background:
+            bg_entry = self._compendium_repository.load_background(
+                actor.character_background
+            )
+            if bg_entry and bg_entry.reference:
+                try:
+                    text = self._compendium_repository.load_reference_text(
+                        bg_entry.reference
+                    )
+                    context.append(text)
+                except FileNotFoundError:
+                    pass
+        return tuple(context)
+
     def _generate_orchestration_decision(
         self,
         state: EncounterState,
@@ -344,7 +387,7 @@ class EncounterOrchestrator:
             instructions=(
                 "Choose the next encounter orchestration step. Return only JSON. "
                 "Allowed next_step values are npc_dialogue, narrate_scene, "
-                "adjudicate_social_check, roll_initiative, enter_combat, and "
+                "adjudicate_action, roll_initiative, enter_combat, and "
                 "complete_encounter. Do not resolve rules yourself."
             ),
             input_text=json.dumps(
@@ -445,6 +488,7 @@ def _frame(
     *,
     resolved_outcomes: tuple[str, ...] = (),
     allowed_disclosures: tuple[str, ...] = ("public encounter state",),
+    compendium_context: tuple[str, ...] = (),
 ) -> NarrationFrame:
     return NarrationFrame(
         purpose=purpose,
@@ -455,6 +499,7 @@ def _frame(
         recent_public_events=state.public_events[-5:],
         resolved_outcomes=resolved_outcomes,
         allowed_disclosures=allowed_disclosures,
+        compendium_context=compendium_context,
     )
 
 
@@ -472,8 +517,11 @@ def _visible_npc_summaries(state: EncounterState) -> tuple[str, ...]:
 
 def _actor_summary(actor: ActorState) -> str:
     inventory = ", ".join(actor.inventory) if actor.inventory else "none"
+    class_tag = (
+        f" ({actor.character_class.capitalize()})" if actor.character_class else ""
+    )
     return (
-        f"{actor.name} HP {actor.hp_current}/{actor.hp_max}, "
+        f"{actor.name}{class_tag} HP {actor.hp_current}/{actor.hp_max}, "
         f"AC {actor.armor_class}, inventory: {inventory}"
     )
 
@@ -484,7 +532,7 @@ def _public_roll_event(roll_request: RollRequest, total: int) -> str:
 
 
 def _is_combat_attack(normalized_input: str) -> bool:
-    attack_terms = ("attack", "swing", "strike")
+    attack_terms = ("attack", "lunge", "swing", "strike")
     return any(term in normalized_input for term in attack_terms)
 
 

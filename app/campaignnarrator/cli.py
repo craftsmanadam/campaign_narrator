@@ -43,6 +43,7 @@ def _build_application_graph(data_root: Path) -> ApplicationOrchestrator:
         narrator_agent=narrator_agent,
         roll_dice=roll_dice,
         decision_adapter=adapter,
+        compendium_repository=compendium_repository,
     )
     return ApplicationOrchestrator(encounter_orchestrator=encounter_orchestrator)
 

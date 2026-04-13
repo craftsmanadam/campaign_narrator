@@ -1,0 +1,21 @@
+{
+  "id": "resp_decision_rogue_ambush_001",
+  "object": "response",
+  "created_at": 1710001021,
+  "model": "gpt-5.4",
+  "output": [{
+    "id": "msg_decision_rogue_ambush_001",
+    "type": "message",
+    "role": "assistant",
+    "status": "completed",
+    "content": [{
+      "type": "output_text",
+      "text": "{\"next_step\":\"enter_combat\",\"next_actor\":null,\"requires_rules_resolution\":false,\"recommended_check\":null,\"phase_transition\":\"combat\",\"player_prompt\":null,\"reason_summary\":\"Talia circles into position for an ambush.\"}",
+      "annotations": []
+    }]
+  }],
+  "parallel_tool_calls": false,
+  "tool_choice": "auto",
+  "tools": [],
+  "status": "completed"
+}

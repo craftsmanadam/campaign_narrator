@@ -25,6 +25,12 @@ _TOPICS_BY_PHASE: dict[EncounterPhase, tuple[str, ...]] = {
 # Defensive default for phases not yet in _TOPICS_BY_PHASE (e.g. future enum values).
 _FALLBACK_TOPICS: tuple[str, ...] = ("core_resolution",)
 
+# Maps check hint keywords (case-insensitive) to additional rule topics to load.
+_EXTRA_TOPICS_BY_HINT: dict[str, tuple[str, ...]] = {
+    "stealth": ("stealth",),
+    "hide": ("stealth",),
+}
+
 
 class RulesAgent:
     """Adjudicate encounter actions into structured rules output."""
@@ -43,7 +49,7 @@ class RulesAgent:
     def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication:
         """Return a structured adjudication for the supplied request."""
 
-        rule_texts = self._load_rule_texts(request.phase)
+        rule_texts = self._load_rule_texts(request.phase, request.check_hints)
         payload = self._adapter.generate_structured_json(
             instructions=(
                 "You are a rules adjudication engine. Return only a single "
@@ -58,11 +64,20 @@ class RulesAgent:
         )
         return self._parse_adjudication(payload)
 
-    def _load_rule_texts(self, phase: EncounterPhase) -> tuple[str, ...]:
+    def _load_rule_texts(
+        self,
+        phase: EncounterPhase,
+        check_hints: tuple[str, ...] = (),
+    ) -> tuple[str, ...]:
         if self._rules_repository is None:
             return ()
-        topics = _TOPICS_BY_PHASE.get(phase, _FALLBACK_TOPICS)
-        return self._rules_repository.load_context_for_topics(topics)
+        topics = list(_TOPICS_BY_PHASE.get(phase, _FALLBACK_TOPICS))
+        for hint in check_hints:
+            extra = _EXTRA_TOPICS_BY_HINT.get(hint.lower(), ())
+            for topic in extra:
+                if topic not in topics:
+                    topics.append(topic)
+        return self._rules_repository.load_context_for_topics(tuple(topics))
 
     def _build_input(
         self,

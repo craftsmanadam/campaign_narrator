@@ -1,8 +1,17 @@
 """Unit tests for the compendium repository."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
+import pytest
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
+
+_COMPENDIUM_ROOT = Path(__file__).resolve().parents[2] / "data" / "compendium"
+
+
+def _repository() -> CompendiumRepository:
+    return CompendiumRepository(_COMPENDIUM_ROOT)
 
 
 def test_compendium_repository_loads_magic_items_by_rarity_and_id(
@@ -133,3 +142,62 @@ def test_compendium_repository_marks_missing_context(tmp_path: Path) -> None:
     assert repository.load_monster_context(("goblin",)) == (
         "Missing compendium context: goblin",
     )
+
+
+def test_load_class_returns_entry_for_rogue() -> None:
+    repo = _repository()
+    entry = repo.load_class("rogue")
+    assert entry is not None
+    assert entry.class_id == "rogue"
+    assert entry.name == "Rogue"
+    assert entry.reference == "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
+
+
+def test_load_class_returns_entry_for_fighter() -> None:
+    repo = _repository()
+    entry = repo.load_class("fighter")
+    assert entry is not None
+    assert entry.class_id == "fighter"
+    assert entry.reference == "DND.SRD.Wiki-0.5.2/Classes/Fighter.md"
+
+
+def test_load_class_returns_none_for_unknown_class() -> None:
+    repo = _repository()
+    assert repo.load_class("unicorn") is None
+
+
+def test_load_background_returns_entry_for_charlatan() -> None:
+    repo = _repository()
+    entry = repo.load_background("charlatan")
+    assert entry is not None
+    assert entry.background_id == "charlatan"
+    assert entry.name == "Charlatan"
+    assert entry.reference is not None
+
+
+def test_load_background_returns_none_for_unknown_background() -> None:
+    repo = _repository()
+    assert repo.load_background("pirate") is None
+
+
+def test_load_reference_text_returns_file_content_for_rogue() -> None:
+    repo = _repository()
+    text = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Classes/Rogue.md")
+    assert "Sneak Attack" in text
+
+
+def test_load_reference_text_strips_anchor_before_path_resolution() -> None:
+    repo = _repository()
+    text_with_anchor = repo.load_reference_text(
+        "DND.SRD.Wiki-0.5.2/Classes/Rogue.md#Sneak-Attack"
+    )
+    text_without_anchor = repo.load_reference_text(
+        "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
+    )
+    assert text_with_anchor == text_without_anchor
+
+
+def test_load_reference_text_raises_for_missing_file() -> None:
+    repo = _repository()
+    with pytest.raises(FileNotFoundError):
+        repo.load_reference_text("DND.SRD.Wiki-0.5.2/Classes/DoesNotExist.md")

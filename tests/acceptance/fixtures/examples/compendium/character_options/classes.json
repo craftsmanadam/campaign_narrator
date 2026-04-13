@@ -1,0 +1,14 @@
+{
+  "classes": [
+    {
+      "class_id": "fighter",
+      "name": "Fighter",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Fighter.md"
+    },
+    {
+      "class_id": "rogue",
+      "name": "Rogue",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
+    }
+  ]
+}

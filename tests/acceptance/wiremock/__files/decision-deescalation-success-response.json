@@ -12,7 +12,7 @@
       "content": [
         {
           "type": "output_text",
-          "text": "{\"next_step\":\"adjudicate_social_check\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Persuasion check\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia offers a calm way for both sides to walk away.\"}",
+          "text": "{\"next_step\":\"adjudicate_action\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Persuasion check\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia offers a calm way for both sides to walk away.\"}",
           "annotations": []
         }
       ]

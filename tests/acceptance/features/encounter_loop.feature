@@ -68,3 +68,41 @@ Feature: Encounter loop
     And the event log includes an encounter_saved event for "goblin-camp" in phase "combat"
     And the persisted encounter "goblin-camp" is in phase "combat"
     And the persisted encounter "goblin-camp" has initiative order
+
+  Scenario: Rogue deceives goblins from concealment with advantage
+    Given the OpenAI API is configured for a rogue deception with advantage on encounter goblin-camp-rogue
+    When the player runs the encounter with scripted input:
+      """
+      I call out from the shadows, claiming to be a travelling merchant who got lost.
+      what happened
+      exit
+      """
+    Then the CLI output includes "Deception check:"
+    And the CLI output includes "advantage"
+    And the CLI output includes "Encounter outcome: de-escalated"
+    And the CLI output does not include "Initiative:"
+
+  Scenario: Rogue stealth past the goblin camp
+    Given the OpenAI API is configured for a rogue stealth past goblins on encounter goblin-camp-rogue
+    When the player runs the encounter with scripted input:
+      """
+      I try to slip through the underbrush past the goblin camp.
+      what happened
+      exit
+      """
+    Then the CLI output includes "Stealth check:"
+    And the CLI output includes "Encounter outcome: de-escalated"
+    And the CLI output does not include "Initiative:"
+
+  Scenario: Rogue ambushes goblin scout with Sneak Attack
+    Given the OpenAI API is configured for a rogue sneak attack on encounter goblin-camp-rogue
+    When the player runs the encounter with scripted input:
+      """
+      I circle into the shadows to prepare an ambush on the goblin scout.
+      I lunge from the shadows at the goblin scout with my dagger.
+      what happened
+      exit
+      """
+    Then the CLI output includes "Initiative:"
+    And the CLI output includes "Sneak Attack"
+    And the CLI output includes "Encounter outcome: combat"

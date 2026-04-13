@@ -1,0 +1,21 @@
+{
+  "id": "resp_decision_rogue_deception_001",
+  "object": "response",
+  "created_at": 1710001001,
+  "model": "gpt-5.4",
+  "output": [{
+    "id": "msg_decision_rogue_deception_001",
+    "type": "message",
+    "role": "assistant",
+    "status": "completed",
+    "content": [{
+      "type": "output_text",
+      "text": "{\"next_step\":\"adjudicate_action\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Deception\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia calls out a merchant cover story.\"}",
+      "annotations": []
+    }]
+  }],
+  "parallel_tool_calls": false,
+  "tool_choice": "auto",
+  "tools": [],
+  "status": "completed"
+}

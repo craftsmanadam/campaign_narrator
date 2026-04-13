@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
-from dataclasses import replace
+from dataclasses import replace as dc_replace
 
 import pytest
 from campaignnarrator.domain.models import (
@@ -21,6 +21,10 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     EncounterRunResult,
 )
+from campaignnarrator.repositories.compendium_repository import (
+    BackgroundEntry,
+    ClassEntry,
+)
 from campaignnarrator.repositories.state_repository import StateRepository
 
 _DAMAGED_GOBLIN_HP = 2
@@ -32,6 +36,31 @@ class FakeMemoryRepository:
 
     def append_event(self, event: Mapping[str, object]) -> None:
         self.events.append(dict(event))
+
+
+class FakeCompendiumRepository:
+    def __init__(
+        self,
+        class_entry: ClassEntry | None = None,
+        background_entry: BackgroundEntry | None = None,
+        reference_text: str = "",
+    ) -> None:
+        self._class_entry = class_entry
+        self._background_entry = background_entry
+        self._reference_text = reference_text
+        self.load_class_calls: list[str] = []
+        self.load_background_calls: list[str] = []
+
+    def load_class(self, class_id: str) -> ClassEntry | None:
+        self.load_class_calls.append(class_id)
+        return self._class_entry
+
+    def load_background(self, background_id: str) -> BackgroundEntry | None:
+        self.load_background_calls.append(background_id)
+        return self._background_entry
+
+    def load_reference_text(self, reference: str) -> str:
+        return self._reference_text
 
 
 class FakeDecisionAdapter:
@@ -96,13 +125,14 @@ def _decision(next_step: str, **overrides: object) -> dict[str, object]:
     return payload
 
 
-def _orchestrator(
+def _orchestrator(  # noqa: PLR0913
     *,
     state_repository: StateRepository | None = None,
     decision_adapter: FakeDecisionAdapter | None = None,
     rules_agent: FakeRulesAgent | None = None,
     narrator_agent: FakeNarratorAgent | None = None,
     roll_dice: FakeDice | None = None,
+    compendium_repository: object | None = None,
 ) -> EncounterOrchestrator:
     return EncounterOrchestrator(
         state_repository=state_repository or StateRepository.from_default_encounter(),
@@ -110,13 +140,14 @@ def _orchestrator(
         narrator_agent=narrator_agent or FakeNarratorAgent(),
         roll_dice=roll_dice or FakeDice(()),
         decision_adapter=decision_adapter or FakeDecisionAdapter(()),
+        compendium_repository=compendium_repository,
     )
 
 
 def _social_repository() -> StateRepository:
     repository = StateRepository.from_default_encounter()
     state = repository.load_encounter("goblin-camp")
-    repository.save_encounter(replace(state, phase=EncounterPhase.SOCIAL))
+    repository.save_encounter(dc_replace(state, phase=EncounterPhase.SOCIAL))
     return repository
 
 
@@ -124,7 +155,7 @@ def _combat_repository() -> StateRepository:
     repository = StateRepository.from_default_encounter()
     state = repository.load_encounter("goblin-camp")
     repository.save_encounter(
-        replace(
+        dc_replace(
             state,
             phase=EncounterPhase.COMBAT,
             initiative_order=("pc:talia", "npc:goblin-scout"),
@@ -186,7 +217,7 @@ def test_status_routes_to_status_frame_without_rules_adjudication() -> None:
     assert rules_agent.requests == []
     assert narrator_agent.frames[-1].purpose == "status_response"
     assert any(
-        "Talia HP 12/12" in summary
+        "Talia" in summary and "HP 12/12" in summary
         for summary in narrator_agent.frames[-1].public_actor_summaries
     )
 
@@ -265,7 +296,7 @@ def test_social_check_uses_rules_agent_and_applies_effects() -> None:
         decision_adapter=FakeDecisionAdapter(
             (
                 _decision(
-                    "adjudicate_social_check",
+                    "adjudicate_action",
                     requires_rules_resolution=True,
                     recommended_check="Persuasion",
                 ),
@@ -322,7 +353,7 @@ def test_social_check_with_outcome_emits_encounter_completed_event() -> None:
         narrator_agent=FakeNarratorAgent(),
         roll_dice=FakeDice(()),
         decision_adapter=FakeDecisionAdapter(
-            (_decision("adjudicate_social_check", requires_rules_resolution=True),)
+            (_decision("adjudicate_action", requires_rules_resolution=True),)
         ),
         memory_repository=memory,
     )
@@ -357,7 +388,7 @@ def test_social_check_without_outcome_does_not_emit_encounter_completed_event() 
         narrator_agent=FakeNarratorAgent(),
         roll_dice=FakeDice(()),
         decision_adapter=FakeDecisionAdapter(
-            (_decision("adjudicate_social_check", requires_rules_resolution=True),)
+            (_decision("adjudicate_action", requires_rules_resolution=True),)
         ),
         memory_repository=memory,
     )
@@ -779,3 +810,183 @@ def test_completed_encounter_records_durable_event() -> None:
             "outcome": "peaceful",
         }
     ]
+
+
+def test_adjudicate_action_routing_replaces_adjudicate_action() -> None:
+    """The renamed next_step 'adjudicate_action' must route to rules adjudication."""
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="Success.",
+                reasoning_summary="ok",
+            ),
+        )
+    )
+    orchestrator = _orchestrator(
+        state_repository=_social_repository(),
+        decision_adapter=FakeDecisionAdapter(
+            (
+                _decision(
+                    "adjudicate_action",
+                    requires_rules_resolution=True,
+                    recommended_check="Persuasion",
+                ),
+            )
+        ),
+        rules_agent=rules_agent,
+    )
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I ask them to stand down."],
+    )
+    assert len(rules_agent.requests) == 1
+
+
+def test_orchestrator_loads_compendium_context_from_class_and_background() -> None:
+    """Class and background reference text must reach the adjudication request."""
+    compendium_repo = FakeCompendiumRepository(
+        class_entry=ClassEntry(
+            class_id="rogue",
+            name="Rogue",
+            reference="DND.SRD.Wiki-0.5.2/Classes/Rogue.md",
+        ),
+        background_entry=BackgroundEntry(
+            background_id="charlatan",
+            name="Charlatan",
+            reference="DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md",
+        ),
+        reference_text="loaded text",
+    )
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="ok",
+                reasoning_summary="ok",
+            ),
+        )
+    )
+
+    repo = StateRepository.from_default_encounter()
+    state = repo.load_encounter("goblin-camp")
+    rogue_actor = dc_replace(
+        state.actors["pc:talia"],
+        character_class="rogue",
+        character_background="charlatan",
+    )
+    repo.save_encounter(
+        dc_replace(
+            state,
+            phase=EncounterPhase.SOCIAL,
+            actors={**state.actors, "pc:talia": rogue_actor},
+        )
+    )
+
+    orchestrator = EncounterOrchestrator(
+        state_repository=repo,
+        rules_agent=rules_agent,
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(
+            (_decision("adjudicate_action", requires_rules_resolution=True),)
+        ),
+        compendium_repository=compendium_repo,
+    )
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I try to sneak past."],
+    )
+
+    assert len(rules_agent.requests) == 1
+    req = rules_agent.requests[0]
+    assert "loaded text" in req.compendium_context
+
+
+def test_actor_summary_includes_class_name_when_present() -> None:
+    """The orchestrator decision input shows class name in actor summary."""
+    decision_adapter = FakeDecisionAdapter((_decision("npc_dialogue"),))
+
+    repo = StateRepository.from_default_encounter()
+    state = repo.load_encounter("goblin-camp")
+    rogue_actor = dc_replace(
+        state.actors["pc:talia"],
+        character_class="rogue",
+    )
+    repo.save_encounter(
+        dc_replace(
+            state,
+            phase=EncounterPhase.SOCIAL,
+            actors={**state.actors, "pc:talia": rogue_actor},
+        )
+    )
+
+    orchestrator = _orchestrator(
+        state_repository=repo,
+        decision_adapter=decision_adapter,
+    )
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["Hello."],
+    )
+
+    input_dict = decision_adapter.calls[0][1]
+    summaries = input_dict.get("public_actor_summaries", [])
+    assert any("Rogue" in s for s in summaries)
+
+
+def test_orchestrator_passes_compendium_context_to_combat_attack() -> None:
+    """Compendium context (e.g. Sneak Attack text) must reach combat adjudication."""
+    compendium_repo = FakeCompendiumRepository(
+        class_entry=ClassEntry(
+            class_id="rogue",
+            name="Rogue",
+            reference="DND.SRD.Wiki-0.5.2/Classes/Rogue.md",
+        ),
+        reference_text="Sneak Attack loaded text",
+    )
+    rules_agent = FakeRulesAgent(
+        (
+            RulesAdjudication(
+                is_legal=True,
+                action_type="attack",
+                summary="Hit.",
+                reasoning_summary="ok",
+            ),
+        )
+    )
+
+    repo = StateRepository.from_default_encounter()
+    state = repo.load_encounter("goblin-camp")
+    rogue_actor = dc_replace(
+        state.actors["pc:talia"],
+        character_class="rogue",
+        character_background=None,
+    )
+    repo.save_encounter(
+        dc_replace(
+            state,
+            phase=EncounterPhase.COMBAT,
+            initiative_order=("pc:talia", "npc:goblin-scout"),
+            outcome="combat",
+            actors={**state.actors, "pc:talia": rogue_actor},
+        )
+    )
+
+    orchestrator = EncounterOrchestrator(
+        state_repository=repo,
+        rules_agent=rules_agent,
+        narrator_agent=FakeNarratorAgent(),
+        roll_dice=FakeDice(()),
+        decision_adapter=FakeDecisionAdapter(()),
+        compendium_repository=compendium_repo,
+    )
+    orchestrator.run_encounter(
+        encounter_id="goblin-camp",
+        player_inputs=["I attack the goblin scout."],
+    )
+
+    assert len(rules_agent.requests) == 1
+    assert "Sneak Attack loaded text" in rules_agent.requests[0].compendium_context

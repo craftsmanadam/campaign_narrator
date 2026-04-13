@@ -121,6 +121,8 @@ def _actor_state_to_json(actor: ActorState) -> dict[str, object]:
         "inventory": list(actor.inventory),
         "conditions": list(actor.conditions),
         "is_visible": actor.is_visible,
+        "character_class": actor.character_class,
+        "character_background": actor.character_background,
     }
 
 
@@ -146,6 +148,8 @@ def _default_seed() -> dict[str, object]:
                     "potion-of-healing",
                 ],
                 "is_visible": True,
+                "character_class": "fighter",
+                "character_background": "soldier",
             },
             "npc:goblin-scout": {
                 "actor_id": "npc:goblin-scout",
@@ -156,6 +160,8 @@ def _default_seed() -> dict[str, object]:
                 "armor_class": 15,
                 "inventory": ["scimitar", "shortbow"],
                 "is_visible": True,
+                "character_class": None,
+                "character_background": None,
             },
         },
     }
@@ -210,6 +216,8 @@ def _actor_state_from_seed(
     inventory = _string_tuple_field_from_seed(seed, resolved_actor_id, "inventory")
     conditions = _string_tuple_field_from_seed(seed, resolved_actor_id, "conditions")
     is_visible = _bool_field_from_seed(seed, resolved_actor_id, "is_visible")
+    character_class = _optional_string_from_seed(seed, "character_class")
+    character_background = _optional_string_from_seed(seed, "character_background")
 
     return ActorState(
         actor_id=resolved_actor_id,
@@ -221,6 +229,8 @@ def _actor_state_from_seed(
         inventory=inventory,
         is_visible=is_visible,
         conditions=conditions,
+        character_class=character_class,
+        character_background=character_background,
     )
 
 
@@ -235,6 +245,8 @@ def _copy_actor_state(actor: ActorState) -> ActorState:
         inventory=tuple(actor.inventory),
         is_visible=actor.is_visible,
         conditions=tuple(actor.conditions),
+        character_class=actor.character_class,
+        character_background=actor.character_background,
     )
 
 

@@ -1,5 +1,5 @@
 {
-  "stealth": ["stealth.md", "checks.md"],
+  "stealth": ["source/adjudication/hiding.md"],
   "combat": ["combat.md", "conditions.md"],
   "conditions": ["conditions.md"],
   "actions": ["actions.md"],

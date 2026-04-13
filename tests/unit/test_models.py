@@ -188,3 +188,60 @@ def test_legacy_potion_resolution_models_are_not_exported() -> None:
     """Legacy potion-specific models should not be exported anymore."""
 
     assert all("potion" not in name.lower() for name in models.__all__)
+
+
+def test_actor_state_character_class_defaults_to_none() -> None:
+    actor = ActorState(
+        actor_id="pc:test",
+        name="Test",
+        kind="pc",
+        hp_current=10,
+        hp_max=10,
+        armor_class=12,
+    )
+    assert actor.character_class is None
+    assert actor.character_background is None
+
+
+def test_actor_state_accepts_character_class_and_background() -> None:
+    actor = ActorState(
+        actor_id="pc:talia",
+        name="Talia",
+        kind="pc",
+        hp_current=18,
+        hp_max=18,
+        armor_class=14,
+        character_class="rogue",
+        character_background="charlatan",
+    )
+    assert actor.character_class == "rogue"
+    assert actor.character_background == "charlatan"
+
+
+def test_narration_frame_compendium_context_defaults_to_empty() -> None:
+    frame = NarrationFrame(
+        purpose="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A forest.",
+        public_actor_summaries=(),
+        visible_npc_summaries=(),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+    )
+    assert frame.compendium_context == ()
+
+
+def test_narration_frame_accepts_compendium_context() -> None:
+    frame = NarrationFrame(
+        purpose="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A forest.",
+        public_actor_summaries=(),
+        visible_npc_summaries=(),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+        compendium_context=("Rogue class text...",),
+    )
+    assert frame.compendium_context == ("Rogue class text...",)

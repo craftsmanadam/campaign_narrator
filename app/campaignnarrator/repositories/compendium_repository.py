@@ -3,8 +3,27 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
+
+
+@dataclass(frozen=True, slots=True)
+class ClassEntry:
+    """Minimal class entry loaded from the compendium."""
+
+    class_id: str
+    name: str
+    reference: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class BackgroundEntry:
+    """Minimal background entry loaded from the compendium."""
+
+    background_id: str
+    name: str
+    reference: str | None
 
 
 class CompendiumRepository:
@@ -72,6 +91,55 @@ class CompendiumRepository:
             self._serialize_compendium_entry(monster_id, entries)
             for monster_id in monster_ids
         )
+
+    def load_class(self, class_id: str) -> ClassEntry | None:
+        """Return the class entry for the given class_id, or None if not found."""
+
+        path = self._root / "character_options" / "classes.json"
+        if not path.exists():
+            return None
+        payload = json.loads(path.read_text())
+        for entry in payload.get("classes", []):
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("class_id") == class_id:
+                ref = entry.get("reference")
+                return ClassEntry(
+                    class_id=class_id,
+                    name=str(entry.get("name", "")),
+                    reference=ref if isinstance(ref, str) else None,
+                )
+        return None
+
+    def load_background(self, background_id: str) -> BackgroundEntry | None:
+        """Return the background entry for the given background_id, or None."""
+
+        path = self._root / "character_options" / "backgrounds.json"
+        if not path.exists():
+            return None
+        payload = json.loads(path.read_text())
+        for entry in payload.get("backgrounds", []):
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("background_id") == background_id:
+                ref = entry.get("reference")
+                return BackgroundEntry(
+                    background_id=background_id,
+                    name=str(entry.get("name", "")),
+                    reference=ref if isinstance(ref, str) else None,
+                )
+        return None
+
+    def load_reference_text(self, reference: str) -> str:
+        """Load the full text of a compendium reference file.
+
+        Strips any #anchor suffix before resolving the path.
+        Raises FileNotFoundError if the file does not exist.
+        """
+
+        path_part = reference.split("#", maxsplit=1)[0]
+        resolved = self._root / path_part
+        return resolved.read_text()
 
     def _load_compendium_entries(
         self,

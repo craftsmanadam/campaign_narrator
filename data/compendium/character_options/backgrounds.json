@@ -1,0 +1,19 @@
+{
+  "backgrounds": [
+    {
+      "background_id": "charlatan",
+      "name": "Charlatan",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md"
+    },
+    {
+      "background_id": "soldier",
+      "name": "Soldier",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md"
+    },
+    {
+      "background_id": "acolyte",
+      "name": "Acolyte",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md"
+    }
+  ]
+}

@@ -12,7 +12,7 @@
       "content": [
         {
           "type": "output_text",
-          "text": "{\"next_step\":\"adjudicate_social_check\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Persuasion check\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia tries to talk past aggressive goblins.\"}",
+          "text": "{\"next_step\":\"adjudicate_action\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Persuasion check\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia tries to talk past aggressive goblins.\"}",
           "annotations": []
         }
       ]

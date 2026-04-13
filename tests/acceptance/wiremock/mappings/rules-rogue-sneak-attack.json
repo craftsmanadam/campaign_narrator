@@ -1,0 +1,26 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.instructions",
+          "contains": "rules adjudication engine"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.input",
+          "contains": "lunge from the shadows"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "bodyFileName": "rules-rogue-sneak-attack-response.json"
+  }
+}

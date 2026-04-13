@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace as dc_replace
 from pathlib import Path
 
 import pytest
@@ -315,6 +316,38 @@ def test_load_encounter_prefers_in_memory_state_over_file(tmp_path: Path) -> Non
     reloaded = repository.load_encounter("goblin-camp")
 
     assert reloaded.phase is EncounterPhase.COMBAT
+
+
+def test_actor_state_from_seed_reads_character_class_and_background() -> None:
+    repository = StateRepository.from_default_encounter()
+    state = repository.load_encounter("goblin-camp")
+    talia = state.actors["pc:talia"]
+    assert talia.character_class == "fighter"
+    assert talia.character_background == "soldier"
+
+
+def test_actor_state_round_trips_character_class_through_save_load() -> None:
+    repository = StateRepository.from_default_encounter()
+    state = repository.load_encounter("goblin-camp")
+    rogue_actor = dc_replace(
+        state.actors["pc:talia"],
+        character_class="rogue",
+        character_background="charlatan",
+    )
+    updated_state = dc_replace(state, actors={**state.actors, "pc:talia": rogue_actor})
+    repository.save_encounter(updated_state)
+    loaded = repository.load_encounter("goblin-camp")
+    assert loaded.actors["pc:talia"].character_class == "rogue"
+    assert loaded.actors["pc:talia"].character_background == "charlatan"
+
+
+def test_actor_state_from_seed_tolerates_missing_character_class() -> None:
+    """NPCs and older fixtures without the field default to None."""
+    repository = StateRepository.from_default_encounter()
+    state = repository.load_encounter("goblin-camp")
+    goblin = state.actors["npc:goblin-scout"]
+    assert goblin.character_class is None
+    assert goblin.character_background is None
 
 
 def _seed() -> dict[str, object]:
