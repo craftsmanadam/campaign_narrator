@@ -6,7 +6,9 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium"],
+      "size_options": [
+        "medium"
+      ],
       "speed": 30,
       "trait_ids": [
         "draconic-ancestry",
@@ -14,7 +16,8 @@
         "damage-resistance",
         "darkvision",
         "draconic-flight"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Dragonborn.md"
     },
     {
       "species_id": "dwarf",
@@ -22,14 +25,17 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium"],
+      "size_options": [
+        "medium"
+      ],
       "speed": 30,
       "trait_ids": [
         "darkvision",
         "dwarven-resilience",
         "dwarven-toughness",
         "stonecunning"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Dwarf.md"
     },
     {
       "species_id": "elf",
@@ -37,7 +43,9 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium"],
+      "size_options": [
+        "medium"
+      ],
       "speed": 30,
       "trait_ids": [
         "darkvision",
@@ -45,7 +53,8 @@
         "fey-ancestry",
         "keen-senses",
         "trance"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Elf.md"
     },
     {
       "species_id": "gnome",
@@ -53,9 +62,16 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["small"],
+      "size_options": [
+        "small"
+      ],
       "speed": 30,
-      "trait_ids": ["darkvision", "gnomish-cunning", "gnomish-lineage"]
+      "trait_ids": [
+        "darkvision",
+        "gnomish-cunning",
+        "gnomish-lineage"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Gnome.md"
     },
     {
       "species_id": "goliath",
@@ -63,9 +79,16 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium"],
+      "size_options": [
+        "medium"
+      ],
       "speed": 35,
-      "trait_ids": ["giant-ancestry", "large-form", "powerful-build"]
+      "trait_ids": [
+        "giant-ancestry",
+        "large-form",
+        "powerful-build"
+      ],
+      "reference": null
     },
     {
       "species_id": "halfling",
@@ -73,14 +96,17 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["small"],
+      "size_options": [
+        "small"
+      ],
       "speed": 30,
       "trait_ids": [
         "brave",
         "halfling-nimbleness",
         "luck",
         "naturally-stealthy"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Halfling.md"
     },
     {
       "species_id": "human",
@@ -88,9 +114,17 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium", "small"],
+      "size_options": [
+        "medium",
+        "small"
+      ],
       "speed": 30,
-      "trait_ids": ["resourceful", "skillful", "origin-feat-choice"]
+      "trait_ids": [
+        "resourceful",
+        "skillful",
+        "origin-feat-choice"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Human.md"
     },
     {
       "species_id": "orc",
@@ -98,9 +132,16 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium"],
+      "size_options": [
+        "medium"
+      ],
       "speed": 30,
-      "trait_ids": ["adrenaline-rush", "darkvision", "relentless-endurance"]
+      "trait_ids": [
+        "adrenaline-rush",
+        "darkvision",
+        "relentless-endurance"
+      ],
+      "reference": null
     },
     {
       "species_id": "tiefling",
@@ -108,13 +149,17 @@
       "playable": true,
       "source_section": "Character Species",
       "creature_type": "humanoid",
-      "size_options": ["medium", "small"],
+      "size_options": [
+        "medium",
+        "small"
+      ],
       "speed": 30,
       "trait_ids": [
         "darkvision",
         "fiendish-legacy",
         "otherworldly-presence"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Races/Tiefling.md"
     }
   ]
 }

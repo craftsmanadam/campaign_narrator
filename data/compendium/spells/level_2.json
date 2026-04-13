@@ -7,11 +7,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "M"],
+      "components": [
+        "V",
+        "M"
+      ],
       "duration": "Concentration, up to 10 minutes",
       "description": "Magical Darkness spreads from a point within range and fills a 15-foot-radius Sphere for the duration. Darkvision can't see through it, and nonmagical light can't illuminate it. If any of this spell's area overlaps with an area of Bright Light or Dim Light created by a spell of level 2 or lower, that other spell is dispelled.",
       "concentration": true,
-      "area": "15-foot-radius Sphere"
+      "area": "15-foot-radius Sphere",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Darkness.md"
     },
     {
       "spell_id": "darkvision",
@@ -20,9 +24,14 @@
       "school": "Transmutation",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "8 hours",
-      "description": "You touch a willing creature. For the duration, the target has Darkvision with a range of 150 feet."
+      "description": "You touch a willing creature. For the duration, the target has Darkvision with a range of 150 feet.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Darkvision.md"
     },
     {
       "spell_id": "misty-step",
@@ -31,9 +40,12 @@
       "school": "Conjuration",
       "casting_time": "Bonus Action",
       "range": "Self",
-      "components": ["V"],
+      "components": [
+        "V"
+      ],
       "duration": "Instantaneous",
-      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Misty Step.md"
     },
     {
       "spell_id": "hold-person",
@@ -42,12 +54,17 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.",
       "save": "wisdom",
       "concentration": true,
-      "higher_level": "You can target one additional Humanoid for each spell slot level above 2."
+      "higher_level": "You can target one additional Humanoid for each spell slot level above 2.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Hold Person.md"
     },
     {
       "spell_id": "invisibility",
@@ -56,11 +73,16 @@
       "school": "Illusion",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "A creature you touch has the Invisible condition until the spell ends. The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.",
       "concentration": true,
-      "higher_level": "You can target one additional creature for each spell slot level above 2."
+      "higher_level": "You can target one additional creature for each spell slot level above 2.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Invisibility.md"
     },
     {
       "spell_id": "scorching-ray",
@@ -69,11 +91,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "120 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "You create three fiery rays. You can hurl them at one target within range or at several. Make a ranged spell attack for each ray. On a hit, the target takes 2d6 Fire damage.",
       "attack": "ranged spell attack",
-      "higher_level": "You create one additional ray for each spell slot level above 2."
+      "higher_level": "You create one additional ray for each spell slot level above 2.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Scorching Ray.md"
     },
     {
       "spell_id": "shatter",
@@ -82,12 +108,17 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Instantaneous",
       "description": "A loud noise erupts from a point of your choice within range. Each creature in a 10-foot-radius Sphere centered there makes a Constitution saving throw, taking 3d8 Thunder damage on a failed save or half as much damage on a successful one. A creature made of inorganic material such as stone, crystal, or metal makes this save with Disadvantage. A nonmagical object that isn't being worn or carried also takes the damage if it's in the spell's area.",
       "save": "constitution",
       "area": "10-foot-radius Sphere",
-      "higher_level": "The damage increases by 1d8 for each spell slot level above 2."
+      "higher_level": "The damage increases by 1d8 for each spell slot level above 2.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Shatter.md"
     },
     {
       "spell_id": "gust-of-wind",
@@ -96,12 +127,17 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "A Line of strong wind 60 feet long and 10 feet wide blasts from you in a direction you choose for the duration. Each creature that starts its turn in the Line must succeed on a Strength saving throw or be pushed 15 feet away from you. Any creature in the Line must spend 2 feet of movement for every 1 foot it moves when moving closer to you. The gust disperses gas or vapor, and it extinguishes candles, torches, and similar unprotected flames in the area.",
       "save": "strength",
       "area": "60-foot Line",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Gust Of Wind.md"
     },
     {
       "spell_id": "see-invisibility",
@@ -110,9 +146,14 @@
       "school": "Divination",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "1 hour",
-      "description": "For the duration, you see Invisible creatures and objects as if they were visible, and you see into the Ethereal Plane."
+      "description": "For the duration, you see Invisible creatures and objects as if they were visible, and you see into the Ethereal Plane.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/See Invisibility.md"
     },
     {
       "spell_id": "spiritual-weapon",
@@ -121,12 +162,16 @@
       "school": "Evocation",
       "casting_time": "Bonus Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "You create a floating, spectral force that resembles a weapon of your choice and lasts for the duration. When the weapon appears, you can make a melee spell attack against one creature within 5 feet of the weapon. On a hit, the target takes Force damage equal to 1d8 plus your spellcasting ability modifier. As a Bonus Action on your later turns, you can move the weapon up to 20 feet and repeat the attack against a creature within 5 feet of it.",
       "attack": "melee spell attack",
       "concentration": true,
-      "higher_level": "The damage increases by 1d8 for every two spell slot levels above 2."
+      "higher_level": "The damage increases by 1d8 for every two spell slot levels above 2.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Spiritual Weapon.md"
     },
     {
       "spell_id": "suggestion",
@@ -135,12 +180,16 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V", "M"],
+      "components": [
+        "V",
+        "M"
+      ],
       "duration": "Concentration, up to 8 hours",
       "description": "You suggest a course of activity, described in no more than 25 words, to a creature you can see within range that can hear and understand you. The suggestion must sound achievable and not involve anything that would obviously deal damage to the target or its allies. The target must succeed on a Wisdom saving throw or have the Charmed condition for the duration or until you or your allies deal damage to it. The Charmed target pursues the suggestion to the best of its ability.",
       "save": "wisdom",
       "concentration": true,
-      "higher_level": "You can target one additional creature for each spell slot level above 2."
+      "higher_level": "You can target one additional creature for each spell slot level above 2.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Suggestion.md"
     },
     {
       "spell_id": "detect-thoughts",
@@ -149,11 +198,16 @@
       "school": "Divination",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "For the duration, you can read the thoughts of certain creatures. When you cast the spell and as a Magic action on later turns, you can focus on one creature you can see within 30 feet. The target makes a Wisdom saving throw if you probe deeper.",
       "save": "wisdom",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Detect Thoughts.md"
     },
     {
       "spell_id": "enthrall",
@@ -162,10 +216,14 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "1 minute",
       "description": "You weave a distracting string of words, causing creatures of your choice that you can see within range to make Wisdom saving throws. A target that fails has Disadvantage on Wisdom (Perception) checks made to perceive creatures other than you until the spell ends.",
-      "save": "wisdom"
+      "save": "wisdom",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Enthrall.md"
     },
     {
       "spell_id": "levitate",
@@ -174,11 +232,16 @@
       "school": "Transmutation",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 10 minutes",
       "description": "One creature or loose object of your choice that you can see within range rises vertically up to 20 feet and remains suspended for the duration. An unwilling creature can make a Constitution saving throw to avoid the effect.",
       "save": "constitution",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Levitate.md"
     },
     {
       "spell_id": "locate-object",
@@ -187,10 +250,15 @@
       "school": "Divination",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 10 minutes",
       "description": "Describe or name an object familiar to you. You sense the direction to the object's location if that object is within 1,000 feet of yourself. The spell can locate a specific known object or the nearest object of a particular kind.",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Locate Object.md"
     },
     {
       "spell_id": "magic-weapon",
@@ -199,11 +267,15 @@
       "school": "Transmutation",
       "casting_time": "Bonus Action",
       "range": "Touch",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "You touch a nonmagical weapon. Until the spell ends, that weapon becomes a magic weapon with a +1 bonus to attack rolls and damage rolls.",
       "concentration": true,
-      "higher_level": "The bonus increases when you cast this spell with higher-level spell slots."
+      "higher_level": "The bonus increases when you cast this spell with higher-level spell slots.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Magic Weapon.md"
     },
     {
       "spell_id": "mind-spike",
@@ -212,12 +284,15 @@
       "school": "Divination",
       "casting_time": "Action",
       "range": "120 feet",
-      "components": ["S"],
+      "components": [
+        "S"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "You drive a spike of psionic energy into the mind of one creature you can see within range. The target makes a Wisdom saving throw, taking Psychic damage on a failed save or half as much on a successful one. On a failed save, you also always know the target's location until the spell ends.",
       "save": "wisdom",
       "concentration": true,
-      "higher_level": "The damage increases when you cast this spell with a higher-level spell slot."
+      "higher_level": "The damage increases when you cast this spell with a higher-level spell slot.",
+      "reference": null
     },
     {
       "spell_id": "mirror-image",
@@ -226,9 +301,13 @@
       "school": "Illusion",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "1 minute",
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and can cause attacks to hit a duplicate instead of you. A duplicate is destroyed when it is hit."
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and can cause attacks to hit a duplicate instead of you. A duplicate is destroyed when it is hit.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Mirror Image.md"
     },
     {
       "spell_id": "phantasmal-force",
@@ -237,11 +316,16 @@
       "school": "Illusion",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "You craft an illusion in the mind of a creature you can see within range. The target makes an Intelligence saving throw. On a failed save, it perceives the illusion as real for the duration.",
       "save": "intelligence",
-      "concentration": true
+      "concentration": true,
+      "reference": null
     },
     {
       "spell_id": "ray-of-enfeeblement",
@@ -250,11 +334,15 @@
       "school": "Necromancy",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "A black beam of enervating energy springs from you toward a creature within range. Make a ranged spell attack. On a hit, the target deals only half damage with weapon attacks that use Strength until the spell ends.",
       "attack": "ranged spell attack",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Ray Of Enfeeblement.md"
     },
     {
       "spell_id": "spider-climb",
@@ -263,10 +351,15 @@
       "school": "Transmutation",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "Until the spell ends, one willing creature you touch gains the ability to move up, down, and across vertical surfaces and along ceilings while leaving its hands free. The target also gains a Climb Speed equal to its Speed.",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Spider Climb.md"
     },
     {
       "spell_id": "web",
@@ -275,12 +368,17 @@
       "school": "Conjuration",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "You conjure a mass of thick, sticky webbing at a point within range. The webs fill a 20-foot Cube there for the duration. The webs are Difficult Terrain and lightly obscure their area. If the webs aren't anchored between two solid masses or layered across a floor, wall, or ceiling, the conjured webs collapse, and the spell ends at the start of your next turn. A creature that starts its turn in the webs or enters them during its turn must make a Dexterity saving throw or have the Restrained condition while in the webs. A Restrained creature can take an action to make a Strength (Athletics) check against your spell save DC, escaping on a success. The webs are flammable.",
       "save": "dexterity",
       "area": "20-foot Cube",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Web.md"
     }
   ]
 }

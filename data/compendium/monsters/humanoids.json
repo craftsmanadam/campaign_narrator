@@ -12,12 +12,17 @@
       "speed": {
         "walk": 30
       },
-      "languages": ["Common"],
-      "senses": ["Passive Perception 10"],
+      "languages": [
+        "Common"
+      ],
+      "senses": [
+        "Passive Perception 10"
+      ],
       "traits": [
         "Training",
         "Club"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Commoner (NPC).md"
     },
     {
       "monster_id": "bandit",
@@ -31,12 +36,18 @@
       "speed": {
         "walk": 30
       },
-      "languages": ["Common", "Thieves' Cant"],
-      "senses": ["Passive Perception 10"],
+      "languages": [
+        "Common",
+        "Thieves' Cant"
+      ],
+      "senses": [
+        "Passive Perception 10"
+      ],
       "traits": [
         "Scimitar",
         "Light Crossbow"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Bandit (NPC).md"
     }
   ]
 }

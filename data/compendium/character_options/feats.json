@@ -1,124 +1,181 @@
 {
-  "feat_categories": [
-    "origin",
-    "general",
-    "fighting_style",
-    "epic_boon"
-  ],
   "feats": [
     {
       "feat_id": "alert",
       "name": "Alert",
       "category": "origin",
-      "benefit_ids": ["initiative-proficiency", "initiative-swap"],
-      "repeatable": false
+      "summary": "You gain proficiency in Initiative and can swap your Initiative with a willing ally after rolls are made.",
+      "benefit_ids": [
+        "initiative-proficiency",
+        "initiative-swap"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "magic-initiate-cleric",
       "name": "Magic Initiate (Cleric)",
       "category": "origin",
       "spell_list": "cleric",
-      "benefit_ids": ["two-cantrips", "level-1-spell", "spell-change"],
-      "repeatable": true
+      "summary": "You learn two Cleric cantrips and one 1st-level Cleric spell; you cast the 1st-level spell once per Long Rest without a slot and may swap it on a Long Rest.",
+      "benefit_ids": [
+        "two-cantrips",
+        "level-1-spell",
+        "spell-change"
+      ],
+      "repeatable": true,
+      "reference": null
     },
     {
       "feat_id": "magic-initiate-druid",
       "name": "Magic Initiate (Druid)",
       "category": "origin",
       "spell_list": "druid",
-      "benefit_ids": ["two-cantrips", "level-1-spell", "spell-change"],
-      "repeatable": true
+      "summary": "You learn two Druid cantrips and one 1st-level Druid spell; you cast the 1st-level spell once per Long Rest without a slot and may swap it on a Long Rest.",
+      "benefit_ids": [
+        "two-cantrips",
+        "level-1-spell",
+        "spell-change"
+      ],
+      "repeatable": true,
+      "reference": null
     },
     {
       "feat_id": "magic-initiate-wizard",
       "name": "Magic Initiate (Wizard)",
       "category": "origin",
       "spell_list": "wizard",
-      "benefit_ids": ["two-cantrips", "level-1-spell", "spell-change"],
-      "repeatable": true
+      "summary": "You learn two Wizard cantrips and one 1st-level Wizard spell; you cast the 1st-level spell once per Long Rest without a slot and may swap it on a Long Rest.",
+      "benefit_ids": [
+        "two-cantrips",
+        "level-1-spell",
+        "spell-change"
+      ],
+      "repeatable": true,
+      "reference": null
     },
     {
       "feat_id": "savage-attacker",
       "name": "Savage Attacker",
       "category": "origin",
-      "benefit_ids": ["reroll-weapon-damage-once-per-turn"],
-      "repeatable": false
+      "summary": "Once per turn when you roll damage for a melee weapon attack, you can reroll the damage dice and use either total.",
+      "benefit_ids": [
+        "reroll-weapon-damage-once-per-turn"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "skilled",
       "name": "Skilled",
       "category": "origin",
-      "benefit_ids": ["three-skill-or-tool-proficiencies"],
-      "repeatable": true
+      "summary": "You gain proficiency in any combination of three skills or tools of your choice.",
+      "benefit_ids": [
+        "three-skill-or-tool-proficiencies"
+      ],
+      "repeatable": true,
+      "reference": null
     },
     {
       "feat_id": "ability-score-improvement",
       "name": "Ability Score Improvement",
       "category": "general",
       "prerequisite": "level-4+",
-      "benefit_ids": ["increase-one-score-by-2-or-two-scores-by-1"],
-      "repeatable": true
+      "summary": "You increase one ability score by 2 or two ability scores by 1 each, up to a maximum of 20.",
+      "benefit_ids": [
+        "increase-one-score-by-2-or-two-scores-by-1"
+      ],
+      "repeatable": true,
+      "reference": null
     },
     {
       "feat_id": "grappler",
       "name": "Grappler",
       "category": "general",
       "prerequisite": "level-4+, strength-or-dexterity-13+",
+      "summary": "You gain +1 to Strength or Dexterity (max 20), advantage on attacks against grappled creatures, and can attempt to pin a grappled creature as an action.",
       "benefit_ids": [
         "ability-score-increase",
         "punch-and-grab",
         "attack-advantage",
         "fast-wrestler"
       ],
-      "repeatable": false
+      "repeatable": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Feats.md#Grappler"
     },
     {
       "feat_id": "archery",
       "name": "Archery",
       "category": "fighting_style",
       "prerequisite": "fighting-style-feature",
-      "benefit_ids": ["plus-2-ranged-attack-rolls"],
-      "repeatable": false
+      "summary": "You gain a +2 bonus to attack rolls made with ranged weapons.",
+      "benefit_ids": [
+        "plus-2-ranged-attack-rolls"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "defense",
       "name": "Defense",
       "category": "fighting_style",
       "prerequisite": "fighting-style-feature",
-      "benefit_ids": ["plus-1-ac-while-armored"],
-      "repeatable": false
+      "summary": "While wearing armor, you gain a +1 bonus to Armor Class.",
+      "benefit_ids": [
+        "plus-1-ac-while-armored"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "great-weapon-fighting",
       "name": "Great Weapon Fighting",
       "category": "fighting_style",
       "prerequisite": "fighting-style-feature",
-      "benefit_ids": ["treat-1-or-2-damage-rolls-as-3"],
-      "repeatable": false
+      "summary": "When you roll a 1 or 2 on a damage die for an attack with a Heavy or Versatile weapon held in two hands, you can reroll that die and must use the new result.",
+      "benefit_ids": [
+        "treat-1-or-2-damage-rolls-as-3"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "two-weapon-fighting",
       "name": "Two-Weapon Fighting",
       "category": "fighting_style",
       "prerequisite": "fighting-style-feature",
-      "benefit_ids": ["add-ability-modifier-to-light-extra-attack-damage"],
-      "repeatable": false
+      "summary": "When you make the bonus attack from Two-Weapon Fighting, you can add your ability modifier to that attack's damage roll.",
+      "benefit_ids": [
+        "add-ability-modifier-to-light-extra-attack-damage"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "boon-of-combat-prowess",
       "name": "Boon of Combat Prowess",
       "category": "epic_boon",
       "prerequisite": "level-19+",
-      "benefit_ids": ["ability-score-increase", "peerless-aim"],
-      "repeatable": false
+      "summary": "You increase one ability score by 1 (max 20) and once per Short Rest can replace a failed melee attack roll with a hit.",
+      "benefit_ids": [
+        "ability-score-increase",
+        "peerless-aim"
+      ],
+      "repeatable": false,
+      "reference": null
     },
     {
       "feat_id": "boon-of-dimensional-travel",
       "name": "Boon of Dimensional Travel",
       "category": "epic_boon",
       "prerequisite": "level-19+",
-      "benefit_ids": ["ability-score-increase", "blink-steps"],
-      "repeatable": false
+      "summary": "You increase one ability score by 1 (max 20) and after taking the Attack action can teleport up to 30 feet to an unoccupied space you can see.",
+      "benefit_ids": [
+        "ability-score-increase",
+        "blink-steps"
+      ],
+      "repeatable": false,
+      "reference": null
     }
   ]
 }

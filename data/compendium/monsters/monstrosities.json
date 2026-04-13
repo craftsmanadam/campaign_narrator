@@ -13,12 +13,18 @@
         "walk": 20,
         "fly": 40
       },
-      "languages": ["None"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 11"],
+      "languages": [
+        "None"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 11"
+      ],
       "traits": [
         "Immunity to Petrified",
         "Petrifying Bite"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Cockatrice.md"
     }
   ]
 }

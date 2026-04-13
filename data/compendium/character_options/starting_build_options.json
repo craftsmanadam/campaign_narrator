@@ -3,82 +3,212 @@
     {
       "class_id": "barbarian",
       "skill_choice_count": 2,
-      "skill_options": ["animal-handling", "athletics", "intimidation", "nature", "perception", "survival"],
-      "starting_equipment_options": ["greataxe package", "martial weapon package"]
+      "skill_options": [
+        "animal-handling",
+        "athletics",
+        "intimidation",
+        "nature",
+        "perception",
+        "survival"
+      ],
+      "starting_equipment_options": [
+        "greataxe package",
+        "martial weapon package"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Barbarian.md"
     },
     {
       "class_id": "bard",
       "skill_choice_count": 3,
-      "skill_options": ["any-skill"],
-      "starting_equipment_options": ["musical instrument package"],
-      "level_1_spell_choice_count": 4
+      "skill_options": [
+        "any-skill"
+      ],
+      "starting_equipment_options": [
+        "musical instrument package"
+      ],
+      "level_1_spell_choice_count": 4,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Bard.md"
     },
     {
       "class_id": "cleric",
       "skill_choice_count": 2,
-      "skill_options": ["history", "insight", "medicine", "persuasion", "religion"],
-      "starting_equipment_options": ["holy symbol package"],
-      "prepared_spells_formula": "wisdom-modifier + cleric-level"
+      "skill_options": [
+        "history",
+        "insight",
+        "medicine",
+        "persuasion",
+        "religion"
+      ],
+      "starting_equipment_options": [
+        "holy symbol package"
+      ],
+      "prepared_spells_formula": "wisdom-modifier + cleric-level",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Cleric.md"
     },
     {
       "class_id": "druid",
       "skill_choice_count": 2,
-      "skill_options": ["arcana", "animal-handling", "insight", "medicine", "nature", "perception", "religion", "survival"],
-      "starting_equipment_options": ["druidic focus package"],
-      "prepared_spells_formula": "wisdom-modifier + druid-level"
+      "skill_options": [
+        "arcana",
+        "animal-handling",
+        "insight",
+        "medicine",
+        "nature",
+        "perception",
+        "religion",
+        "survival"
+      ],
+      "starting_equipment_options": [
+        "druidic focus package"
+      ],
+      "prepared_spells_formula": "wisdom-modifier + druid-level",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Druid.md"
     },
     {
       "class_id": "fighter",
       "skill_choice_count": 2,
-      "skill_options": ["acrobatics", "animal-handling", "athletics", "history", "insight", "intimidation", "perception", "survival"],
-      "starting_equipment_options": ["defense package", "two-weapon package", "archery package"]
+      "skill_options": [
+        "acrobatics",
+        "animal-handling",
+        "athletics",
+        "history",
+        "insight",
+        "intimidation",
+        "perception",
+        "survival"
+      ],
+      "starting_equipment_options": [
+        "defense package",
+        "two-weapon package",
+        "archery package"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Fighter.md"
     },
     {
       "class_id": "monk",
       "skill_choice_count": 2,
-      "skill_options": ["acrobatics", "athletics", "history", "insight", "religion", "stealth"],
-      "starting_equipment_options": ["monk weapon package"]
+      "skill_options": [
+        "acrobatics",
+        "athletics",
+        "history",
+        "insight",
+        "religion",
+        "stealth"
+      ],
+      "starting_equipment_options": [
+        "monk weapon package"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Monk.md"
     },
     {
       "class_id": "paladin",
       "skill_choice_count": 2,
-      "skill_options": ["athletics", "insight", "intimidation", "medicine", "persuasion", "religion"],
-      "starting_equipment_options": ["martial weapon and holy symbol package"]
+      "skill_options": [
+        "athletics",
+        "insight",
+        "intimidation",
+        "medicine",
+        "persuasion",
+        "religion"
+      ],
+      "starting_equipment_options": [
+        "martial weapon and holy symbol package"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Paladin.md"
     },
     {
       "class_id": "ranger",
       "skill_choice_count": 3,
-      "skill_options": ["animal-handling", "athletics", "insight", "investigation", "nature", "perception", "stealth", "survival"],
-      "starting_equipment_options": ["explorer package", "archer package"]
+      "skill_options": [
+        "animal-handling",
+        "athletics",
+        "insight",
+        "investigation",
+        "nature",
+        "perception",
+        "stealth",
+        "survival"
+      ],
+      "starting_equipment_options": [
+        "explorer package",
+        "archer package"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Ranger.md"
     },
     {
       "class_id": "rogue",
       "skill_choice_count": 4,
-      "skill_options": ["acrobatics", "athletics", "deception", "insight", "intimidation", "investigation", "perception", "persuasion", "sleight-of-hand", "stealth"],
-      "starting_equipment_options": ["thieves tools package"]
+      "skill_options": [
+        "acrobatics",
+        "athletics",
+        "deception",
+        "insight",
+        "intimidation",
+        "investigation",
+        "perception",
+        "persuasion",
+        "sleight-of-hand",
+        "stealth"
+      ],
+      "starting_equipment_options": [
+        "thieves tools package"
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
     },
     {
       "class_id": "sorcerer",
       "skill_choice_count": 2,
-      "skill_options": ["arcana", "deception", "insight", "intimidation", "persuasion", "religion"],
-      "starting_equipment_options": ["arcane focus package"],
-      "level_1_spell_choice_count": 2
+      "skill_options": [
+        "arcana",
+        "deception",
+        "insight",
+        "intimidation",
+        "persuasion",
+        "religion"
+      ],
+      "starting_equipment_options": [
+        "arcane focus package"
+      ],
+      "level_1_spell_choice_count": 2,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Sorcerer.md"
     },
     {
       "class_id": "warlock",
       "skill_choice_count": 2,
-      "skill_options": ["arcana", "deception", "history", "intimidation", "investigation", "nature", "religion"],
-      "starting_equipment_options": ["simple weapon and occult focus package"],
+      "skill_options": [
+        "arcana",
+        "deception",
+        "history",
+        "intimidation",
+        "investigation",
+        "nature",
+        "religion"
+      ],
+      "starting_equipment_options": [
+        "simple weapon and occult focus package"
+      ],
       "level_1_spell_choice_count": 2,
-      "level_1_invocation_count": 1
+      "level_1_invocation_count": 1,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md"
     },
     {
       "class_id": "wizard",
       "skill_choice_count": 2,
-      "skill_options": ["arcana", "history", "insight", "investigation", "medicine", "nature", "religion"],
-      "starting_equipment_options": ["spellbook and arcane focus package"],
+      "skill_options": [
+        "arcana",
+        "history",
+        "insight",
+        "investigation",
+        "medicine",
+        "nature",
+        "religion"
+      ],
+      "starting_equipment_options": [
+        "spellbook and arcane focus package"
+      ],
       "spellbook_level_1_spell_count": 6,
-      "prepared_spells_formula": "intelligence-modifier + wizard-level"
+      "prepared_spells_formula": "intelligence-modifier + wizard-level",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Wizard.md"
     }
   ]
 }

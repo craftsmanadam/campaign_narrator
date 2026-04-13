@@ -5,105 +5,120 @@
       "class_id": "warlock",
       "level": 1,
       "name": "Pact Magic",
-      "summary": "Warlocks cast prepared Warlock spells using Pact Magic slots. Pact Magic slots are all the same level and return on a Short or Long Rest."
+      "summary": "Warlocks cast prepared Warlock spells using Pact Magic slots. Pact Magic slots are all the same level and return on a Short or Long Rest.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md#Pact Magic"
     },
     {
       "feature_id": "eldritch-invocations",
       "class_id": "warlock",
       "level": 1,
       "name": "Eldritch Invocations",
-      "summary": "Warlocks gain invocation options that modify spells, grant at-will magic, or define pact benefits. Invocation counts are recorded in class progression."
+      "summary": "Warlocks gain invocation options that modify spells, grant at-will magic, or define pact benefits. Invocation counts are recorded in class progression.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md#Eldritch Invocations"
     },
     {
       "feature_id": "magical-cunning",
       "class_id": "warlock",
       "level": 2,
       "name": "Magical Cunning",
-      "summary": "After a 1-minute rite, the Warlock regains expended Pact Magic slots up to half their maximum, rounded up, once per Long Rest."
+      "summary": "After a 1-minute rite, the Warlock regains expended Pact Magic slots up to half their maximum, rounded up, once per Long Rest.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md#Magical Cunning"
     },
     {
       "feature_id": "spellcasting",
       "class_id": "wizard",
       "level": 1,
       "name": "Spellcasting",
-      "summary": "The Wizard prepares spells from a spellbook, uses Intelligence as spellcasting ability, and starts with six level 1 Wizard spells in the spellbook."
+      "summary": "The Wizard prepares spells from a spellbook, uses Intelligence as spellcasting ability, and starts with six level 1 Wizard spells in the spellbook.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Wizard.md#Spellcasting"
     },
     {
       "feature_id": "arcane-recovery",
       "class_id": "wizard",
       "level": 1,
       "name": "Arcane Recovery",
-      "summary": "After finishing a Short Rest, the Wizard can recover expended spell slots with combined levels up to half Wizard level, rounded up."
+      "summary": "After finishing a Short Rest, the Wizard can recover expended spell slots with combined levels up to half Wizard level, rounded up.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Wizard.md#Arcane Recovery"
     },
     {
       "feature_id": "bardic-inspiration",
       "class_id": "bard",
       "level": 1,
       "name": "Bardic Inspiration",
-      "summary": "The Bard grants a Bardic Inspiration die to another creature, which can add it to a D20 Test after seeing the roll."
+      "summary": "The Bard grants a Bardic Inspiration die to another creature, which can add it to a D20 Test after seeing the roll.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Bard.md#Bardic Inspiration"
     },
     {
       "feature_id": "rage",
       "class_id": "barbarian",
       "level": 1,
       "name": "Rage",
-      "summary": "The Barbarian enters a combat fury that grants resistance to Bludgeoning, Piercing, and Slashing damage and improves Strength-based attacks."
+      "summary": "The Barbarian enters a combat fury that grants resistance to Bludgeoning, Piercing, and Slashing damage and improves Strength-based attacks.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Barbarian.md#Rage"
     },
     {
       "feature_id": "sneak-attack",
       "class_id": "rogue",
       "level": 1,
       "name": "Sneak Attack",
-      "summary": "Once per turn, the Rogue deals extra damage when they hit with a qualifying attack and satisfy the feature conditions."
+      "summary": "Once per turn, the Rogue deals extra damage when they hit with a qualifying attack and satisfy the feature conditions.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Rogue.md#Sneak Attack"
     },
     {
       "feature_id": "channel-divinity",
       "class_id": "cleric",
       "level": 2,
       "name": "Channel Divinity",
-      "summary": "The Cleric channels divine power into options such as Divine Spark and Turn Undead."
+      "summary": "The Cleric channels divine power into options such as Divine Spark and Turn Undead.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Cleric.md#Channel Divinity"
     },
     {
       "feature_id": "wild-shape",
       "class_id": "druid",
       "level": 2,
       "name": "Wild Shape",
-      "summary": "The Druid magically assumes a Beast form known to them, following the Wild Shape restrictions and uses."
+      "summary": "The Druid magically assumes a Beast form known to them, following the Wild Shape restrictions and uses.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Druid.md#Wild Shape"
     },
     {
       "feature_id": "action-surge",
       "class_id": "fighter",
       "level": 2,
       "name": "Action Surge",
-      "summary": "The Fighter can take one additional action on their turn, excluding the Magic action."
+      "summary": "The Fighter can take one additional action on their turn, excluding the Magic action.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Fighter.md#Action Surge"
     },
     {
       "feature_id": "monks-focus",
       "class_id": "monk",
       "level": 2,
       "name": "Monk's Focus",
-      "summary": "The Monk spends Focus Points to fuel features such as Flurry of Blows, Patient Defense, and Step of the Wind."
+      "summary": "The Monk spends Focus Points to fuel features such as Flurry of Blows, Patient Defense, and Step of the Wind.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Monk.md#Monk's Focus"
     },
     {
       "feature_id": "lay-on-hands",
       "class_id": "paladin",
       "level": 1,
       "name": "Lay on Hands",
-      "summary": "The Paladin uses a healing pool to restore Hit Points or remove certain conditions from a touched creature."
+      "summary": "The Paladin uses a healing pool to restore Hit Points or remove certain conditions from a touched creature.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Paladin.md#Lay on Hands"
     },
     {
       "feature_id": "favored-enemy",
       "class_id": "ranger",
       "level": 1,
       "name": "Favored Enemy",
-      "summary": "The Ranger gains Hunter's Mark preparation and special use support from their class progression."
+      "summary": "The Ranger gains Hunter's Mark preparation and special use support from their class progression.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Ranger.md#Favored Enemy"
     },
     {
       "feature_id": "innate-sorcery",
       "class_id": "sorcerer",
       "level": 1,
       "name": "Innate Sorcery",
-      "summary": "The Sorcerer taps innate magic to improve Sorcerer spellcasting for a limited duration."
+      "summary": "The Sorcerer taps innate magic to improve Sorcerer spellcasting for a limited duration.",
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Sorcerer.md#Innate Sorcery"
     }
   ]
 }

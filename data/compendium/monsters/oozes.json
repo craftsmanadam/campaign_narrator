@@ -12,13 +12,19 @@
       "speed": {
         "walk": 15
       },
-      "languages": ["None"],
-      "senses": ["Blindsight 60 ft.", "Passive Perception 8"],
+      "languages": [
+        "None"
+      ],
+      "senses": [
+        "Blindsight 60 ft.",
+        "Passive Perception 8"
+      ],
       "traits": [
         "Immunity to Acid",
         "Ooze Resilience",
         "Engulf"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Gelatinous Cube (Ooze).md"
     }
   ]
 }

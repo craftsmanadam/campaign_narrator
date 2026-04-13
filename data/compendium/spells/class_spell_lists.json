@@ -7,12 +7,16 @@
         "1": [],
         "2": [],
         "3": []
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Barbarian.md"
     },
     {
       "class_id": "bard",
       "spell_ids_by_level": {
-        "0": ["true-strike", "vicious-mockery"],
+        "0": [
+          "true-strike",
+          "vicious-mockery"
+        ],
         "1": [
           "bane",
           "charm-person",
@@ -45,12 +49,17 @@
           "sending",
           "stinking-cloud"
         ]
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Bard.md"
     },
     {
       "class_id": "cleric",
       "spell_ids_by_level": {
-        "0": ["guidance", "sacred-flame", "thaumaturgy"],
+        "0": [
+          "guidance",
+          "sacred-flame",
+          "thaumaturgy"
+        ],
         "1": [
           "bane",
           "bless",
@@ -61,7 +70,11 @@
           "healing-word",
           "protection-from-evil-and-good"
         ],
-        "2": ["hold-person", "locate-object", "spiritual-weapon"],
+        "2": [
+          "hold-person",
+          "locate-object",
+          "spiritual-weapon"
+        ],
         "3": [
           "dispel-magic",
           "mass-healing-word",
@@ -69,12 +82,16 @@
           "sending",
           "spirit-guardians"
         ]
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Cleric.md"
     },
     {
       "class_id": "druid",
       "spell_ids_by_level": {
-        "0": ["guidance", "produce-flame"],
+        "0": [
+          "guidance",
+          "produce-flame"
+        ],
         "1": [
           "cure-wounds",
           "detect-magic",
@@ -83,9 +100,19 @@
           "speak-with-animals",
           "thunderwave"
         ],
-        "2": ["gust-of-wind", "hold-person", "locate-object"],
-        "3": ["dispel-magic", "revivify", "sleet-storm", "water-breathing"]
-      }
+        "2": [
+          "gust-of-wind",
+          "hold-person",
+          "locate-object"
+        ],
+        "3": [
+          "dispel-magic",
+          "revivify",
+          "sleet-storm",
+          "water-breathing"
+        ]
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Druid.md"
     },
     {
       "class_id": "fighter",
@@ -94,7 +121,8 @@
         "1": [],
         "2": [],
         "3": []
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Fighter.md"
     },
     {
       "class_id": "monk",
@@ -103,25 +131,48 @@
         "1": [],
         "2": [],
         "3": []
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Monk.md"
     },
     {
       "class_id": "paladin",
       "spell_ids_by_level": {
         "0": [],
-        "1": ["bless", "heroism", "protection-from-evil-and-good"],
-        "2": ["magic-weapon"],
-        "3": ["revivify"]
-      }
+        "1": [
+          "bless",
+          "heroism",
+          "protection-from-evil-and-good"
+        ],
+        "2": [
+          "magic-weapon"
+        ],
+        "3": [
+          "revivify"
+        ]
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Paladin.md"
     },
     {
       "class_id": "ranger",
       "spell_ids_by_level": {
         "0": [],
-        "1": ["goodberry", "hunters-mark", "speak-with-animals", "thunderwave"],
-        "2": ["gust-of-wind", "locate-object", "magic-weapon"],
-        "3": ["revivify", "water-breathing"]
-      }
+        "1": [
+          "goodberry",
+          "hunters-mark",
+          "speak-with-animals",
+          "thunderwave"
+        ],
+        "2": [
+          "gust-of-wind",
+          "locate-object",
+          "magic-weapon"
+        ],
+        "3": [
+          "revivify",
+          "water-breathing"
+        ]
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Ranger.md"
     },
     {
       "class_id": "rogue",
@@ -130,7 +181,8 @@
         "1": [],
         "2": [],
         "3": []
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
     },
     {
       "class_id": "sorcerer",
@@ -193,12 +245,17 @@
           "slow",
           "stinking-cloud"
         ]
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Sorcerer.md"
     },
     {
       "class_id": "warlock",
       "spell_ids_by_level": {
-        "0": ["chill-touch", "eldritch-blast", "true-strike"],
+        "0": [
+          "chill-touch",
+          "eldritch-blast",
+          "true-strike"
+        ],
         "1": [
           "bane",
           "charm-person",
@@ -228,7 +285,8 @@
           "fly",
           "hypnotic-pattern"
         ]
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md"
     },
     {
       "class_id": "wizard",
@@ -295,7 +353,8 @@
           "slow",
           "stinking-cloud"
         ]
-      }
+      },
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Wizard.md"
     }
   ]
 }

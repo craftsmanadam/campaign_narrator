@@ -13,14 +13,20 @@
         "walk": 10,
         "fly": 90
       },
-      "languages": ["Primordial (Auran)"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 10"],
+      "languages": [
+        "Primordial (Auran)"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 10"
+      ],
       "traits": [
         "Air Form",
         "Multiattack",
         "Thunderous Slam",
         "Whirlwind (Recharge 4-6)"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Air Elemental.md"
     },
     {
       "monster_id": "earth-elemental",
@@ -35,8 +41,14 @@
         "walk": 30,
         "burrow": 30
       },
-      "languages": ["Primordial (Terran)"],
-      "senses": ["Darkvision 60 ft.", "Tremorsense 60 ft.", "Passive Perception 10"],
+      "languages": [
+        "Primordial (Terran)"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Tremorsense 60 ft.",
+        "Passive Perception 10"
+      ],
       "traits": [
         "Vulnerability to Thunder",
         "Earth Glide",
@@ -44,7 +56,8 @@
         "Multiattack",
         "Slam",
         "Rock Launch"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Earth Elemental.md"
     },
     {
       "monster_id": "fire-elemental",
@@ -58,8 +71,13 @@
       "speed": {
         "walk": 50
       },
-      "languages": ["Primordial (Ignan)"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 10"],
+      "languages": [
+        "Primordial (Ignan)"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 10"
+      ],
       "traits": [
         "Fire Aura",
         "Fire Form",
@@ -67,7 +85,8 @@
         "Water Susceptibility",
         "Multiattack",
         "Burn"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Fire Elemental.md"
     },
     {
       "monster_id": "water-elemental",
@@ -82,12 +101,18 @@
         "walk": 30,
         "swim": 90
       },
-      "languages": ["Primordial (Aquan)"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 10"],
+      "languages": [
+        "Primordial (Aquan)"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 10"
+      ],
       "traits": [
         "Resistance to Acid and Fire",
         "Water Form"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Water Elemental.md"
     }
   ]
 }

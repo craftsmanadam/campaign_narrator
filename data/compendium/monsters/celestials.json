@@ -13,13 +13,20 @@
         "walk": 30,
         "fly": 90
       },
-      "languages": ["All", "telepathy 120 ft."],
-      "senses": ["Truesight 120 ft.", "Passive Perception 15"],
+      "languages": [
+        "All",
+        "telepathy 120 ft."
+      ],
+      "senses": [
+        "Truesight 120 ft.",
+        "Passive Perception 15"
+      ],
       "traits": [
         "Shielded Mind",
         "Divine Aid (2/Day)",
         "Spellcasting"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Couatl.md"
     }
   ]
 }

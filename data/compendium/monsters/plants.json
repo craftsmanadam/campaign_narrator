@@ -12,11 +12,17 @@
       "speed": {
         "walk": 5
       },
-      "languages": ["None"],
-      "senses": ["Blindsight 30 ft.", "Passive Perception 6"],
+      "languages": [
+        "None"
+      ],
+      "senses": [
+        "Blindsight 30 ft.",
+        "Passive Perception 6"
+      ],
       "traits": [
         "Shriek"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Shrieker (Fungi).md"
     }
   ]
 }

@@ -26,6 +26,16 @@ class BackgroundEntry:
     reference: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class FeatEntry:
+    """Minimal feat entry loaded from the compendium."""
+
+    feat_id: str
+    name: str
+    summary: str
+    reference: str | None
+
+
 class CompendiumRepository:
     """Load compendium entries from a repository root."""
 
@@ -126,6 +136,26 @@ class CompendiumRepository:
                 return BackgroundEntry(
                     background_id=background_id,
                     name=str(entry.get("name", "")),
+                    reference=ref if isinstance(ref, str) else None,
+                )
+        return None
+
+    def load_feat(self, feat_id: str) -> FeatEntry | None:
+        """Return the feat entry for the given feat_id, or None if not found."""
+
+        path = self._root / "character_options" / "feats.json"
+        if not path.exists():
+            return None
+        payload = json.loads(path.read_text())
+        for entry in payload.get("feats", []):
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("feat_id") == feat_id:
+                ref = entry.get("reference")
+                return FeatEntry(
+                    feat_id=feat_id,
+                    name=str(entry.get("name", "")),
+                    summary=str(entry.get("summary", "")),
                     reference=ref if isinstance(ref, str) else None,
                 )
         return None

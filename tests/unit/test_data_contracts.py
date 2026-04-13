@@ -225,10 +225,7 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
         Path("data/compendium/equipment/adventuring_gear.json"): {"adventuring_gear"},
         Path("data/compendium/character_options/species.json"): {"species"},
         Path("data/compendium/character_options/origins.json"): {"origins"},
-        Path("data/compendium/character_options/feats.json"): {
-            "feat_categories",
-            "feats",
-        },
+        Path("data/compendium/character_options/feats.json"): {"feats"},
         Path("data/compendium/character_options/classes.json"): {"classes"},
         Path("data/compendium/character_options/subclasses.json"): {"subclasses"},
         Path("data/compendium/character_options/class_progression.json"): {
@@ -999,3 +996,20 @@ def test_jsonl_memory_files_contain_one_json_object_per_line() -> None:
         for line in lines:
             parsed = json.loads(line)
             assert isinstance(parsed, dict), path
+
+
+def test_feats_json_has_no_feat_categories_key() -> None:
+    """The feats.json should not have a redundant feat_categories key."""
+    feats_path = Path("data/compendium/character_options/feats.json")
+    payload = json.loads(feats_path.read_text())
+    assert "feat_categories" not in payload
+
+
+def test_all_feat_entries_have_summary() -> None:
+    """All feat entries should have a non-empty summary field."""
+    feats_path = Path("data/compendium/character_options/feats.json")
+    payload = json.loads(feats_path.read_text())
+    for entry in payload["feats"]:
+        feat_id = entry.get("feat_id")
+        assert "summary" in entry, f"feat {feat_id} missing summary"
+        assert entry["summary"], f"feat {feat_id} has empty summary"

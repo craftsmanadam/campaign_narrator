@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -201,3 +202,96 @@ def test_load_reference_text_raises_for_missing_file() -> None:
     repo = _repository()
     with pytest.raises(FileNotFoundError):
         repo.load_reference_text("DND.SRD.Wiki-0.5.2/Classes/DoesNotExist.md")
+
+
+def test_load_feat_returns_entry_with_all_fields(tmp_path: Path) -> None:
+    """The repository should load and return feat entries with all required fields."""
+
+    reference = "DND.SRD.Wiki-0.5.2/Characterizations/Feats.md#Alert"
+    (tmp_path / "character_options").mkdir()
+    (tmp_path / "character_options" / "feats.json").write_text(
+        json.dumps(
+            {
+                "feats": [
+                    {
+                        "feat_id": "alert",
+                        "name": "Alert",
+                        "category": "origin",
+                        "summary": "You gain proficiency in Initiative.",
+                        "benefit_ids": ["initiative-proficiency"],
+                        "repeatable": False,
+                        "reference": reference,
+                    }
+                ]
+            }
+        )
+    )
+    repo = CompendiumRepository(tmp_path)
+    entry = repo.load_feat("alert")
+    assert entry is not None
+    assert entry.feat_id == "alert"
+    assert entry.name == "Alert"
+    assert entry.summary == "You gain proficiency in Initiative."
+    assert entry.reference == reference
+
+
+def test_load_feat_returns_none_for_unknown_feat(tmp_path: Path) -> None:
+    """The repository should return None when a feat is not found."""
+
+    (tmp_path / "character_options").mkdir()
+    (tmp_path / "character_options" / "feats.json").write_text('{"feats": []}')
+    repo = CompendiumRepository(tmp_path)
+    assert repo.load_feat("nonexistent") is None
+
+
+_FEATS_PATH = _COMPENDIUM_ROOT / "character_options" / "feats.json"
+_LEVEL_0_SPELLS_PATH = _COMPENDIUM_ROOT / "spells" / "level_0.json"
+_HUMANOIDS_PATH = _COMPENDIUM_ROOT / "monsters" / "humanoids.json"
+
+
+def test_all_feats_have_reference_field_after_enrichment() -> None:
+    """Every feat entry must have a reference key (null is ok for non-SRD feats)."""
+    payload = json.loads(_FEATS_PATH.read_text())
+    for entry in payload["feats"]:
+        feat_id = entry.get("feat_id")
+        assert "reference" in entry, f"feat {feat_id} missing reference key"
+
+
+def test_load_feat_grappler_has_non_null_reference() -> None:
+    """Grappler is the only SRD feat and must have a non-null wiki reference."""
+    repo = _repository()
+    entry = repo.load_feat("grappler")
+    assert entry is not None
+    assert entry.reference is not None
+    assert "Feats.md" in entry.reference
+
+
+def test_load_reference_text_resolves_grappler_feat_reference() -> None:
+    """load_reference_text must load Feats.md when given the grappler reference."""
+    repo = _repository()
+    feat = repo.load_feat("grappler")
+    assert feat is not None
+    assert feat.reference is not None
+    text = repo.load_reference_text(feat.reference)
+    assert "Grappler" in text
+
+
+def test_spell_entries_have_reference_field() -> None:
+    """All level-0 spell entries must have a reference key after enrichment."""
+    payload = json.loads(_LEVEL_0_SPELLS_PATH.read_text())
+    for entry in payload["spells"]:
+        assert "reference" in entry, f"spell {entry.get('spell_id')} missing reference"
+
+
+def test_acid_splash_reference_resolves_to_real_wiki_file() -> None:
+    repo = _repository()
+    text = repo.load_reference_text("DND.SRD.Wiki-0.5.2/Spells/Acid Splash.md")
+    assert "Acid Splash" in text
+
+
+def test_monster_entries_have_reference_field() -> None:
+    """All humanoid monster entries must have a reference key after enrichment."""
+    payload = json.loads(_HUMANOIDS_PATH.read_text())
+    for entry in payload["monsters"]:
+        monster_id = entry.get("monster_id")
+        assert "reference" in entry, f"monster {monster_id} missing reference"

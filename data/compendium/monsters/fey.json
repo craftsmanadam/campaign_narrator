@@ -12,13 +12,20 @@
       "speed": {
         "walk": 30
       },
-      "languages": ["Elvish", "Sylvan"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 14"],
+      "languages": [
+        "Elvish",
+        "Sylvan"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 14"
+      ],
       "traits": [
         "Magic Resistance",
         "Speak with Beasts and Plants",
         "Thorn Burst"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Dryad.md"
     }
   ]
 }

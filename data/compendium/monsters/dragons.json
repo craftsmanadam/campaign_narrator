@@ -14,13 +14,20 @@
         "climb": 30,
         "fly": 60
       },
-      "languages": ["Draconic"],
-      "senses": ["Blindsight 10 ft.", "Darkvision 60 ft.", "Passive Perception 14"],
+      "languages": [
+        "Draconic"
+      ],
+      "senses": [
+        "Blindsight 10 ft.",
+        "Darkvision 60 ft.",
+        "Passive Perception 14"
+      ],
       "traits": [
         "Acid Immunity",
         "Acid Breath (Recharge 5-6)",
         "Slowing Breath"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Copper Dragon (Metallic).md"
     },
     {
       "monster_id": "young-copper-dragon",
@@ -36,14 +43,22 @@
         "climb": 40,
         "fly": 80
       },
-      "languages": ["Common", "Draconic"],
-      "senses": ["Blindsight 30 ft.", "Darkvision 120 ft.", "Passive Perception 17"],
+      "languages": [
+        "Common",
+        "Draconic"
+      ],
+      "senses": [
+        "Blindsight 30 ft.",
+        "Darkvision 120 ft.",
+        "Passive Perception 17"
+      ],
       "traits": [
         "Acid Immunity",
         "Multiattack",
         "Acid Breath (Recharge 5-6)",
         "Slowing Breath"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Young Copper Dragon (Metallic).md"
     },
     {
       "monster_id": "adult-copper-dragon",
@@ -59,14 +74,22 @@
         "climb": 40,
         "fly": 80
       },
-      "languages": ["Common", "Draconic"],
-      "senses": ["Blindsight 60 ft.", "Darkvision 120 ft.", "Passive Perception 22"],
+      "languages": [
+        "Common",
+        "Draconic"
+      ],
+      "senses": [
+        "Blindsight 60 ft.",
+        "Darkvision 120 ft.",
+        "Passive Perception 22"
+      ],
       "traits": [
         "Legendary Resistance (3/Day, or 4/Day in lair)",
         "Spellcasting",
         "Acid Breath (Recharge 5-6)",
         "Slowing Breath"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Adult Copper Dragon (Metallic).md"
     },
     {
       "monster_id": "ancient-copper-dragon",
@@ -82,14 +105,22 @@
         "climb": 40,
         "fly": 80
       },
-      "languages": ["Common", "Draconic"],
-      "senses": ["Blindsight 60 ft.", "Darkvision 120 ft.", "Passive Perception 27"],
+      "languages": [
+        "Common",
+        "Draconic"
+      ],
+      "senses": [
+        "Blindsight 60 ft.",
+        "Darkvision 120 ft.",
+        "Passive Perception 27"
+      ],
       "traits": [
         "Legendary Resistance (4/Day, or 5/Day in lair)",
         "Spellcasting",
         "Acid Breath (Recharge 5-6)",
         "Slowing Breath"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Ancient Copper Dragon (Metallic).md"
     }
   ]
 }

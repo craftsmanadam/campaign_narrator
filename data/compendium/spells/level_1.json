@@ -7,11 +7,16 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "You bless up to three creatures of your choice within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target adds 1d4 to the attack roll or save.",
       "concentration": true,
-      "higher_level": "You can target one additional creature for each spell slot level above 1."
+      "higher_level": "You can target one additional creature for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Bless.md"
     },
     {
       "spell_id": "guiding-bolt",
@@ -20,11 +25,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "120 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "1 round",
       "description": "You hurl a bolt of light toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 4d6 Radiant damage, and the next attack roll made against it before the end of your next turn has Advantage.",
       "attack": "ranged spell attack",
-      "higher_level": "The damage increases by 1d6 for each spell slot level above 1."
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Guiding Bolt.md"
     },
     {
       "spell_id": "charm-person",
@@ -33,11 +42,15 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "1 hour",
       "description": "One Humanoid you can see within range makes a Wisdom saving throw. It does so with Advantage if you or your allies are fighting it. On a failed save, the target has the Charmed condition until the spell ends or until you or your allies damage it. The Charmed creature is Friendly to you. When the spell ends, the target knows it was Charmed by you.",
       "save": "wisdom",
-      "higher_level": "You can target one additional creature for each spell slot level above 1."
+      "higher_level": "You can target one additional creature for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Charm Person.md"
     },
     {
       "spell_id": "command",
@@ -46,11 +59,14 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V"],
+      "components": [
+        "V"
+      ],
       "duration": "Instantaneous",
       "description": "You speak a one-word command to a creature you can see within range. The target must succeed on a Wisdom saving throw or follow the command on its next turn. The spell has no effect if the target is Undead, if it doesn't understand your language, or if your command is directly harmful to it.",
       "save": "wisdom",
-      "higher_level": "You can affect one additional creature for each spell slot level above 1."
+      "higher_level": "You can affect one additional creature for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Command.md"
     },
     {
       "spell_id": "cure-wounds",
@@ -59,11 +75,15 @@
       "school": "Abjuration",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "A creature you touch regains a number of Hit Points equal to 2d8 plus your spellcasting ability modifier.",
       "healing": "2d8 + spellcasting ability modifier",
-      "higher_level": "The healing increases by 2d8 for each spell slot level above 1."
+      "higher_level": "The healing increases by 2d8 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Cure Wounds.md"
     },
     {
       "spell_id": "feather-fall",
@@ -72,10 +92,14 @@
       "school": "Transmutation",
       "casting_time": "Reaction",
       "range": "60 feet",
-      "components": ["V", "M"],
+      "components": [
+        "V",
+        "M"
+      ],
       "duration": "1 minute",
       "description": "Choose up to five falling creatures within range. A falling creature's rate of descent slows to 60 feet per round until the spell ends. If a creature lands before the spell ends, the creature takes no damage from the fall, and the spell ends for that creature.",
-      "trigger": "you or a creature you can see within 60 feet of you falls"
+      "trigger": "you or a creature you can see within 60 feet of you falls",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Feather Fall.md"
     },
     {
       "spell_id": "healing-word",
@@ -84,11 +108,14 @@
       "school": "Abjuration",
       "casting_time": "Bonus Action",
       "range": "60 feet",
-      "components": ["V"],
+      "components": [
+        "V"
+      ],
       "duration": "Instantaneous",
       "description": "A creature of your choice that you can see within range regains Hit Points equal to 2d4 plus your spellcasting ability modifier.",
       "healing": "2d4 + spellcasting ability modifier",
-      "higher_level": "The healing increases by 2d4 for each spell slot level above 1."
+      "higher_level": "The healing increases by 2d4 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Healing Word.md"
     },
     {
       "spell_id": "thunderwave",
@@ -97,12 +124,16 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "A wave of thunderous force sweeps out from you. Each creature in a 15-foot Cube originating from you makes a Constitution saving throw. On a failed save, a creature takes 2d8 Thunder damage and is pushed 10 feet away from you. On a successful save, the creature takes half as much damage only. In addition, unsecured objects that are completely within the Cube are pushed 10 feet away from you, and a thunderous boom emanates from the spell that is audible out to 300 feet.",
       "save": "constitution",
       "area": "15-foot Cube",
-      "higher_level": "The damage increases by 1d8 for each spell slot level above 1."
+      "higher_level": "The damage increases by 1d8 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Thunderwave.md"
     },
     {
       "spell_id": "hunters-mark",
@@ -111,11 +142,14 @@
       "school": "Divination",
       "casting_time": "Bonus Action",
       "range": "90 feet",
-      "components": ["V"],
+      "components": [
+        "V"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "You choose a creature you can see within range and mystically mark it as your quarry. Until the spell ends, you deal an extra 1d6 Force damage to the target whenever you hit it with an attack roll, and you have Advantage on any Wisdom (Perception or Survival) check you make to find it. If the target drops to 0 Hit Points before this spell ends, you can take a Bonus Action on a later turn to mark a new creature.",
       "concentration": true,
-      "higher_level": "Your Concentration can last longer when you cast this spell using a higher-level spell slot."
+      "higher_level": "Your Concentration can last longer when you cast this spell using a higher-level spell slot.",
+      "reference": null
     },
     {
       "spell_id": "goodberry",
@@ -124,9 +158,14 @@
       "school": "Conjuration",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "24 hours",
-      "description": "Ten berries appear in your hand and are infused with magic for the duration. A creature can take a Bonus Action to eat one berry. Eating a berry restores 1 Hit Point, and the berry provides enough nourishment to sustain a creature for one day."
+      "description": "Ten berries appear in your hand and are infused with magic for the duration. A creature can take a Bonus Action to eat one berry. Eating a berry restores 1 Hit Point, and the berry provides enough nourishment to sustain a creature for one day.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Goodberry.md"
     },
     {
       "spell_id": "heroism",
@@ -135,10 +174,14 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "A willing creature you touch is imbued with bravery. Until the spell ends, the creature is immune to the Frightened condition and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns.",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Heroism.md"
     },
     {
       "spell_id": "hex",
@@ -147,11 +190,16 @@
       "school": "Enchantment",
       "casting_time": "Bonus Action",
       "range": "90 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 hour",
       "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also choose one ability when you cast the spell. The target has Disadvantage on ability checks made with the chosen ability. If the target drops to 0 Hit Points before the spell ends, you can take a Bonus Action on a later turn to curse a new creature.",
       "concentration": true,
-      "higher_level": "Your Concentration can last longer when you cast this spell using a higher-level spell slot."
+      "higher_level": "Your Concentration can last longer when you cast this spell using a higher-level spell slot.",
+      "reference": null
     },
     {
       "spell_id": "burning-hands",
@@ -160,12 +208,16 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "As you hold your hands with thumbs touching and fingers spread, a thin sheet of flames shoots forth from you. Each creature in a 15-foot Cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failed save or half as much damage on a successful one. Flammable objects in the Cone that aren't being worn or carried start burning.",
       "save": "dexterity",
       "area": "15-foot Cone",
-      "higher_level": "The damage increases by 1d6 for each spell slot level above 1."
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Burning Hands.md"
     },
     {
       "spell_id": "magic-missile",
@@ -174,10 +226,14 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "120 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "You create three glowing darts of magical force. Each dart strikes a creature of your choice that you can see within range. A dart deals 1d4 + 1 Force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
-      "higher_level": "The spell creates one more dart for each spell slot level above 1."
+      "higher_level": "The spell creates one more dart for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Magic Missile.md"
     },
     {
       "spell_id": "mage-armor",
@@ -186,9 +242,14 @@
       "school": "Abjuration",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "8 hours",
-      "description": "You touch a willing creature who isn't wearing armor. Until the spell ends, the target's base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor."
+      "description": "You touch a willing creature who isn't wearing armor. Until the spell ends, the target's base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Mage Armor.md"
     },
     {
       "spell_id": "shield",
@@ -197,10 +258,14 @@
       "school": "Abjuration",
       "casting_time": "Reaction",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "1 round",
       "description": "An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from Magic Missile.",
-      "trigger": "being hit by an attack roll or targeted by the Magic Missile spell"
+      "trigger": "being hit by an attack roll or targeted by the Magic Missile spell",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Shield.md"
     },
     {
       "spell_id": "detect-magic",
@@ -209,11 +274,15 @@
       "school": "Divination",
       "casting_time": "Action or Ritual",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Concentration, up to 10 minutes",
       "description": "For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or object in the area that bears the magic, and if an effect was created by a spell, you learn the spell's school of magic.",
       "concentration": true,
-      "ritual": true
+      "ritual": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Detect Magic.md"
     },
     {
       "spell_id": "bane",
@@ -222,12 +291,17 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "Up to three creatures of your choice that you can see within range must make Charisma saving throws. Whenever a target that fails this save makes an attack roll or a saving throw before the spell ends, the target subtracts 1d4 from the roll.",
       "save": "charisma",
       "concentration": true,
-      "higher_level": "You can target one additional creature for each spell slot level above 1."
+      "higher_level": "You can target one additional creature for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Bane.md"
     },
     {
       "spell_id": "chromatic-orb",
@@ -236,11 +310,16 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "90 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Instantaneous",
       "description": "You hurl an orb of energy at a target within range. Make a ranged spell attack. On a hit, the target takes 3d8 Acid, Cold, Fire, Lightning, Poison, or Thunder damage, chosen when you cast the spell.",
       "attack": "ranged spell attack",
-      "higher_level": "The damage increases by 1d8 for each spell slot level above 1."
+      "higher_level": "The damage increases by 1d8 for each spell slot level above 1.",
+      "reference": null
     },
     {
       "spell_id": "comprehend-languages",
@@ -249,10 +328,15 @@
       "school": "Divination",
       "casting_time": "Action or Ritual",
       "range": "Self",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "1 hour",
       "description": "For the duration, you understand the literal meaning of any language that you hear or see signed. You also understand written language that you see, but you must be touching the surface on which the words are written.",
-      "ritual": true
+      "ritual": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Comprehend Languages.md"
     },
     {
       "spell_id": "find-familiar",
@@ -261,10 +345,15 @@
       "school": "Conjuration",
       "casting_time": "1 hour or Ritual",
       "range": "10 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Instantaneous",
       "description": "You gain the service of a familiar, a spirit that takes an animal form you choose. The familiar has the statistics of the chosen form, though it is a Celestial, Fey, or Fiend instead of a Beast. Your familiar acts independently but obeys your commands.",
-      "ritual": true
+      "ritual": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Find Familiar.md"
     },
     {
       "spell_id": "floating-disk",
@@ -273,10 +362,15 @@
       "school": "Conjuration",
       "casting_time": "Action or Ritual",
       "range": "30 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "1 hour",
       "description": "You create a circular horizontal plane of force that floats 3 feet above the ground in an unoccupied space within range. The disk can hold up to 500 pounds, remains near you, and follows you if you move more than 20 feet away from it.",
-      "ritual": true
+      "ritual": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Floating Disk.md"
     },
     {
       "spell_id": "hellish-rebuke",
@@ -285,12 +379,16 @@
       "school": "Evocation",
       "casting_time": "Reaction",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "The creature that damaged you is momentarily surrounded by green flames. The target makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.",
       "save": "dexterity",
       "trigger": "a creature within 60 feet of you that you can see damages you",
-      "higher_level": "The damage increases by 1d10 for each spell slot level above 1."
+      "higher_level": "The damage increases by 1d10 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Hellish Rebuke.md"
     },
     {
       "spell_id": "hideous-laughter",
@@ -299,11 +397,16 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "One creature of your choice that you can see within range makes a Wisdom saving throw. On a failed save, it has the Prone and Incapacitated conditions for the duration. At the end of each of its turns and whenever it takes damage, the target repeats the save, ending the spell on itself on a success.",
       "save": "wisdom",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Hideous Laughter.md"
     },
     {
       "spell_id": "protection-from-evil-and-good",
@@ -312,10 +415,15 @@
       "school": "Abjuration",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 10 minutes",
       "description": "Until the spell ends, one willing creature you touch is protected against Aberrations, Celestials, Elementals, Fey, Fiends, and Undead. Those creatures have Disadvantage on attack rolls against the target, and the target can't be possessed by or gain the Charmed or Frightened condition from them.",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Protection From Evil And Good.md"
     },
     {
       "spell_id": "ray-of-sickness",
@@ -324,11 +432,15 @@
       "school": "Necromancy",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "You shoot a greenish ray at a creature within range. Make a ranged spell attack. On a hit, the target takes 2d8 Poison damage and has the Poisoned condition until the end of your next turn.",
       "attack": "ranged spell attack",
-      "higher_level": "The damage increases by 1d8 for each spell slot level above 1."
+      "higher_level": "The damage increases by 1d8 for each spell slot level above 1.",
+      "reference": null
     },
     {
       "spell_id": "silent-image",
@@ -337,11 +449,16 @@
       "school": "Illusion",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 10 minutes",
       "description": "You create the image of an object, a creature, or another visible phenomenon no larger than a 15-foot Cube. The image appears at a spot within range and lasts for the duration. Physical interaction reveals it to be an illusion.",
       "area": "15-foot Cube",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Silent Image.md"
     },
     {
       "spell_id": "speak-with-animals",
@@ -350,10 +467,14 @@
       "school": "Divination",
       "casting_time": "Action or Ritual",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "10 minutes",
       "description": "For the duration, you can comprehend and verbally communicate with Beasts, and you can use any Influence action against them.",
-      "ritual": true
+      "ritual": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Speak With Animals.md"
     },
     {
       "spell_id": "unseen-servant",
@@ -362,10 +483,15 @@
       "school": "Conjuration",
       "casting_time": "Action or Ritual",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "1 hour",
       "description": "This spell creates an Invisible, mindless, shapeless Medium force that performs simple tasks at your command until the spell ends. As a Bonus Action, you can command it to move up to 15 feet and interact with an object.",
-      "ritual": true
+      "ritual": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Unseen Servant.md"
     },
     {
       "spell_id": "sleep",
@@ -374,12 +500,17 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S", "M"],
+      "components": [
+        "V",
+        "S",
+        "M"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "Each creature of your choice in a 5-foot-radius Sphere centered on a point within range must succeed on a Wisdom saving throw or have the Incapacitated condition until the end of its next turn, at which point it must repeat the save. If the target fails the second save, the target has the Unconscious condition for the duration. The spell ends on a target if it takes damage or someone within 5 feet of it takes an action to shake it out of the spell's effect. Creatures that don't sleep, such as elves, or that have Immunity to the Exhaustion condition automatically succeed on saves against this spell.",
       "save": "wisdom",
       "area": "5-foot-radius Sphere",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Sleep.md"
     }
   ]
 }

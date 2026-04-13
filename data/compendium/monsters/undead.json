@@ -12,13 +12,19 @@
       "speed": {
         "walk": 30
       },
-      "languages": ["Understands Common plus one other language but can't speak"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 9"],
+      "languages": [
+        "Understands Common plus one other language but can't speak"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 9"
+      ],
       "traits": [
         "Vulnerability to Bludgeoning",
         "Shortsword",
         "Shortbow"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Skeleton.md"
     },
     {
       "monster_id": "wight",
@@ -32,14 +38,20 @@
       "speed": {
         "walk": 30
       },
-      "languages": ["Common plus one other language"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 13"],
+      "languages": [
+        "Common plus one other language"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 13"
+      ],
       "traits": [
         "Sunlight Sensitivity",
         "Necrotic Sword",
         "Necrotic Bow",
         "Life Drain"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Wight.md"
     },
     {
       "monster_id": "zombie",
@@ -53,12 +65,18 @@
       "speed": {
         "walk": 20
       },
-      "languages": ["Understands Common plus one other language but can't speak"],
-      "senses": ["Darkvision 60 ft.", "Passive Perception 8"],
+      "languages": [
+        "Understands Common plus one other language but can't speak"
+      ],
+      "senses": [
+        "Darkvision 60 ft.",
+        "Passive Perception 8"
+      ],
       "traits": [
         "Undead Fortitude",
         "Slam"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Zombie.md"
     }
   ]
 }

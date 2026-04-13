@@ -3,52 +3,83 @@
     {
       "spell_id": "eldritch-blast",
       "attack": "ranged spell attack",
-      "damage": { "dice": "1d10", "type": "force" },
-      "scaling": "The spell creates 2 beams at level 5, 3 at level 11, and 4 at level 17."
+      "damage": {
+        "dice": "1d10",
+        "type": "force"
+      },
+      "scaling": "The spell creates 2 beams at level 5, 3 at level 11, and 4 at level 17.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Eldritch Blast.md"
     },
     {
       "spell_id": "magic-missile",
-      "damage": { "dice": "1d4 + 1", "type": "force" },
+      "damage": {
+        "dice": "1d4 + 1",
+        "type": "force"
+      },
       "targets": "three darts divided among one or more visible creatures",
-      "scaling": "One additional dart for each spell slot level above 1."
+      "scaling": "One additional dart for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Magic Missile.md"
     },
     {
       "spell_id": "sleep",
       "save": "wisdom",
       "area": "5-foot-radius Sphere",
-      "conditions": ["incapacitated", "unconscious"],
-      "concentration": true
+      "conditions": [
+        "incapacitated",
+        "unconscious"
+      ],
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Sleep.md"
     },
     {
       "spell_id": "fireball",
       "save": "dexterity",
-      "damage": { "dice": "8d6", "type": "fire" },
+      "damage": {
+        "dice": "8d6",
+        "type": "fire"
+      },
       "area": "20-foot-radius Sphere",
-      "scaling": "Damage increases by 1d6 for each spell slot level above 3."
+      "scaling": "Damage increases by 1d6 for each spell slot level above 3.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Fireball.md"
     },
     {
       "spell_id": "cure-wounds",
-      "healing": { "dice": "2d8", "modifier": "spellcasting ability modifier" },
-      "scaling": "Healing increases by 2d8 for each spell slot level above 1."
+      "healing": {
+        "dice": "2d8",
+        "modifier": "spellcasting ability modifier"
+      },
+      "scaling": "Healing increases by 2d8 for each spell slot level above 1.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Cure Wounds.md"
     },
     {
       "spell_id": "bless",
       "bonus_die": "1d4",
-      "applies_to": ["attack rolls", "saving throws"],
-      "concentration": true
+      "applies_to": [
+        "attack rolls",
+        "saving throws"
+      ],
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Bless.md"
     },
     {
       "spell_id": "hex",
-      "damage": { "dice": "1d6", "type": "necrotic" },
+      "damage": {
+        "dice": "1d6",
+        "type": "necrotic"
+      },
       "rider": "Choose one ability; the target has Disadvantage on checks with that ability.",
-      "concentration": true
+      "concentration": true,
+      "reference": null
     },
     {
       "spell_id": "web",
       "save": "dexterity",
       "area": "20-foot Cube",
-      "conditions": ["restrained"],
-      "concentration": true
+      "conditions": [
+        "restrained"
+      ],
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Web.md"
     }
   ]
 }

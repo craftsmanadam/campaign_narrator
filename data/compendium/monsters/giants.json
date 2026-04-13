@@ -13,15 +13,21 @@
         "walk": 40,
         "fly": 20
       },
-      "languages": ["Common", "Giant"],
-      "senses": ["Passive Perception 21"],
+      "languages": [
+        "Common",
+        "Giant"
+      ],
+      "senses": [
+        "Passive Perception 21"
+      ],
       "traits": [
         "Multiattack",
         "Thunderous Mace",
         "Thundercloud",
         "Spellcasting",
         "Misty Step"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Cloud Giant (Giant).md"
     }
   ]
 }

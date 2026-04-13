@@ -4,37 +4,69 @@
       "origin_id": "acolyte",
       "name": "Acolyte",
       "source_section": "Character Backgrounds",
-      "ability_score_options": ["intelligence", "wisdom", "charisma"],
+      "ability_score_options": [
+        "intelligence",
+        "wisdom",
+        "charisma"
+      ],
       "feat_id": "magic-initiate-cleric",
-      "skill_proficiencies": ["insight", "religion"],
-      "tool_proficiency": "calligraphers-supplies"
+      "skill_proficiencies": [
+        "insight",
+        "religion"
+      ],
+      "tool_proficiency": "calligraphers-supplies",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md#Acolyte"
     },
     {
       "origin_id": "criminal",
       "name": "Criminal",
       "source_section": "Character Backgrounds",
-      "ability_score_options": ["dexterity", "constitution", "intelligence"],
+      "ability_score_options": [
+        "dexterity",
+        "constitution",
+        "intelligence"
+      ],
       "feat_id": "alert",
-      "skill_proficiencies": ["sleight-of-hand", "stealth"],
-      "tool_proficiency": "thieves-tools"
+      "skill_proficiencies": [
+        "sleight-of-hand",
+        "stealth"
+      ],
+      "tool_proficiency": "thieves-tools",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md#Criminal"
     },
     {
       "origin_id": "sage",
       "name": "Sage",
       "source_section": "Character Backgrounds",
-      "ability_score_options": ["constitution", "intelligence", "wisdom"],
+      "ability_score_options": [
+        "constitution",
+        "intelligence",
+        "wisdom"
+      ],
       "feat_id": "magic-initiate-wizard",
-      "skill_proficiencies": ["arcana", "history"],
-      "tool_proficiency": "calligraphers-supplies"
+      "skill_proficiencies": [
+        "arcana",
+        "history"
+      ],
+      "tool_proficiency": "calligraphers-supplies",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md#Sage"
     },
     {
       "origin_id": "soldier",
       "name": "Soldier",
       "source_section": "Character Backgrounds",
-      "ability_score_options": ["strength", "dexterity", "constitution"],
+      "ability_score_options": [
+        "strength",
+        "dexterity",
+        "constitution"
+      ],
       "feat_id": "savage-attacker",
-      "skill_proficiencies": ["athletics", "intimidation"],
-      "tool_proficiency": "gaming-set-choice"
+      "skill_proficiencies": [
+        "athletics",
+        "intimidation"
+      ],
+      "tool_proficiency": "gaming-set-choice",
+      "reference": "DND.SRD.Wiki-0.5.2/Characterizations/Backgrounds.md#Soldier"
     }
   ]
 }

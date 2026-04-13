@@ -12,12 +12,17 @@
       "speed": {
         "walk": 40
       },
-      "languages": ["None"],
-      "senses": ["Passive Perception 15"],
+      "languages": [
+        "None"
+      ],
+      "senses": [
+        "Passive Perception 15"
+      ],
       "traits": [
         "Pack Tactics",
         "Bite"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Wolf (Creature).md"
     }
   ]
 }

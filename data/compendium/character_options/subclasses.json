@@ -4,73 +4,85 @@
       "subclass_id": "path-of-the-berserker",
       "class_id": "barbarian",
       "name": "Path of the Berserker",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Barbarian.md"
     },
     {
       "subclass_id": "college-of-lore",
       "class_id": "bard",
       "name": "College of Lore",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Bard.md"
     },
     {
       "subclass_id": "life-domain",
       "class_id": "cleric",
       "name": "Life Domain",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Cleric.md"
     },
     {
       "subclass_id": "circle-of-the-land",
       "class_id": "druid",
       "name": "Circle of the Land",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Druid.md"
     },
     {
       "subclass_id": "champion",
       "class_id": "fighter",
       "name": "Champion",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Fighter.md"
     },
     {
       "subclass_id": "warrior-of-the-open-hand",
       "class_id": "monk",
       "name": "Warrior of the Open Hand",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Monk.md"
     },
     {
       "subclass_id": "oath-of-devotion",
       "class_id": "paladin",
       "name": "Oath of Devotion",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Paladin.md"
     },
     {
       "subclass_id": "hunter",
       "class_id": "ranger",
       "name": "Hunter",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Ranger.md"
     },
     {
       "subclass_id": "thief",
       "class_id": "rogue",
       "name": "Thief",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Rogue.md"
     },
     {
       "subclass_id": "draconic-sorcery",
       "class_id": "sorcerer",
       "name": "Draconic Sorcery",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Sorcerer.md"
     },
     {
       "subclass_id": "fiend-patron",
       "class_id": "warlock",
       "name": "Fiend Patron",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Warlock.md"
     },
     {
       "subclass_id": "evoker",
       "class_id": "wizard",
       "name": "Evoker",
-      "entry_level": 3
+      "entry_level": 3,
+      "reference": "DND.SRD.Wiki-0.5.2/Classes/Wizard.md"
     }
   ]
 }

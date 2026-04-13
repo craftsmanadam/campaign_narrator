@@ -7,11 +7,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "You hurl a bubble of acid at one creature or object within range, or at two creatures or objects within range that are within 5 feet of each other. A target must succeed on a Dexterity saving throw or take 1d6 Acid damage.",
       "save": "dexterity",
-      "higher_level": "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6)."
+      "higher_level": "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Acid Splash.md"
     },
     {
       "spell_id": "chill-touch",
@@ -20,11 +24,15 @@
       "school": "Necromancy",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "Channeling the chill of the grave, make a melee spell attack against a target within reach. On a hit, the target takes 1d10 Necrotic damage, and it can't regain Hit Points until the end of your next turn.",
       "attack": "melee spell attack",
-      "higher_level": "The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10)."
+      "higher_level": "The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Chill Touch.md"
     },
     {
       "spell_id": "guidance",
@@ -33,10 +41,14 @@
       "school": "Divination",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Concentration, up to 1 minute",
       "description": "You touch a willing creature and choose a skill. Until the spell ends, the creature adds 1d4 to any ability check using the chosen skill.",
-      "concentration": true
+      "concentration": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Guidance.md"
     },
     {
       "spell_id": "light",
@@ -45,9 +57,13 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "M"],
+      "components": [
+        "V",
+        "M"
+      ],
       "duration": "1 hour",
-      "description": "You touch one Large or smaller object that isn't being worn or carried. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. Completely covering the object with something opaque blocks the light."
+      "description": "You touch one Large or smaller object that isn't being worn or carried. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. Completely covering the object with something opaque blocks the light.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Light.md"
     },
     {
       "spell_id": "mage-hand",
@@ -56,9 +72,13 @@
       "school": "Conjuration",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "1 minute",
-      "description": "A spectral, floating hand appears at a point you choose within range. The hand lasts for the duration or until you dismiss it as a Magic action. The hand vanishes if it is ever more than 30 feet away from you. You can take a Magic action to control the hand: you can use it to manipulate an object, open an unlocked door or container, stow or retrieve an item from an open container, or pour the contents out of a vial. You can move the hand up to 30 feet each time you use it. The hand can't attack, activate magic items, or carry more than 10 pounds."
+      "description": "A spectral, floating hand appears at a point you choose within range. The hand lasts for the duration or until you dismiss it as a Magic action. The hand vanishes if it is ever more than 30 feet away from you. You can take a Magic action to control the hand: you can use it to manipulate an object, open an unlocked door or container, stow or retrieve an item from an open container, or pour the contents out of a vial. You can move the hand up to 30 feet each time you use it. The hand can't attack, activate magic items, or carry more than 10 pounds.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Mage Hand.md"
     },
     {
       "spell_id": "minor-illusion",
@@ -67,9 +87,13 @@
       "school": "Illusion",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["S", "M"],
+      "components": [
+        "S",
+        "M"
+      ],
       "duration": "1 minute",
-      "description": "You create a sound or an image of an object within range that lasts for the duration. If you create a sound, its volume can range from a whisper to a scream, and it can be your voice, someone else's voice, a lion's roar, a beating of drums, or any other sound you choose. If you create an image, it must be no larger than a 5-foot Cube, it can't create sound, light, smell, or another sensory effect, and physical interaction with it reveals it to be an illusion. If a creature takes a Study action to examine the sound or image, the creature can determine that it is an illusion with a successful Intelligence (Investigation) check against your spell save DC. If a creature discerns the illusion for what it is, the illusion becomes faint for the creature."
+      "description": "You create a sound or an image of an object within range that lasts for the duration. If you create a sound, its volume can range from a whisper to a scream, and it can be your voice, someone else's voice, a lion's roar, a beating of drums, or any other sound you choose. If you create an image, it must be no larger than a 5-foot Cube, it can't create sound, light, smell, or another sensory effect, and physical interaction with it reveals it to be an illusion. If a creature takes a Study action to examine the sound or image, the creature can determine that it is an illusion with a successful Intelligence (Investigation) check against your spell save DC. If a creature discerns the illusion for what it is, the illusion becomes faint for the creature.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Minor Illusion.md"
     },
     {
       "spell_id": "prestidigitation",
@@ -78,9 +102,13 @@
       "school": "Transmutation",
       "casting_time": "Action",
       "range": "10 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Up to 1 hour",
-      "description": "You create one of several minor magical effects within range: an instantaneous harmless sensory effect; instantly light or snuff out a candle, torch, or small campfire; instantly clean or soil an object no larger than 1 cubic foot; chill, warm, or flavor up to 1 cubic foot of nonliving material for 1 hour; make a color, a small mark, or a symbol appear on an object or a surface for 1 hour; or create a nonmagical trinket or an illusory image that can fit in your hand and lasts until the end of your next turn. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time."
+      "description": "You create one of several minor magical effects within range: an instantaneous harmless sensory effect; instantly light or snuff out a candle, torch, or small campfire; instantly clean or soil an object no larger than 1 cubic foot; chill, warm, or flavor up to 1 cubic foot of nonliving material for 1 hour; make a color, a small mark, or a symbol appear on an object or a surface for 1 hour; or create a nonmagical trinket or an illusory image that can fit in your hand and lasts until the end of your next turn. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Prestidigitation.md"
     },
     {
       "spell_id": "fire-bolt",
@@ -89,11 +117,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "120 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "You hurl a mote of fire at a creature or an object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Fire damage. A flammable object hit by this spell starts burning if it isn't being worn or carried.",
       "attack": "ranged spell attack",
-      "higher_level": "The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10)."
+      "higher_level": "The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Fire Bolt.md"
     },
     {
       "spell_id": "produce-flame",
@@ -102,11 +134,15 @@
       "school": "Conjuration",
       "casting_time": "Bonus Action",
       "range": "Self",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "10 minutes",
       "description": "A flickering flame appears in your hand and remains there for the duration. While there, the flame emits no heat and sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. The spell ends if you cast it again. Until the spell ends, you can take a Magic action to hurl fire at a creature or object within 60 feet. Make a ranged spell attack. On a hit, the target takes 1d8 Fire damage.",
       "attack": "ranged spell attack",
-      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8)."
+      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Produce Flame.md"
     },
     {
       "spell_id": "ray-of-frost",
@@ -115,11 +151,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "A frigid beam of blue-white light streaks toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 1d8 Cold damage, and its Speed is reduced by 10 feet until the start of your next turn.",
       "attack": "ranged spell attack",
-      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8)."
+      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Ray Of Frost.md"
     },
     {
       "spell_id": "sacred-flame",
@@ -128,11 +168,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a Dexterity saving throw or take 1d8 Radiant damage. The target gains no benefit from Half Cover or Three-Quarters Cover for this save.",
       "save": "dexterity",
-      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8)."
+      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Sacred Flame.md"
     },
     {
       "spell_id": "shocking-grasp",
@@ -141,11 +185,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "Touch",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "Lightning springs from you to a creature that you try to touch. Make a melee spell attack against the target. On a hit, the target takes 1d8 Lightning damage, and it can't make Opportunity Attacks until the start of its next turn.",
       "attack": "melee spell attack",
-      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8)."
+      "higher_level": "The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Shocking Grasp.md"
     },
     {
       "spell_id": "thaumaturgy",
@@ -154,9 +202,12 @@
       "school": "Transmutation",
       "casting_time": "Action",
       "range": "30 feet",
-      "components": ["V"],
+      "components": [
+        "V"
+      ],
       "duration": "Up to 1 minute",
-      "description": "You manifest a minor wonder within range. You create one of the following effects within range: your voice booms up to three times as loud for 1 minute; flames flicker, brighten, dim, or change color for 1 minute; harmless tremors ripple through the ground for 1 minute; you create an instantaneous sound that originates from a point of your choice; or you instantaneously cause an unlocked door or window to fly open or slam shut."
+      "description": "You manifest a minor wonder within range. You create one of the following effects within range: your voice booms up to three times as loud for 1 minute; flames flicker, brighten, dim, or change color for 1 minute; harmless tremors ripple through the ground for 1 minute; you create an instantaneous sound that originates from a point of your choice; or you instantaneously cause an unlocked door or window to fly open or slam shut.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Thaumaturgy.md"
     },
     {
       "spell_id": "true-strike",
@@ -165,10 +216,14 @@
       "school": "Divination",
       "casting_time": "Action",
       "range": "Self",
-      "components": ["S", "M"],
+      "components": [
+        "S",
+        "M"
+      ],
       "duration": "Instantaneous",
       "description": "Guided by a flash of magical insight, you make one attack with the weapon used in the spell's casting. For that attack, you use your spellcasting ability instead of Strength or Dexterity for the attack and damage rolls. If the attack deals damage, it can deal Radiant damage or the weapon's normal damage type.",
-      "attack": "weapon attack"
+      "attack": "weapon attack",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/True Strike.md"
     },
     {
       "spell_id": "eldritch-blast",
@@ -177,11 +232,15 @@
       "school": "Evocation",
       "casting_time": "Action",
       "range": "120 feet",
-      "components": ["V", "S"],
+      "components": [
+        "V",
+        "S"
+      ],
       "duration": "Instantaneous",
       "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object within range. On a hit, the target takes 1d10 Force damage.",
       "attack": "ranged spell attack",
-      "higher_level": "The spell creates more than one beam when you reach levels 5 (2 beams), 11 (3 beams), and 17 (4 beams). You can direct the beams at the same target or at different ones. Make a separate attack roll for each beam."
+      "higher_level": "The spell creates more than one beam when you reach levels 5 (2 beams), 11 (3 beams), and 17 (4 beams). You can direct the beams at the same target or at different ones. Make a separate attack roll for each beam.",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Eldritch Blast.md"
     },
     {
       "spell_id": "vicious-mockery",
@@ -190,11 +249,14 @@
       "school": "Enchantment",
       "casting_time": "Action",
       "range": "60 feet",
-      "components": ["V"],
+      "components": [
+        "V"
+      ],
       "duration": "Instantaneous",
       "description": "You unleash a string of insults laced with subtle enchantments at one creature you can see or hear within range. The target must succeed on a Wisdom saving throw or take 1d6 Psychic damage and have Disadvantage on the next attack roll it makes before the end of its next turn.",
       "save": "wisdom",
-      "higher_level": "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6)."
+      "higher_level": "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).",
+      "reference": "DND.SRD.Wiki-0.5.2/Spells/Vicious Mockery.md"
     }
   ]
 }

@@ -13,14 +13,21 @@
         "walk": 20,
         "fly": 40
       },
-      "languages": ["Common", "Infernal"],
-      "senses": ["Darkvision 120 ft.", "Passive Perception 11"],
+      "languages": [
+        "Common",
+        "Infernal"
+      ],
+      "senses": [
+        "Darkvision 120 ft.",
+        "Passive Perception 11"
+      ],
       "traits": [
         "Magic Resistance",
         "Sting",
         "Invisibility",
         "Shape-Shift"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Imp (Devil).md"
     }
   ]
 }

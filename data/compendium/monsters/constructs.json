@@ -12,13 +12,19 @@
       "speed": {
         "walk": 25
       },
-      "languages": ["None"],
-      "senses": ["Blindsight 60 ft.", "Passive Perception 6"],
+      "languages": [
+        "None"
+      ],
+      "senses": [
+        "Blindsight 60 ft.",
+        "Passive Perception 6"
+      ],
       "traits": [
         "Immunities to Poison and Psychic",
         "Multiattack",
         "Slam"
-      ]
+      ],
+      "reference": "DND.SRD.Wiki-0.5.2/Monsters/Animated Armor (Animated Object).md"
     }
   ]
 }
