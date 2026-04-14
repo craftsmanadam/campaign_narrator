@@ -1,3 +1,337 @@
 {
-  "weapons": []
+  "weapons": [
+    {
+      "item_id": "club",
+      "name": "Club",
+      "category": "simple_melee",
+      "damage_dice": "1d4",
+      "damage_type": "bludgeoning",
+      "properties": ["light"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "dagger",
+      "name": "Dagger",
+      "category": "simple_melee",
+      "damage_dice": "1d4",
+      "damage_type": "piercing",
+      "properties": ["finesse", "light", "thrown (range 20/60)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "greatclub",
+      "name": "Greatclub",
+      "category": "simple_melee",
+      "damage_dice": "1d8",
+      "damage_type": "bludgeoning",
+      "properties": ["two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "handaxe",
+      "name": "Handaxe",
+      "category": "simple_melee",
+      "damage_dice": "1d6",
+      "damage_type": "slashing",
+      "properties": ["light", "thrown (range 20/60)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "javelin",
+      "name": "Javelin",
+      "category": "simple_melee",
+      "damage_dice": "1d6",
+      "damage_type": "piercing",
+      "properties": ["thrown (range 30/120)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "light-hammer",
+      "name": "Light Hammer",
+      "category": "simple_melee",
+      "damage_dice": "1d4",
+      "damage_type": "bludgeoning",
+      "properties": ["light", "thrown (range 20/60)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "mace",
+      "name": "Mace",
+      "category": "simple_melee",
+      "damage_dice": "1d6",
+      "damage_type": "bludgeoning",
+      "properties": [],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "quarterstaff",
+      "name": "Quarterstaff",
+      "category": "simple_melee",
+      "damage_dice": "1d6",
+      "damage_type": "bludgeoning",
+      "properties": ["versatile (1d8)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "sickle",
+      "name": "Sickle",
+      "category": "simple_melee",
+      "damage_dice": "1d4",
+      "damage_type": "slashing",
+      "properties": ["light"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "spear",
+      "name": "Spear",
+      "category": "simple_melee",
+      "damage_dice": "1d6",
+      "damage_type": "piercing",
+      "properties": ["thrown (range 20/60)", "versatile (1d8)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "light-crossbow",
+      "name": "Light Crossbow",
+      "category": "simple_ranged",
+      "damage_dice": "1d8",
+      "damage_type": "piercing",
+      "properties": ["ammunition (range 80/320)", "loading", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "dart",
+      "name": "Dart",
+      "category": "simple_ranged",
+      "damage_dice": "1d4",
+      "damage_type": "piercing",
+      "properties": ["finesse", "thrown (range 20/60)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "shortbow",
+      "name": "Shortbow",
+      "category": "simple_ranged",
+      "damage_dice": "1d6",
+      "damage_type": "piercing",
+      "properties": ["ammunition (range 80/320)", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "sling",
+      "name": "Sling",
+      "category": "simple_ranged",
+      "damage_dice": "1d4",
+      "damage_type": "bludgeoning",
+      "properties": ["ammunition (range 30/120)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "battleaxe",
+      "name": "Battleaxe",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "slashing",
+      "properties": ["versatile (1d10)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "flail",
+      "name": "Flail",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "bludgeoning",
+      "properties": [],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "glaive",
+      "name": "Glaive",
+      "category": "martial_melee",
+      "damage_dice": "1d10",
+      "damage_type": "slashing",
+      "properties": ["heavy", "reach", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "greataxe",
+      "name": "Greataxe",
+      "category": "martial_melee",
+      "damage_dice": "1d12",
+      "damage_type": "slashing",
+      "properties": ["heavy", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "greatsword",
+      "name": "Greatsword",
+      "category": "martial_melee",
+      "damage_dice": "2d6",
+      "damage_type": "slashing",
+      "properties": ["heavy", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "halberd",
+      "name": "Halberd",
+      "category": "martial_melee",
+      "damage_dice": "1d10",
+      "damage_type": "slashing",
+      "properties": ["heavy", "reach", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "lance",
+      "name": "Lance",
+      "category": "martial_melee",
+      "damage_dice": "1d12",
+      "damage_type": "piercing",
+      "properties": ["reach", "special"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "longsword",
+      "name": "Longsword",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "slashing",
+      "properties": ["versatile (1d10)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "maul",
+      "name": "Maul",
+      "category": "martial_melee",
+      "damage_dice": "2d6",
+      "damage_type": "bludgeoning",
+      "properties": ["heavy", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "morningstar",
+      "name": "Morningstar",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "piercing",
+      "properties": [],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "pike",
+      "name": "Pike",
+      "category": "martial_melee",
+      "damage_dice": "1d10",
+      "damage_type": "piercing",
+      "properties": ["heavy", "reach", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "rapier",
+      "name": "Rapier",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "piercing",
+      "properties": ["finesse"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "scimitar",
+      "name": "Scimitar",
+      "category": "martial_melee",
+      "damage_dice": "1d6",
+      "damage_type": "slashing",
+      "properties": ["finesse", "light"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "shortsword",
+      "name": "Shortsword",
+      "category": "martial_melee",
+      "damage_dice": "1d6",
+      "damage_type": "piercing",
+      "properties": ["finesse", "light"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "trident",
+      "name": "Trident",
+      "category": "martial_melee",
+      "damage_dice": "1d6",
+      "damage_type": "piercing",
+      "properties": ["thrown (range 20/60)", "versatile (1d8)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "war-pick",
+      "name": "War Pick",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "piercing",
+      "properties": [],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "warhammer",
+      "name": "Warhammer",
+      "category": "martial_melee",
+      "damage_dice": "1d8",
+      "damage_type": "bludgeoning",
+      "properties": ["versatile (1d10)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "whip",
+      "name": "Whip",
+      "category": "martial_melee",
+      "damage_dice": "1d4",
+      "damage_type": "slashing",
+      "properties": ["finesse", "reach"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "blowgun",
+      "name": "Blowgun",
+      "category": "martial_ranged",
+      "damage_dice": "1",
+      "damage_type": "piercing",
+      "properties": ["ammunition (range 25/100)", "loading"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "hand-crossbow",
+      "name": "Hand Crossbow",
+      "category": "martial_ranged",
+      "damage_dice": "1d6",
+      "damage_type": "piercing",
+      "properties": ["ammunition (range 30/120)", "light", "loading"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "heavy-crossbow",
+      "name": "Heavy Crossbow",
+      "category": "martial_ranged",
+      "damage_dice": "1d10",
+      "damage_type": "piercing",
+      "properties": ["ammunition (range 100/400)", "heavy", "loading", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "longbow",
+      "name": "Longbow",
+      "category": "martial_ranged",
+      "damage_dice": "1d8",
+      "damage_type": "piercing",
+      "properties": ["ammunition (range 150/600)", "heavy", "two-handed"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    },
+    {
+      "item_id": "net",
+      "name": "Net",
+      "category": "martial_ranged",
+      "damage_dice": null,
+      "damage_type": null,
+      "properties": ["special", "thrown (range 5/15)"],
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Weapons.md"
+    }
+  ]
 }

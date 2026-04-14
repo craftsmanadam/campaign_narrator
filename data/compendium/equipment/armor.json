@@ -1,3 +1,121 @@
 {
-  "armor": []
+  "armor": [
+    {
+      "item_id": "padded",
+      "name": "Padded",
+      "category": "light",
+      "ac_formula": "11 + Dex modifier",
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "leather",
+      "name": "Leather",
+      "category": "light",
+      "ac_formula": "11 + Dex modifier",
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "studded-leather",
+      "name": "Studded Leather",
+      "category": "light",
+      "ac_formula": "12 + Dex modifier",
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "hide",
+      "name": "Hide",
+      "category": "medium",
+      "ac_formula": "12 + Dex modifier (max 2)",
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "chain-shirt",
+      "name": "Chain Shirt",
+      "category": "medium",
+      "ac_formula": "13 + Dex modifier (max 2)",
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "scale-mail",
+      "name": "Scale Mail",
+      "category": "medium",
+      "ac_formula": "14 + Dex modifier (max 2)",
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "breastplate",
+      "name": "Breastplate",
+      "category": "medium",
+      "ac_formula": "14 + Dex modifier (max 2)",
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "half-plate",
+      "name": "Half Plate",
+      "category": "medium",
+      "ac_formula": "15 + Dex modifier (max 2)",
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "ring-mail",
+      "name": "Ring Mail",
+      "category": "heavy",
+      "ac_formula": "14",
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "chain-mail",
+      "name": "Chain Mail",
+      "category": "heavy",
+      "ac_formula": "16",
+      "strength_requirement": 13,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "splint",
+      "name": "Splint",
+      "category": "heavy",
+      "ac_formula": "17",
+      "strength_requirement": 15,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "plate",
+      "name": "Plate",
+      "category": "heavy",
+      "ac_formula": "18",
+      "strength_requirement": 15,
+      "stealth_disadvantage": true,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    },
+    {
+      "item_id": "shield",
+      "name": "Shield",
+      "category": "shield",
+      "ac_formula": "+2",
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "reference": "DND.SRD.Wiki-0.5.2/Equipment/Armor.md"
+    }
+  ]
 }

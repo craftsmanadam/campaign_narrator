@@ -266,8 +266,6 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     world_state = json.loads(Path("data/state/world_state.json").read_text())
     campaign_state = json.loads(Path("data/state/campaign_state.json").read_text())
     scenarios = json.loads(Path("data/scenarios/test_scenarios.json").read_text())
-    weapons = json.loads(Path("data/compendium/equipment/weapons.json").read_text())
-    armor = json.loads(Path("data/compendium/equipment/armor.json").read_text())
     tools = json.loads(Path("data/compendium/equipment/tools.json").read_text())
     gear = json.loads(
         Path("data/compendium/equipment/adventuring_gear.json").read_text()
@@ -284,8 +282,6 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
     assert world_state["active_quest_ids"] == []
     assert campaign_state["npc_relationships"] == {}
     assert scenarios["scenarios"] == []
-    assert weapons["weapons"] == []
-    assert armor["armor"] == []
     assert tools["tools"] == []
     assert gear["adventuring_gear"] == []
 
@@ -1013,3 +1009,146 @@ def test_all_feat_entries_have_summary() -> None:
         feat_id = entry.get("feat_id")
         assert "summary" in entry, f"feat {feat_id} missing summary"
         assert entry["summary"], f"feat {feat_id} has empty summary"
+
+
+_ARMOR_PATH = Path("data/compendium/equipment/armor.json")
+_WEAPONS_PATH = Path("data/compendium/equipment/weapons.json")
+_VALID_ARMOR_CATEGORIES = {"light", "medium", "heavy", "shield"}
+_VALID_WEAPON_CATEGORIES = {
+    "simple_melee",
+    "simple_ranged",
+    "martial_melee",
+    "martial_ranged",
+}
+_ARMOR_REQUIRED_FIELDS = {
+    "item_id",
+    "name",
+    "category",
+    "ac_formula",
+    "strength_requirement",
+    "stealth_disadvantage",
+    "reference",
+}
+_WEAPON_REQUIRED_FIELDS = {
+    "item_id",
+    "name",
+    "category",
+    "damage_dice",
+    "damage_type",
+    "properties",
+    "reference",
+}
+_EXPECTED_ARMOR_COUNT = 13
+_EXPECTED_WEAPON_COUNT = 37
+_CHAIN_MAIL_STR_REQUIREMENT = 13
+_PLATE_STR_REQUIREMENT = 15
+
+
+def test_armor_json_has_expected_entry_count() -> None:
+    """armor.json must contain all 13 SRD armor entries."""
+    payload = json.loads(_ARMOR_PATH.read_text())
+    assert len(payload["armor"]) == _EXPECTED_ARMOR_COUNT
+
+
+def test_armor_entries_have_required_fields() -> None:
+    """Every armor entry must carry all required fields."""
+    payload = json.loads(_ARMOR_PATH.read_text())
+    for entry in payload["armor"]:
+        item_id = entry.get("item_id")
+        missing = _ARMOR_REQUIRED_FIELDS - entry.keys()
+        assert not missing, f"armor {item_id} missing fields: {missing}"
+
+
+def test_armor_category_values_are_valid() -> None:
+    """Every armor entry must have a recognised category."""
+    payload = json.loads(_ARMOR_PATH.read_text())
+    for entry in payload["armor"]:
+        assert entry["category"] in _VALID_ARMOR_CATEGORIES, (
+            f"armor {entry.get('item_id')} has invalid category {entry['category']!r}"
+        )
+
+
+def test_armor_spot_checks() -> None:
+    """Key armor entries must carry the correct mechanical values."""
+    payload = json.loads(_ARMOR_PATH.read_text())
+    entries = {e["item_id"]: e for e in payload["armor"]}
+
+    chain_mail = entries["chain-mail"]
+    assert chain_mail["ac_formula"] == "16"
+    assert chain_mail["strength_requirement"] == _CHAIN_MAIL_STR_REQUIREMENT
+    assert chain_mail["stealth_disadvantage"] is True
+
+    plate = entries["plate"]
+    assert plate["ac_formula"] == "18"
+    assert plate["strength_requirement"] == _PLATE_STR_REQUIREMENT
+
+    leather = entries["leather"]
+    assert leather["category"] == "light"
+    assert leather["ac_formula"] == "11 + Dex modifier"
+    assert leather["stealth_disadvantage"] is False
+
+    shield = entries["shield"]
+    assert shield["category"] == "shield"
+    assert shield["ac_formula"] == "+2"
+
+
+def test_weapon_json_has_expected_entry_count() -> None:
+    """weapons.json must contain all 37 SRD weapon entries."""
+    payload = json.loads(_WEAPONS_PATH.read_text())
+    assert len(payload["weapons"]) == _EXPECTED_WEAPON_COUNT
+
+
+def test_weapon_entries_have_required_fields() -> None:
+    """Every weapon entry must carry all required fields."""
+    payload = json.loads(_WEAPONS_PATH.read_text())
+    for entry in payload["weapons"]:
+        item_id = entry.get("item_id")
+        missing = _WEAPON_REQUIRED_FIELDS - entry.keys()
+        assert not missing, f"weapon {item_id} missing fields: {missing}"
+
+
+def test_weapon_category_values_are_valid() -> None:
+    """Every weapon entry must have a recognised category."""
+    payload = json.loads(_WEAPONS_PATH.read_text())
+    for entry in payload["weapons"]:
+        assert entry["category"] in _VALID_WEAPON_CATEGORIES, (
+            f"weapon {entry.get('item_id')} has invalid category {entry['category']!r}"
+        )
+
+
+def test_weapon_properties_are_arrays() -> None:
+    """Every weapon properties field must be a list."""
+    payload = json.loads(_WEAPONS_PATH.read_text())
+    for entry in payload["weapons"]:
+        assert isinstance(entry["properties"], list), (
+            f"weapon {entry.get('item_id')} properties is not a list"
+        )
+
+
+def test_weapon_spot_checks() -> None:
+    """Key weapon entries must carry the correct mechanical values."""
+    payload = json.loads(_WEAPONS_PATH.read_text())
+    entries = {e["item_id"]: e for e in payload["weapons"]}
+
+    longsword = entries["longsword"]
+    assert longsword["damage_dice"] == "1d8"
+    assert longsword["damage_type"] == "slashing"
+    assert "versatile (1d10)" in longsword["properties"]
+
+    dagger = entries["dagger"]
+    assert dagger["damage_dice"] == "1d4"
+    assert "finesse" in dagger["properties"]
+    assert "thrown (range 20/60)" in dagger["properties"]
+
+    greatsword = entries["greatsword"]
+    assert greatsword["damage_dice"] == "2d6"
+    assert "heavy" in greatsword["properties"]
+    assert "two-handed" in greatsword["properties"]
+
+    net = entries["net"]
+    assert net["damage_dice"] is None
+    assert net["damage_type"] is None
+
+    blowgun = entries["blowgun"]
+    assert blowgun["damage_dice"] == "1"
+    assert blowgun["damage_type"] == "piercing"

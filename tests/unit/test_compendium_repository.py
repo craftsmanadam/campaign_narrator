@@ -410,3 +410,33 @@ def test_load_reference_text_falls_back_to_full_file_when_anchor_not_found(
         "DND.SRD.Wiki-0.5.2/Fighter.md#Nonexistent Heading"
     )
     assert result == content
+
+
+def test_load_equipment_context_returns_longsword_data() -> None:
+    repo = _repository()
+    result = repo.load_equipment_context(("longsword",))
+    assert len(result) == 1
+    assert "longsword" in result[0]
+    assert "1d8" in result[0]
+
+
+def test_load_equipment_context_returns_chain_mail_data() -> None:
+    repo = _repository()
+    result = repo.load_equipment_context(("chain-mail",))
+    assert len(result) == 1
+    assert "chain-mail" in result[0]
+    assert '"ac_formula": "16"' in result[0]
+
+
+def test_load_equipment_context_dagger_has_finesse_property() -> None:
+    repo = _repository()
+    result = repo.load_equipment_context(("dagger",))
+    assert len(result) == 1
+    assert "finesse" in result[0]
+
+
+def test_load_equipment_context_returns_missing_marker_for_unknown_item() -> None:
+    repo = _repository()
+    result = repo.load_equipment_context(("nonexistent-item",))
+    assert len(result) == 1
+    assert "Missing compendium context:" in result[0]
