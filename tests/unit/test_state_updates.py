@@ -3,15 +3,72 @@
 from __future__ import annotations
 
 import pytest
-from campaignnarrator.domain.models import EncounterPhase, StateEffect
-from campaignnarrator.repositories.state_repository import StateRepository
+from campaignnarrator.domain.models import (
+    ActorState,
+    ActorType,
+    EncounterPhase,
+    EncounterState,
+    StateEffect,
+)
 from campaignnarrator.tools.state_updates import apply_state_effects
+
+
+def _default_encounter(
+    hidden_facts: dict[str, object] | None = None,
+) -> EncounterState:
+    talia = ActorState(
+        actor_id="pc:talia",
+        name="Talia",
+        actor_type=ActorType.PC,
+        hp_current=12,
+        hp_max=12,
+        armor_class=18,
+        strength=18,
+        dexterity=14,
+        constitution=16,
+        intelligence=10,
+        wisdom=12,
+        charisma=8,
+        proficiency_bonus=3,
+        initiative_bonus=5,
+        speed=30,
+        attacks_per_action=2,
+        action_options=(),
+        ac_breakdown=(),
+    )
+    goblin = ActorState(
+        actor_id="npc:goblin-scout",
+        name="Goblin Scout",
+        actor_type=ActorType.NPC,
+        hp_current=7,
+        hp_max=7,
+        armor_class=15,
+        strength=8,
+        dexterity=14,
+        constitution=10,
+        intelligence=10,
+        wisdom=8,
+        charisma=8,
+        proficiency_bonus=2,
+        initiative_bonus=2,
+        speed=30,
+        attacks_per_action=1,
+        action_options=(),
+        ac_breakdown=(),
+    )
+    return EncounterState(
+        encounter_id="goblin-camp",
+        phase=EncounterPhase.SCENE_OPENING,
+        setting="A ruined roadside camp.",
+        actors={"pc:talia": talia, "npc:goblin-scout": goblin},
+        hidden_facts=hidden_facts or {},
+    )
 
 
 def test_apply_state_effects_updates_phase_and_public_events() -> None:
     """Structured effects should update encounter phase and public narration."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     updated = apply_state_effects(
         state,
@@ -32,7 +89,7 @@ def test_apply_state_effects_updates_phase_and_public_events() -> None:
 def test_change_hp_clamps_to_zero() -> None:
     """Damage effects should not drive hit points below zero."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     updated = apply_state_effects(
         state,
@@ -45,7 +102,7 @@ def test_change_hp_clamps_to_zero() -> None:
 def test_change_hp_clamps_above_hp_max() -> None:
     """Healing effects should not exceed the actor's maximum hit points."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     updated = apply_state_effects(
         state,
@@ -58,57 +115,10 @@ def test_change_hp_clamps_above_hp_max() -> None:
     )
 
 
-def test_remove_inventory_item_removes_one_matching_item() -> None:
-    """Removing an item should only consume a single matching inventory entry."""
-
-    state = StateRepository.from_seed(
-        {
-            "encounter_id": "goblin-camp",
-            "setting": "A ruined roadside camp.",
-            "phase": "scene_opening",
-            "actors": {
-                "pc:talia": {
-                    "actor_id": "pc:talia",
-                    "name": "Talia",
-                    "kind": "pc",
-                    "hp_current": 12,
-                    "hp_max": 12,
-                    "armor_class": 18,
-                    "inventory": ["torch", "torch", "rope"],
-                    "conditions": [],
-                    "is_visible": True,
-                }
-            },
-        }
-    ).load_encounter("goblin-camp")
-
-    updated = apply_state_effects(
-        state,
-        (StateEffect("remove_inventory_item", "pc:talia", "torch"),),
-    )
-
-    assert updated.actors["pc:talia"].inventory == ("torch", "rope")
-
-
-def test_remove_inventory_item_rejects_missing_item() -> None:
-    """Missing inventory items should fail with a clear actor-specific error."""
-
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
-
-    with pytest.raises(
-        ValueError,
-        match=r"actor pc:talia does not have item: lantern",
-    ):
-        apply_state_effects(
-            state,
-            (StateEffect("remove_inventory_item", "pc:talia", "lantern"),),
-        )
-
-
 def test_set_encounter_outcome_sets_state_outcome() -> None:
     """Encounter outcome effects should set the canonical outcome field."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     updated = apply_state_effects(
         state,
@@ -121,7 +131,7 @@ def test_set_encounter_outcome_sets_state_outcome() -> None:
 def test_apply_state_effects_rejects_unknown_actor() -> None:
     """Unknown actors should be rejected with a stable error message."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     with pytest.raises(ValueError, match=r"unknown actor: npc:missing"):
         apply_state_effects(state, (StateEffect("change_hp", "npc:missing", -1),))
@@ -130,7 +140,7 @@ def test_apply_state_effects_rejects_unknown_actor() -> None:
 def test_apply_state_effects_rejects_unknown_effect_type() -> None:
     """Unsupported effect types should fail closed."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     with pytest.raises(ValueError, match=r"unsupported state effect: teleport"):
         apply_state_effects(
@@ -142,7 +152,7 @@ def test_apply_state_effects_rejects_unknown_effect_type() -> None:
 def test_apply_state_effects_rejects_wrong_encounter_target() -> None:
     """Encounter effects should enforce the exact encounter target."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
 
     with pytest.raises(
         ValueError,
@@ -163,7 +173,7 @@ def test_apply_state_effects_rejects_wrong_encounter_target() -> None:
 def test_apply_state_effects_never_mutates_input_state() -> None:
     """Effect application should return a fresh state and leave input untouched."""
 
-    state = StateRepository.from_default_encounter().load_encounter("goblin-camp")
+    state = _default_encounter()
     original_public_events = state.public_events
     original_hp = state.actors["pc:talia"].hp_current
 
@@ -183,27 +193,7 @@ def test_apply_state_effects_never_mutates_input_state() -> None:
 def test_apply_state_effects_deep_copies_nested_hidden_facts_on_set_phase() -> None:
     """Nested hidden facts should not alias when a phase change is applied."""
 
-    state = StateRepository.from_seed(
-        {
-            "encounter_id": "goblin-camp",
-            "setting": "A ruined roadside camp.",
-            "phase": "scene_opening",
-            "hidden_facts": {"nested": {"alarms": ["bell"]}},
-            "actors": {
-                "pc:talia": {
-                    "actor_id": "pc:talia",
-                    "name": "Talia",
-                    "kind": "pc",
-                    "hp_current": 12,
-                    "hp_max": 12,
-                    "armor_class": 18,
-                    "inventory": [],
-                    "conditions": [],
-                    "is_visible": True,
-                }
-            },
-        }
-    ).load_encounter("goblin-camp")
+    state = _default_encounter(hidden_facts={"nested": {"alarms": ["bell"]}})
 
     updated = apply_state_effects(
         state,

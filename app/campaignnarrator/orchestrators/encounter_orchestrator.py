@@ -10,8 +10,11 @@ from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     ActorState,
+    ActorType,
     EncounterPhase,
     EncounterState,
+    GameState,
+    InitiativeTurn,
     Narration,
     NarrationFrame,
     OrchestrationDecision,
@@ -57,7 +60,6 @@ class EncounterOrchestrator:
         roll_dice: Callable[[str], int],
         decision_adapter: object | None = None,
         memory_repository: MemoryRepository | None = None,
-        compendium_repository: object | None = None,
     ) -> None:
         self._state_repository = state_repository
         self._rules_agent = rules_agent
@@ -69,7 +71,6 @@ class EncounterOrchestrator:
             None,
         )
         self._memory_repository = memory_repository
-        self._compendium_repository = compendium_repository
 
     def run_encounter(
         self,
@@ -79,7 +80,11 @@ class EncounterOrchestrator:
     ) -> EncounterRunResult:
         """Run player inputs through the encounter loop."""
 
-        state = self._state_repository.load_encounter(encounter_id)
+        game_state = self._state_repository.load()
+        if game_state.encounter is None:
+            raise ValueError("no active encounter")  # noqa: TRY003
+        state = game_state.encounter
+        player = game_state.player
         output: list[str] = []
 
         if state.phase is EncounterPhase.SCENE_OPENING:
@@ -92,7 +97,7 @@ class EncounterOrchestrator:
             normalized = player_input.normalized
             if not normalized:
                 continue
-            directive = self._handle_utility_command(normalized, state, output)
+            directive = self._handle_utility_command(normalized, state, output, player)
             if directive == "break":
                 break
             if directive == "continue":
@@ -100,16 +105,20 @@ class EncounterOrchestrator:
 
             if state.phase is EncounterPhase.COMBAT:
                 if _is_combat_attack(normalized):
-                    state, narration = self._handle_combat_attack(state, player_input)
+                    state, narration = self._handle_combat_attack(
+                        state, player_input, player
+                    )
                     output.append(narration.text)
                     continue
                 raise ValueError("unsupported combat input")  # noqa: TRY003
 
-            state, narration = self._handle_non_combat_action(state, player_input)
+            state, narration = self._handle_non_combat_action(
+                state, player_input, player
+            )
             output.append(narration.text)
 
         return EncounterRunResult(
-            encounter_id=encounter_id,
+            encounter_id=state.encounter_id,
             output_text="\n".join(output),
             completed=state.phase is EncounterPhase.ENCOUNTER_COMPLETE,
         )
@@ -119,13 +128,14 @@ class EncounterOrchestrator:
         normalized: str,
         state: EncounterState,
         output: list[str],
+        player: ActorState,
     ) -> str | None:
         """Handle built-in player commands. Returns 'break', 'continue', or None."""
 
         if normalized == "exit":
             return "break"
         if normalized == "save and quit":
-            self._state_repository.save_encounter(state)
+            self._state_repository.save(GameState(player=player, encounter=state))
             self._append_event(
                 {
                     "type": "encounter_saved",
@@ -147,18 +157,18 @@ class EncounterOrchestrator:
             return "continue"
         return None
 
-    def current_state(self, encounter_id: str) -> EncounterState:
+    def current_state(self) -> EncounterState | None:
         """Return the current persisted encounter state."""
 
-        return self._state_repository.load_encounter(encounter_id)
+        return self._state_repository.load().encounter
 
     def _handle_non_combat_action(
         self,
         state: EncounterState,
         player_input: PlayerInput,
+        player: ActorState,
     ) -> tuple[EncounterState, Narration]:
-        actor = state.actors[state.player_actor_id]
-        compendium_context = self._load_compendium_context(actor)
+        compendium_context = player.references
         payload = self._generate_orchestration_decision(state, player_input)
         decision = _parse_decision(payload)
         if decision.next_step not in _ALLOWED_SOCIAL_NEXT_STEPS:
@@ -168,14 +178,16 @@ class EncounterOrchestrator:
 
         if decision.next_step == "adjudicate_action":
             return self._handle_action(
-                state, player_input, decision, compendium_context
+                state, player_input, decision, compendium_context, player
             )
 
         if decision.next_step in {"roll_initiative", "enter_combat"}:
-            return self._enter_combat(state)
+            return self._enter_combat(state, player)
 
         if decision.next_step == "complete_encounter":
-            return self._complete_encounter(state, payload, decision, player_input)
+            return self._complete_encounter(
+                state, payload, decision, player_input, player
+            )
 
         purpose = (
             "npc_dialogue" if decision.next_step == "npc_dialogue" else "scene_response"
@@ -195,6 +207,7 @@ class EncounterOrchestrator:
         player_input: PlayerInput,
         decision: OrchestrationDecision,
         compendium_context: tuple[str, ...],
+        player: ActorState,
     ) -> tuple[EncounterState, Narration]:
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
@@ -206,7 +219,7 @@ class EncounterOrchestrator:
         )
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
-        self._state_repository.save_encounter(updated_state)
+        self._state_repository.save(GameState(player=player, encounter=updated_state))
         if updated_state.outcome is not None:
             self._append_event(
                 {
@@ -225,7 +238,9 @@ class EncounterOrchestrator:
         )
         return updated_state, narration
 
-    def _enter_combat(self, state: EncounterState) -> tuple[EncounterState, Narration]:
+    def _enter_combat(
+        self, state: EncounterState, player: ActorState
+    ) -> tuple[EncounterState, Narration]:
         talia_roll = self._roll_dice("1d20+2")
         goblin_roll = self._roll_dice("1d20+2")
         initiative = (
@@ -233,8 +248,8 @@ class EncounterOrchestrator:
             ("npc:goblin-scout", "Goblin Scout", goblin_roll),
         )
         ordered = tuple(
-            actor_id
-            for actor_id, _name, _roll in sorted(
+            InitiativeTurn(actor_id=actor_id, initiative_roll=roll)
+            for actor_id, _name, roll in sorted(
                 initiative,
                 key=lambda entry: entry[2],
                 reverse=True,
@@ -244,11 +259,11 @@ class EncounterOrchestrator:
         updated_state = replace(
             state,
             phase=EncounterPhase.COMBAT,
-            initiative_order=ordered,
+            combat_turns=ordered,
             outcome="combat",
             public_events=(*state.public_events, event),
         )
-        self._state_repository.save_encounter(updated_state)
+        self._state_repository.save(GameState(player=player, encounter=updated_state))
         self._append_event(
             {
                 "type": "encounter_completed",
@@ -267,6 +282,7 @@ class EncounterOrchestrator:
         payload: Mapping[str, object],
         decision: OrchestrationDecision,
         player_input: PlayerInput,
+        player: ActorState,
     ) -> tuple[EncounterState, Narration]:
         outcome = _completion_outcome(payload, decision, player_input)
         updated_state = apply_state_effects(
@@ -279,7 +295,7 @@ class EncounterOrchestrator:
                 ),
             ),
         )
-        self._state_repository.save_encounter(updated_state)
+        self._state_repository.save(GameState(player=player, encounter=updated_state))
         self._append_event(
             {
                 "type": "encounter_completed",
@@ -300,9 +316,9 @@ class EncounterOrchestrator:
         self,
         state: EncounterState,
         player_input: PlayerInput,
+        player: ActorState,
     ) -> tuple[EncounterState, Narration]:
-        actor = state.actors[state.player_actor_id]
-        compendium_context = self._load_compendium_context(actor)
+        compendium_context = player.references
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
             intent=player_input.raw_text,
@@ -312,7 +328,7 @@ class EncounterOrchestrator:
         )
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
-        self._state_repository.save_encounter(updated_state)
+        self._state_repository.save(GameState(player=player, encounter=updated_state))
         narration = self._narrate(
             _frame(
                 updated_state,
@@ -345,36 +361,6 @@ class EncounterOrchestrator:
             apply_state_effects(state, (*roll_effects, *adjudication.state_effects)),
             roll_events,
         )
-
-    def _load_compendium_context(self, actor: ActorState) -> tuple[str, ...]:
-        """Load class and background reference text for the given actor."""
-
-        if self._compendium_repository is None:
-            return ()
-        context: list[str] = []
-        if actor.character_class:
-            class_entry = self._compendium_repository.load_class(actor.character_class)
-            if class_entry and class_entry.reference:
-                try:
-                    text = self._compendium_repository.load_reference_text(
-                        class_entry.reference
-                    )
-                    context.append(text)
-                except FileNotFoundError:
-                    pass
-        if actor.character_background:
-            bg_entry = self._compendium_repository.load_background(
-                actor.character_background
-            )
-            if bg_entry and bg_entry.reference:
-                try:
-                    text = self._compendium_repository.load_reference_text(
-                        bg_entry.reference
-                    )
-                    context.append(text)
-                except FileNotFoundError:
-                    pass
-        return tuple(context)
 
     def _generate_orchestration_decision(
         self,
@@ -511,19 +497,12 @@ def _visible_npc_summaries(state: EncounterState) -> tuple[str, ...]:
     return tuple(
         _actor_summary(actor)
         for actor in state.actors.values()
-        if actor.kind == "npc" and actor.is_visible
+        if actor.actor_type == ActorType.NPC and actor.is_visible
     )
 
 
 def _actor_summary(actor: ActorState) -> str:
-    inventory = ", ".join(actor.inventory) if actor.inventory else "none"
-    class_tag = (
-        f" ({actor.character_class.capitalize()})" if actor.character_class else ""
-    )
-    return (
-        f"{actor.name}{class_tag} HP {actor.hp_current}/{actor.hp_max}, "
-        f"AC {actor.armor_class}, inventory: {inventory}"
-    )
+    return f"{actor.name} HP {actor.hp_current}/{actor.hp_max}, AC {actor.armor_class}"
 
 
 def _public_roll_event(roll_request: RollRequest, total: int) -> str:

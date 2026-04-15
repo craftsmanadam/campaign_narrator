@@ -42,11 +42,34 @@ class _FakeOrchestrator:
 # ---------------------------------------------------------------------------
 
 
-class _FakeStateRepository:
+class _FakeActorRepository:
     captured_paths: ClassVar[list[Path]] = []
 
     def __init__(self, path: Path) -> None:
-        _FakeStateRepository.captured_paths.append(path)
+        _FakeActorRepository.captured_paths.append(path)
+
+
+class _FakeEncounterRepository:
+    captured_paths: ClassVar[list[Path]] = []
+
+    def __init__(self, path: Path) -> None:
+        _FakeEncounterRepository.captured_paths.append(path)
+
+
+class _FakeStateRepository:
+    instances: ClassVar[list[_FakeStateRepository]] = []
+
+    def __init__(
+        self,
+        *,
+        actor_repo: object,
+        encounter_repo: object,
+        compendium: object = None,
+    ) -> None:
+        self.actor_repo = actor_repo
+        self.encounter_repo = encounter_repo
+        self.compendium = compendium
+        _FakeStateRepository.instances.append(self)
 
 
 class _FakeRulesAgent:
@@ -165,9 +188,15 @@ def test_build_application_graph_wires_repository_paths(
     rules_paths: list[Path] = []
     compendium_paths: list[Path] = []
     memory_paths: list[Path] = []
-    _FakeStateRepository.captured_paths.clear()
+    _FakeActorRepository.captured_paths.clear()
+    _FakeEncounterRepository.captured_paths.clear()
+    _FakeStateRepository.instances.clear()
 
     monkeypatch.setattr("campaignnarrator.cli.PydanticAIAdapter.from_env", object)
+    monkeypatch.setattr("campaignnarrator.cli.ActorRepository", _FakeActorRepository)
+    monkeypatch.setattr(
+        "campaignnarrator.cli.EncounterRepository", _FakeEncounterRepository
+    )
     monkeypatch.setattr("campaignnarrator.cli.StateRepository", _FakeStateRepository)
     monkeypatch.setattr(
         "campaignnarrator.cli.RulesRepository",
@@ -192,7 +221,8 @@ def test_build_application_graph_wires_repository_paths(
 
     _build_application_graph(tmp_path)
 
-    assert _FakeStateRepository.captured_paths == [tmp_path / "state"]
+    assert _FakeActorRepository.captured_paths == [tmp_path / "state"]
+    assert _FakeEncounterRepository.captured_paths == [tmp_path / "state"]
     assert rules_paths == [tmp_path / "rules"]
     assert compendium_paths == [tmp_path / "compendium"]
     assert memory_paths == [tmp_path / "memory"]
@@ -205,15 +235,22 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     """The application graph should pass shared adapter through all components."""
 
     adapter = object()
-    _FakeStateRepository.captured_paths.clear()
+    _FakeActorRepository.captured_paths.clear()
+    _FakeEncounterRepository.captured_paths.clear()
+    _FakeStateRepository.instances.clear()
 
     monkeypatch.setattr(
         "campaignnarrator.cli.PydanticAIAdapter.from_env", lambda: adapter
     )
+    monkeypatch.setattr("campaignnarrator.cli.ActorRepository", _FakeActorRepository)
+    monkeypatch.setattr(
+        "campaignnarrator.cli.EncounterRepository", _FakeEncounterRepository
+    )
     monkeypatch.setattr("campaignnarrator.cli.StateRepository", _FakeStateRepository)
     monkeypatch.setattr("campaignnarrator.cli.RulesRepository", lambda _path: object())
+    compendium_instance = object()
     monkeypatch.setattr(
-        "campaignnarrator.cli.CompendiumRepository", lambda _path: object()
+        "campaignnarrator.cli.CompendiumRepository", lambda _path: compendium_instance
     )
     monkeypatch.setattr("campaignnarrator.cli.MemoryRepository", lambda _path: object())
     monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
@@ -235,3 +272,7 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     assert enc.rules_agent.adapter is adapter
     assert enc.narrator_agent.adapter is adapter
     assert enc.decision_adapter is adapter
+    state_repo = _FakeStateRepository.instances[0]
+    assert isinstance(state_repo.actor_repo, _FakeActorRepository)
+    assert isinstance(state_repo.encounter_repo, _FakeEncounterRepository)
+    assert state_repo.compendium is compendium_instance

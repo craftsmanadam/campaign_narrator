@@ -71,13 +71,10 @@ def runtime_data_root(tmp_path: Path) -> Path:
     shutil.copytree(EXAMPLES_ROOT, runtime_root)
     _overlay_runtime_fixtures(runtime_root)
 
-    player_character_path = runtime_root / "state" / "player_character.json"
-    player_character = json.loads(player_character_path.read_text())
-    player_character["hp"]["current"] = 12
-    player_character["inventory"] = ["potion-of-healing", "rope"]
-    player_character_path.write_text(
-        json.dumps(player_character, indent=2, sort_keys=True) + "\n"
-    )
+    player_path = runtime_root / "state" / "actors" / "player.json"
+    player = json.loads(player_path.read_text())
+    player["hp_current"] = 12
+    player_path.write_text(json.dumps(player, indent=2, sort_keys=True) + "\n")
 
     event_log_path = runtime_root / "memory" / "event_log.jsonl"
     event_log_path.parent.mkdir(parents=True, exist_ok=True)

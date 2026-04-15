@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from subprocess import CompletedProcess, run
 
@@ -10,6 +11,7 @@ import pytest
 from pytest_bdd import given, parsers, scenario, then, when
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_FIXTURE_EXAMPLES = Path(__file__).resolve().parent / "fixtures" / "examples"
 
 
 @scenario(
@@ -84,7 +86,7 @@ def _read_event_log(runtime_data_root: Path) -> list[dict[str, object]]:
 
 
 def _read_encounter(runtime_data_root: Path, encounter_id: str) -> dict[str, object]:
-    path = runtime_data_root / "state" / "encounters" / f"{encounter_id}.json"
+    path = runtime_data_root / "state" / "encounters" / "active.json"
     return json.loads(path.read_text())
 
 
@@ -113,11 +115,19 @@ def configure_openai_api_for_scenario_with_encounter(
     scenario_name: str,
     encounter_id: str,
     request: pytest.FixtureRequest,
+    runtime_data_root: Path,
     wiremock_stack: None,
 ) -> dict[str, str]:
     """Start the acceptance stack with a specific encounter ID."""
 
     request.node._encounter_scenario_name = scenario_name
+    named_encounter = (
+        _FIXTURE_EXAMPLES / "state" / "encounters" / f"{encounter_id}.json"
+    )
+    if named_encounter.exists():
+        active_path = runtime_data_root / "state" / "encounters" / "active.json"
+        active_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(named_encounter, active_path)
     return {"scenario_name": scenario_name, "encounter_id": encounter_id}
 
 
@@ -258,11 +268,11 @@ def persisted_encounter_has_initiative_order(
     runtime_data_root: Path,
     encounter_id: str,
 ) -> None:
-    """The on-disk encounter state should have a non-empty initiative order."""
+    """The on-disk encounter state should have a non-empty combat turns list."""
 
     state = _read_encounter(runtime_data_root, encounter_id)
-    order = state.get("initiative_order", [])
-    assert order, f"Expected non-empty initiative_order but got {order!r}"
+    order = state.get("combat_turns", [])
+    assert order, f"Expected non-empty combat_turns but got {order!r}"
 
 
 @then(parsers.parse("the player state has current hit points {hp:d}"))
@@ -272,7 +282,7 @@ def player_state_has_current_hit_points(
 ) -> None:
     """The on-disk player character state should reflect the expected HP."""
 
-    path = runtime_data_root / "state" / "player_character.json"
+    path = runtime_data_root / "state" / "actors" / "player.json"
     player = json.loads(path.read_text())
-    actual = player.get("hp", {}).get("current")
+    actual = player.get("hp_current")
     assert actual == hp, f"Expected current HP {hp} but got {actual}"

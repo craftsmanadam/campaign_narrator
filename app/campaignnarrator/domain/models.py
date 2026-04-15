@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from enum import Enum
+from enum import Enum, StrEnum
 from types import MappingProxyType
 
 
-class EncounterPhase(str, Enum):
+class EncounterPhase(StrEnum):
     """High-level phases for encounter progression."""
 
     SCENE_OPENING = "scene_opening"
@@ -23,6 +23,76 @@ class RollVisibility(str, Enum):
 
     PUBLIC = "public"
     HIDDEN = "hidden"
+
+
+class ActorType(str, Enum):
+    """Distinguishes player characters, NPCs, and allied NPCs."""
+
+    PC = "pc"
+    NPC = "npc"
+    ALLY = "ally"
+
+
+class RecoveryPeriod(str, Enum):
+    """When a resource or item charge replenishes."""
+
+    TURN = "turn"  # resets at start of actor's turn
+    SHORT_REST = "short_rest"
+    LONG_REST = "long_rest"
+    DAY = "day"  # items only — "regains charges at dawn"
+
+
+@dataclass(frozen=True, slots=True)
+class FeatState:
+    """A feat carried by an actor, with LLM-readable effect text."""
+
+    name: str
+    effect_summary: str  # Injected verbatim into Rules Agent context
+    reference: str | None  # e.g. "DND.SRD.Wiki-0.5.2/Feats.md#Alert"
+    per_turn_uses: int | None  # None = passive; int = resource reset each turn
+
+
+@dataclass(frozen=True, slots=True)
+class WeaponState:
+    """A weapon with fully pre-computed attack and damage values."""
+
+    name: str
+    attack_bonus: int  # proficiency + ability mod (+ magic if any)
+    damage_dice: str  # e.g. "1d8", "2d6"
+    damage_bonus: int  # ability mod (+ magic if any)
+    damage_type: str  # "slashing", "piercing", "bludgeoning", etc.
+    properties: tuple[str, ...]  # e.g. ("versatile (1d10)", "finesse")
+
+
+@dataclass(frozen=True, slots=True)
+class InitiativeTurn:
+    """One slot in the initiative order: who acts and what they rolled."""
+
+    actor_id: str
+    initiative_roll: int
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceState:
+    """A character class resource with current/max tracking and recovery metadata."""
+
+    resource: str  # e.g. "second_wind", "action_surge"
+    current: int
+    max: int
+    recovers_after: RecoveryPeriod
+    reference: str | None = None  # e.g. "class_features.json#second-wind"
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryItem:
+    """A physical item carried by an actor."""
+
+    item: str
+    count: int
+    charges: int | None = None  # current charges (e.g. wand)
+    max_charges: int | None = None
+    recovers_after: RecoveryPeriod | None = None  # None for consumables/mundane items
+    reference: str | None = None  # None for narrative-only items
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,19 +110,85 @@ class PlayerInput:
 
 @dataclass(frozen=True, slots=True)
 class ActorState:
-    """Visible or hidden actor state in an encounter."""
+    """Full D&D 2024 character-sheet-equivalent actor state for an encounter."""
 
+    # --- Identity ---
     actor_id: str
     name: str
-    kind: str
-    hp_current: int
+    actor_type: ActorType
+
+    # --- Core combat stats ---
     hp_max: int
+    hp_current: int
     armor_class: int
-    inventory: tuple[str, ...] = field(default_factory=tuple)
-    is_visible: bool = True
+
+    # --- Ability scores ---
+    strength: int
+    dexterity: int
+    constitution: int
+    intelligence: int
+    wisdom: int
+    charisma: int
+
+    # --- Derived stats ---
+    proficiency_bonus: int
+    initiative_bonus: int  # DEX mod + feat bonuses (e.g. Alert); pre-computed
+    speed: int  # feet per turn
+    attacks_per_action: int
+
+    # --- Action economy options ---
+    action_options: tuple[str, ...]
+
+    # --- AC breakdown ---
+    ac_breakdown: tuple[str, ...]
+
+    # --- Saving throws: tuple of (ability_name, total_bonus) ---
+    saving_throws: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+
+    # --- Temporary HP ---
+    hp_temp: int = 0
+
+    # --- Resources: structured per-character ability tracking ---
+    resources: tuple[ResourceState, ...] = field(default_factory=tuple)
+
+    # --- Inventory: physical items carried ---
+    inventory: tuple[InventoryItem, ...] = field(default_factory=tuple)
+
+    # --- Bonus and reaction action economy ---
+    bonus_action_options: tuple[str, ...] = field(default_factory=tuple)
+    reaction_options: tuple[str, ...] = field(default_factory=tuple)
+
+    # --- Weapons and feats ---
+    equipped_weapons: tuple[WeaponState, ...] = field(default_factory=tuple)
+    feats: tuple[FeatState, ...] = field(default_factory=tuple)
+
+    # --- Defenses ---
+    damage_resistances: tuple[str, ...] = field(default_factory=tuple)
+    damage_vulnerabilities: tuple[str, ...] = field(default_factory=tuple)
+    damage_immunities: tuple[str, ...] = field(default_factory=tuple)
+    condition_immunities: tuple[str, ...] = field(default_factory=tuple)
+
+    # --- Current conditions ---
     conditions: tuple[str, ...] = field(default_factory=tuple)
-    character_class: str | None = None
-    character_background: str | None = None
+
+    # --- Death saves (dynamic during encounter) ---
+    death_save_successes: int = 0
+    death_save_failures: int = 0
+
+    # --- Spellcasting (empty for non-casters) ---
+    spell_slots: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    spell_slots_max: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    available_spells: tuple[str, ...] = field(default_factory=tuple)
+    concentration: str | None = None
+
+    # --- NPC personality (None for PCs) ---
+    personality: str | None = None
+
+    # --- Visibility ---
+    is_visible: bool = True
+
+    # --- Compendium references (transient — populated at load time, not persisted) ---
+    references: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +201,7 @@ class EncounterState:
     actors: Mapping[str, ActorState]
     public_events: tuple[str, ...] = field(default_factory=tuple)
     hidden_facts: Mapping[str, object] = field(default_factory=dict)
-    initiative_order: tuple[str, ...] = field(default_factory=tuple)
+    combat_turns: tuple[InitiativeTurn, ...] = field(default_factory=tuple)
     outcome: str | None = None
 
     def __post_init__(self) -> None:
@@ -81,7 +217,7 @@ class EncounterState:
         """Return the first player character actor in insertion order."""
 
         for actor in self.actors.values():
-            if actor.kind == "pc":
+            if actor.actor_type == ActorType.PC:
                 return actor.actor_id
         raise ValueError("missing player actor")  # noqa: TRY003
 
@@ -94,6 +230,14 @@ class EncounterState:
         """Return a copy of the state with an updated phase."""
 
         return replace(self, phase=phase)
+
+
+@dataclass(frozen=True, slots=True)
+class GameState:
+    """Top-level game state: always-present player + optional active encounter."""
+
+    player: ActorState
+    encounter: EncounterState | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,17 +352,25 @@ class Adjudication:
 __all__ = [
     "Action",
     "ActorState",
+    "ActorType",
     "Adjudication",
     "EncounterPhase",
     "EncounterState",
+    "FeatState",
+    "GameState",
+    "InitiativeTurn",
+    "InventoryItem",
     "Narration",
     "NarrationFrame",
     "OrchestrationDecision",
     "PlayerInput",
+    "RecoveryPeriod",
+    "ResourceState",
     "RollRequest",
     "RollVisibility",
     "RuleReference",
     "RulesAdjudication",
     "RulesAdjudicationRequest",
     "StateEffect",
+    "WeaponState",
 ]

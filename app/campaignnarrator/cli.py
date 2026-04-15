@@ -15,7 +15,9 @@ from campaignnarrator.orchestrators.application_orchestrator import (
     ApplicationOrchestrator,
 )
 from campaignnarrator.orchestrators.encounter_orchestrator import EncounterOrchestrator
+from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
+from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.rules_repository import RulesRepository
 from campaignnarrator.repositories.state_repository import StateRepository
@@ -28,7 +30,13 @@ def _build_application_graph(data_root: Path) -> ApplicationOrchestrator:
     adapter = PydanticAIAdapter.from_env()
     rules_repository = RulesRepository(data_root / "rules")
     compendium_repository = CompendiumRepository(data_root / "compendium")
-    state_repository = StateRepository(data_root / "state")
+    actor_repo = ActorRepository(data_root / "state")
+    encounter_repo = EncounterRepository(data_root / "state")
+    state_repository = StateRepository(
+        actor_repo=actor_repo,
+        encounter_repo=encounter_repo,
+        compendium=compendium_repository,
+    )
     memory_repository = MemoryRepository(data_root / "memory")
     rules_agent = RulesAgent(
         adapter=adapter,
@@ -43,7 +51,6 @@ def _build_application_graph(data_root: Path) -> ApplicationOrchestrator:
         narrator_agent=narrator_agent,
         roll_dice=roll_dice,
         decision_adapter=adapter,
-        compendium_repository=compendium_repository,
     )
     return ApplicationOrchestrator(encounter_orchestrator=encounter_orchestrator)
 

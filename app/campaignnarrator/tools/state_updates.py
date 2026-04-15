@@ -34,8 +34,6 @@ def _apply_state_effect(state: EncounterState, effect: StateEffect) -> Encounter
         return _apply_set_encounter_outcome(state, effect.target, effect.value)
     if effect.effect_type == "change_hp":
         return _apply_change_hp(state, effect.target, effect.value)
-    if effect.effect_type == "remove_inventory_item":
-        return _apply_remove_inventory_item(state, effect.target, effect.value)
     raise ValueError(  # noqa: TRY003
         f"unsupported state effect: {effect.effect_type}"
     )
@@ -63,7 +61,7 @@ def _apply_append_public_event(
         actors=state.actors,
         public_events=(*state.public_events, _require_string(value, "public event")),
         hidden_facts=_copy_hidden_facts(state),
-        initiative_order=state.initiative_order,
+        combat_turns=state.combat_turns,
         outcome=state.outcome,
     )
 
@@ -81,7 +79,7 @@ def _apply_set_encounter_outcome(
         actors=state.actors,
         public_events=state.public_events,
         hidden_facts=_copy_hidden_facts(state),
-        initiative_order=state.initiative_order,
+        combat_turns=state.combat_turns,
         outcome=_require_string(value, "encounter outcome"),
     )
 
@@ -97,30 +95,6 @@ def _apply_change_hp(
         actor,
         hp_current=max(0, min(actor.hp_max, actor.hp_current + delta)),
     )
-    return _replace_actor(state, updated_actor)
-
-
-def _apply_remove_inventory_item(
-    state: EncounterState,
-    target: str,
-    value: object,
-) -> EncounterState:
-    actor = _require_actor(state, target)
-    item = _require_string(value, "inventory item")
-    inventory = list(actor.inventory)
-    try:
-        item_index = next(
-            index
-            for index, inventory_item in enumerate(inventory)
-            if inventory_item == item
-        )
-    except StopIteration as error:
-        raise ValueError(  # noqa: TRY003
-            f"actor {actor.actor_id} does not have item: {item}"
-        ) from error
-
-    del inventory[item_index]
-    updated_actor = replace(actor, inventory=tuple(inventory))
     return _replace_actor(state, updated_actor)
 
 
@@ -177,7 +151,7 @@ def _copy_state_with(
         "actors": state.actors,
         "public_events": state.public_events,
         "hidden_facts": _copy_hidden_facts(state),
-        "initiative_order": state.initiative_order,
+        "combat_turns": state.combat_turns,
         "outcome": state.outcome,
     }
     values.update(changes)
