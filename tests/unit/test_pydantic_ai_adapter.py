@@ -56,11 +56,10 @@ def test_from_env_configures_the_pydantic_ai_model_boundary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Environment configuration should flow into Pydantic AI provider/model setup."""
-
     expected_timeout_seconds = 7.5
 
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
-    monkeypatch.setattr(adapter_module, "OpenAIResponsesModel", _FakeModel)
+    monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-5.4")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://example.invalid/v1")
@@ -71,73 +70,13 @@ def test_from_env_configures_the_pydantic_ai_model_boundary(
     assert isinstance(adapter.provider, _FakeProvider)
     assert adapter.provider.api_key == "test-key"
     assert adapter.provider.base_url == "https://example.invalid/v1"
-    assert isinstance(adapter.pydantic_model, _FakeModel)
-    assert adapter.pydantic_model.model_name == "gpt-5.4"
-    assert adapter.model == "gpt-5.4"
+    assert isinstance(adapter.model, _FakeModel)
+    assert adapter.model.model_name == "gpt-5.4"
     assert adapter.timeout_seconds == expected_timeout_seconds
-
-
-def test_generate_structured_json_parses_pydantic_ai_text_output(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Structured output should preserve the app's direct JSON object contract."""
-
-    agents: list[_FakeAgent] = []
-
-    def _agent_factory(
-        model: object,
-        *,
-        output_type: object = str,
-        instructions: str,
-    ) -> _FakeAgent:
-        agent = _FakeAgent(
-            model,
-            output_type=output_type,
-            instructions=instructions,
-        )
-        agent.output = '{"outcome": "roll_requested"}'
-        agents.append(agent)
-        return agent
-
-    monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
-    monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
-    monkeypatch.setattr(adapter_module, "OpenAIResponsesModel", _FakeModel)
-
-    adapter = PydanticAIAdapter(
-        api_key="test-key",
-        model="gpt-5.4",
-        base_url="https://example.invalid/v1",
-        timeout_seconds=3.25,
-    )
-
-    payload = adapter.generate_structured_json(
-        instructions="You are a rules adjudicator.",
-        input_text="I try to calm the goblin scout.",
-        schema_name="rules_adjudication",
-        json_schema={
-            "type": "object",
-            "properties": {"outcome": {"type": "string"}},
-            "required": ["outcome"],
-            "additionalProperties": False,
-        },
-    )
-
-    assert payload == {"outcome": "roll_requested"}
-    assert agents[0].output_type is str
-    assert agents[0].instructions == (
-        "You are a rules adjudicator.\n\nReturn JSON for schema `rules_adjudication`."
-    )
-    assert agents[0].calls == [
-        {
-            "user_prompt": "I try to calm the goblin scout.",
-            "model_settings": {"timeout": 3.25},
-        }
-    ]
 
 
 def test_generate_text_returns_plain_output(monkeypatch: pytest.MonkeyPatch) -> None:
     """Text generation should expose the Pydantic AI output verbatim."""
-
     agents: list[_FakeAgent] = []
 
     def _agent_factory(
@@ -146,18 +85,14 @@ def test_generate_text_returns_plain_output(monkeypatch: pytest.MonkeyPatch) -> 
         output_type: object = str,
         instructions: str,
     ) -> _FakeAgent:
-        agent = _FakeAgent(
-            model,
-            output_type=output_type,
-            instructions=instructions,
-        )
+        agent = _FakeAgent(model, output_type=output_type, instructions=instructions)
         agent.output = "Talia addresses the wary goblin."
         agents.append(agent)
         return agent
 
     monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
-    monkeypatch.setattr(adapter_module, "OpenAIResponsesModel", _FakeModel)
+    monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
 
     adapter = PydanticAIAdapter(api_key="test-key", model="gpt-5.4")
 
@@ -174,33 +109,58 @@ def test_generate_text_returns_plain_output(monkeypatch: pytest.MonkeyPatch) -> 
     ]
 
 
-def test_generate_structured_json_rejects_non_object_output(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Structured output should fail closed if Pydantic AI returns a non-object."""
+def test_generate_text_rejects_empty_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Empty text output should raise ValueError."""
 
     def _agent_factory(
-        model: object,
-        *,
-        output_type: object = str,
-        instructions: str,
+        model: object, *, output_type: object = str, instructions: str
     ) -> _FakeAgent:
-        agent = _FakeAgent(
-            model,
-            output_type=output_type,
-            instructions=instructions,
-        )
-        agent.output = '"not-json-object"'
+        agent = _FakeAgent(model, output_type=output_type, instructions=instructions)
+        agent.output = "   "
         return agent
 
     monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
-    monkeypatch.setattr(adapter_module, "OpenAIResponsesModel", _FakeModel)
+    monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
 
     adapter = PydanticAIAdapter(api_key="test-key", model="gpt-5.4")
 
-    with pytest.raises(TypeError, match="not object"):
-        adapter.generate_structured_json(
-            instructions="You are a rules adjudicator.",
-            input_text="I try to calm the goblin scout.",
-        )
+    with pytest.raises(ValueError, match="empty"):
+        adapter.generate_text(instructions="narrator", input_text="go")
+
+
+def test_generate_text_forwards_timeout_in_model_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Timeout configured on the adapter must reach run_sync as a model_settings entry."""  # noqa: E501
+    agents: list[_FakeAgent] = []
+
+    def _agent_factory(
+        model: object, *, output_type: object = str, instructions: str
+    ) -> _FakeAgent:
+        agent = _FakeAgent(model, output_type=output_type, instructions=instructions)
+        agent.output = "some output"
+        agents.append(agent)
+        return agent
+
+    monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
+    monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
+
+    adapter = PydanticAIAdapter(api_key="key", model="gpt-5.4", timeout_seconds=15.0)
+    adapter.generate_text(instructions="narrator", input_text="go")
+
+    assert agents[0].calls[0]["model_settings"] == {"timeout": 15.0}
+
+
+def test_adapter_exposes_model_for_agent_construction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """adapter.model should return the OpenAIChatModel instance."""
+    monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
+
+    adapter = PydanticAIAdapter(api_key="key", model="gpt-5.4")
+
+    assert isinstance(adapter.model, _FakeModel)
+    assert adapter.model.model_name == "gpt-5.4"

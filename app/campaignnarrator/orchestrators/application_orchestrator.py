@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     EncounterRunResult,
@@ -21,15 +19,7 @@ class ApplicationOrchestrator:
     def __init__(self, *, encounter_orchestrator: EncounterOrchestrator) -> None:
         self._encounter_orchestrator = encounter_orchestrator
 
-    def run_encounter(
-        self,
-        *,
-        encounter_id: str,
-        player_inputs: Iterable[str],
-    ) -> EncounterRunResult:
+    def run_encounter(self, *, encounter_id: str) -> EncounterRunResult:
         """Delegate encounter play to the EncounterOrchestrator."""
 
-        return self._encounter_orchestrator.run_encounter(
-            encounter_id=encounter_id,
-            player_inputs=player_inputs,
-        )
+        return self._encounter_orchestrator.run_encounter(encounter_id=encounter_id)

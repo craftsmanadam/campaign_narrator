@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from campaignnarrator.domain.models import (
     ActorState,
@@ -73,11 +75,15 @@ def test_apply_state_effects_updates_phase_and_public_events() -> None:
     updated = apply_state_effects(
         state,
         (
-            StateEffect("set_phase", "encounter:goblin-camp", EncounterPhase.COMBAT),
             StateEffect(
-                "append_public_event",
-                "encounter:goblin-camp",
-                "Initiative begins.",
+                effect_type="set_phase",
+                target="encounter:goblin-camp",
+                value=EncounterPhase.COMBAT,
+            ),
+            StateEffect(
+                effect_type="append_public_event",
+                target="encounter:goblin-camp",
+                value="Initiative begins.",
             ),
         ),
     )
@@ -93,7 +99,7 @@ def test_change_hp_clamps_to_zero() -> None:
 
     updated = apply_state_effects(
         state,
-        (StateEffect("change_hp", "pc:talia", -99),),
+        (StateEffect(effect_type="change_hp", target="pc:talia", value=-99),),
     )
 
     assert updated.actors["pc:talia"].hp_current == 0
@@ -106,7 +112,7 @@ def test_change_hp_clamps_above_hp_max() -> None:
 
     updated = apply_state_effects(
         state,
-        (StateEffect("change_hp", "npc:goblin-scout", 99),),
+        (StateEffect(effect_type="change_hp", target="npc:goblin-scout", value=99),),
     )
 
     assert (
@@ -122,7 +128,13 @@ def test_set_encounter_outcome_sets_state_outcome() -> None:
 
     updated = apply_state_effects(
         state,
-        (StateEffect("set_encounter_outcome", "encounter:goblin-camp", "victory"),),
+        (
+            StateEffect(
+                effect_type="set_encounter_outcome",
+                target="encounter:goblin-camp",
+                value="victory",
+            ),
+        ),
     )
 
     assert updated.outcome == "victory"
@@ -134,7 +146,10 @@ def test_apply_state_effects_rejects_unknown_actor() -> None:
     state = _default_encounter()
 
     with pytest.raises(ValueError, match=r"unknown actor: npc:missing"):
-        apply_state_effects(state, (StateEffect("change_hp", "npc:missing", -1),))
+        apply_state_effects(
+            state,
+            (StateEffect(effect_type="change_hp", target="npc:missing", value=-1),),
+        )
 
 
 def test_apply_state_effects_rejects_unknown_effect_type() -> None:
@@ -145,7 +160,13 @@ def test_apply_state_effects_rejects_unknown_effect_type() -> None:
     with pytest.raises(ValueError, match=r"unsupported state effect: teleport"):
         apply_state_effects(
             state,
-            (StateEffect("teleport", "encounter:goblin-camp", "elsewhere"),),
+            (
+                StateEffect(
+                    effect_type="teleport",
+                    target="encounter:goblin-camp",
+                    value="elsewhere",
+                ),
+            ),
         )
 
 
@@ -162,9 +183,9 @@ def test_apply_state_effects_rejects_wrong_encounter_target() -> None:
             state,
             (
                 StateEffect(
-                    "set_phase",
-                    "encounter:other-camp",
-                    EncounterPhase.COMBAT,
+                    effect_type="set_phase",
+                    target="encounter:other-camp",
+                    value=EncounterPhase.COMBAT,
                 ),
             ),
         )
@@ -180,8 +201,12 @@ def test_apply_state_effects_never_mutates_input_state() -> None:
     updated = apply_state_effects(
         state,
         (
-            StateEffect("append_public_event", "encounter:goblin-camp", "Alarm bells!"),
-            StateEffect("change_hp", "pc:talia", -3),
+            StateEffect(
+                effect_type="append_public_event",
+                target="encounter:goblin-camp",
+                value="Alarm bells!",
+            ),
+            StateEffect(effect_type="change_hp", target="pc:talia", value=-3),
         ),
     )
 
@@ -197,7 +222,13 @@ def test_apply_state_effects_deep_copies_nested_hidden_facts_on_set_phase() -> N
 
     updated = apply_state_effects(
         state,
-        (StateEffect("set_phase", "encounter:goblin-camp", EncounterPhase.COMBAT),),
+        (
+            StateEffect(
+                effect_type="set_phase",
+                target="encounter:goblin-camp",
+                value=EncounterPhase.COMBAT,
+            ),
+        ),
     )
 
     updated.hidden_facts["nested"]["alarms"].append("horn")
@@ -205,3 +236,31 @@ def test_apply_state_effects_deep_copies_nested_hidden_facts_on_set_phase() -> N
     assert state.hidden_facts["nested"]["alarms"] == ["bell"]
     assert updated.hidden_facts["nested"]["alarms"] == ["bell", "horn"]
     assert updated.phase is EncounterPhase.COMBAT
+
+
+def test_scene_tone_preserved_through_append_public_event() -> None:
+    """scene_tone must survive an append_public_event state effect."""
+    state = replace(_default_encounter(), scene_tone="tense and foreboding")
+    effect = StateEffect(
+        effect_type="append_public_event",
+        target="encounter:goblin-camp",
+        value="A goblin screams.",
+    )
+
+    result = apply_state_effects(state, (effect,))
+
+    assert result.scene_tone == "tense and foreboding"
+
+
+def test_scene_tone_preserved_through_set_encounter_outcome() -> None:
+    """scene_tone must survive a set_encounter_outcome state effect."""
+    state = replace(_default_encounter(), scene_tone="warm and inviting")
+    effect = StateEffect(
+        effect_type="set_encounter_outcome",
+        target="encounter:goblin-camp",
+        value="peaceful",
+    )
+
+    result = apply_state_effects(state, (effect,))
+
+    assert result.scene_tone == "warm and inviting"

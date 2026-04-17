@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"next_step\":\"roll_initiative\",\"next_actor\":null,\"requires_rules_resolution\":false,\"recommended_check\":null,\"phase_transition\":\"combat\",\"player_prompt\":null,\"reason_summary\":\"Talia starts combat by charging with her longsword.\"}"
+          "arguments": "{\"intent\": \"combat_action\"}"
         }
       }]
     },

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum, StrEnum
 from types import MappingProxyType
+from typing import Literal, Protocol
+
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class EncounterPhase(StrEnum):
@@ -203,6 +207,7 @@ class EncounterState:
     hidden_facts: Mapping[str, object] = field(default_factory=dict)
     combat_turns: tuple[InitiativeTurn, ...] = field(default_factory=tuple)
     outcome: str | None = None
+    scene_tone: str | None = None
 
     def __post_init__(self) -> None:
         """Snapshot mutable mappings so encounter state cannot be mutated externally."""
@@ -240,36 +245,90 @@ class GameState:
     encounter: EncounterState | None = None
 
 
+class PlayerIO(Protocol):
+    """Protocol for all player-facing I/O.
+
+    Lives in models.py so both EncounterOrchestrator and CombatOrchestrator
+    can depend on it without circular imports. The terminal implementation is
+    created in cli.py and injected downward. Tests inject ScriptedIO.
+    """
+
+    def prompt(self, text: str) -> str:
+        """Display text and return player input."""
+        ...
+
+    def display(self, text: str) -> None:
+        """Display text with no expected input."""
+        ...
+
+
+class CombatStatus(StrEnum):
+    """Terminal outcome of a combat encounter from CombatOrchestrator's perspective."""
+
+    COMPLETE = "complete"
+    PLAYER_DOWN_NO_ALLIES = "player_down_no_allies"
+    SAVED_AND_QUIT = "saved_and_quit"
+
+
 @dataclass(frozen=True, slots=True)
-class OrchestrationDecision:
+class TurnResources:
+    """Action economy remaining for the actor whose turn is currently active."""
+
+    action_available: bool = True
+    bonus_action_available: bool = True
+    reaction_available: bool = True
+    movement_remaining: int = 0  # feet; initialized from ActorState.speed at turn start
+
+
+@dataclass(frozen=True, slots=True)
+class CombatResult:
+    """Returned by CombatOrchestrator to EncounterOrchestrator when combat ends."""
+
+    status: CombatStatus
+    final_state: EncounterState
+    death_saves_remaining: int | None  # None unless status is PLAYER_DOWN_NO_ALLIES
+
+
+class OrchestrationDecision(BaseModel):
     """Structured output from the orchestrator."""
 
+    model_config = ConfigDict(frozen=True)
+
     next_step: str
-    next_actor: str | None
+    next_actor: str | None = None
     requires_rules_resolution: bool
-    recommended_check: str | None
-    phase_transition: str | None
-    player_prompt: str | None
+    recommended_check: str | None = None
+    phase_transition: str | None = None
+    player_prompt: str | None = None
     reason_summary: str
 
 
-@dataclass(frozen=True, slots=True)
-class RollRequest:
+class RollRequest(BaseModel):
     """An explicit request for a dice roll."""
+
+    model_config = ConfigDict(frozen=True)
 
     owner: str
     visibility: RollVisibility
     expression: str
     purpose: str | None = None
 
+    @field_validator("expression")
+    @classmethod
+    def valid_dice(cls, v: str) -> str:
+        if not re.fullmatch(r"\d+d\d+(k[lh]?\d+)?([+-]\d+)?", v):
+            raise ValueError(f"invalid dice expression: {v!r}")  # noqa: TRY003
+        return v
 
-@dataclass(frozen=True, slots=True)
-class StateEffect:
+
+class StateEffect(BaseModel):
     """A structured state mutation produced by rules adjudication."""
+
+    model_config = ConfigDict(frozen=True)
 
     effect_type: str
     target: str
-    value: object
+    value: object = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -284,17 +343,18 @@ class RulesAdjudicationRequest:
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
 
 
-@dataclass(frozen=True, slots=True)
-class RulesAdjudication:
+class RulesAdjudication(BaseModel):
     """Structured result from rules resolution."""
+
+    model_config = ConfigDict(frozen=True)
 
     is_legal: bool
     action_type: str
     summary: str
-    roll_requests: tuple[RollRequest, ...] = field(default_factory=tuple)
-    state_effects: tuple[StateEffect, ...] = field(default_factory=tuple)
-    rule_references: tuple[str, ...] = field(default_factory=tuple)
     reasoning_summary: str = ""
+    roll_requests: tuple[RollRequest, ...] = ()
+    state_effects: tuple[StateEffect, ...] = ()
+    rule_references: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -319,6 +379,7 @@ class Narration:
 
     text: str
     audience: str | None = None
+    scene_tone: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -349,11 +410,31 @@ class Adjudication:
     rule_references: tuple[RuleReference, ...] = field(default_factory=tuple)
 
 
+class SceneOpeningResponse(BaseModel):
+    """Structured LLM output for scene opening narration."""
+
+    model_config = ConfigDict(frozen=True)
+
+    text: str
+    scene_tone: str
+
+
+class CombatIntent(BaseModel):
+    """Structured LLM output for a player's declared combat intent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    intent: Literal["end_turn", "query_status", "exit_session", "combat_action"]
+
+
 __all__ = [
     "Action",
     "ActorState",
     "ActorType",
     "Adjudication",
+    "CombatIntent",
+    "CombatResult",
+    "CombatStatus",
     "EncounterPhase",
     "EncounterState",
     "FeatState",
@@ -363,6 +444,7 @@ __all__ = [
     "Narration",
     "NarrationFrame",
     "OrchestrationDecision",
+    "PlayerIO",
     "PlayerInput",
     "RecoveryPeriod",
     "ResourceState",
@@ -371,6 +453,8 @@ __all__ = [
     "RuleReference",
     "RulesAdjudication",
     "RulesAdjudicationRequest",
+    "SceneOpeningResponse",
     "StateEffect",
+    "TurnResources",
     "WeaponState",
 ]

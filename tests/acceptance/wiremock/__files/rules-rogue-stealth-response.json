@@ -1,21 +1,23 @@
 {
-  "id": "resp_rules_rogue_stealth_001",
-  "object": "response",
-  "created_at": 1710001012,
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
   "model": "gpt-5.4",
-  "output": [{
-    "id": "msg_rules_rogue_stealth_001",
-    "type": "message",
-    "role": "assistant",
-    "status": "completed",
-    "content": [{
-      "type": "output_text",
-      "text": "{\"is_legal\":true,\"action_type\":\"stealth\",\"summary\":\"Talia slips silently past the goblin camp.\",\"reasoning_summary\":\"Cunning Action applies.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+5\",\"purpose\":\"Stealth check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"Talia vanishes into the underbrush.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"encounter_complete\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"de-escalated\"}],\"rule_references\":[]}",
-      "annotations": []
-    }]
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_xxx",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"stealth\",\"summary\":\"Talia slips silently past the goblin camp.\",\"reasoning_summary\":\"Cunning Action applies.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+5\",\"purpose\":\"Stealth check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"Talia vanishes into the underbrush.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"encounter_complete\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp-rogue\",\"value\":\"de-escalated\"}],\"rule_references\":[]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
   }],
-  "parallel_tool_calls": false,
-  "tool_choice": "auto",
-  "tools": [],
-  "status": "completed"
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
 }

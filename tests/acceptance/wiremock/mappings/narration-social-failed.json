@@ -2,27 +2,11 @@
   "priority": 20,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "\"purpose\": \"social_resolution\""
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "The goblins reject Talia's plea"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"social_resolution\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "The goblins reject Talia's plea"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "narration-social-failed-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-social-failed-response.json"}
 }

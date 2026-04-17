@@ -2,27 +2,11 @@
   "priority": 20,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "\"purpose\": \"recap_response\""
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "Outcome: combat"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"recap_response\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "Outcome: combat"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "narration-recap-combat-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-recap-combat-response.json"}
 }

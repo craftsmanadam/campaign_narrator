@@ -2,25 +2,11 @@
   "priority": 5,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "\"purpose\": \"combat_turn_result\""
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "Sneak Attack: the dagger"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"combat_turn_result\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "Sneak Attack: the dagger"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": { "Content-Type": "application/json" },
-    "bodyFileName": "narration-rogue-sneak-attack-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-rogue-sneak-attack-response.json"}
 }

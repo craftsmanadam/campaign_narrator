@@ -2,21 +2,10 @@
   "priority": 80,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "\"purpose\": \"status_response\""
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"status_response\""}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "narration-status-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-status-response.json"}
 }

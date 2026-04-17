@@ -1,0 +1,12 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "Classify the player's input during a D&D 5e combat turn"}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "exit"}}
+    ]
+  },
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "combat-intent-exit-session-response.json"}
+}

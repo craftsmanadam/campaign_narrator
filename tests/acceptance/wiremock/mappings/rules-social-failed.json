@@ -2,27 +2,11 @@
   "priority": 10,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.instructions",
-          "contains": "rules adjudication engine"
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "let me pass"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "rules adjudication engine"}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "let me pass"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "rules-social-failed-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "rules-social-failed-response.json"}
 }

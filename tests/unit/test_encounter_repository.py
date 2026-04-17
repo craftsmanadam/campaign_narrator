@@ -119,3 +119,16 @@ def test_save_round_trips_combat_turns(tmp_path: Path) -> None:
     assert loaded is not None
     assert loaded.combat_turns[0].actor_id == "pc:talia"
     assert loaded.combat_turns[0].initiative_roll == 18  # noqa: PLR2004
+
+
+def test_save_and_load_round_trips_scene_tone(tmp_path: Path) -> None:
+    """scene_tone should survive a save/load round-trip through the repository."""
+    repo = EncounterRepository(tmp_path)
+    state = _minimal_encounter()
+    state = replace(state, scene_tone="tense and foreboding")
+
+    repo.save(state)
+    loaded = repo.load_active()
+
+    assert loaded is not None
+    assert loaded.scene_tone == "tense and foreboding"

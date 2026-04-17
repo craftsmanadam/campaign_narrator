@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from io import StringIO
 from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from campaignnarrator.cli import _build_application_graph, main
+from campaignnarrator.cli import (
+    _DEFAULT_NARRATOR_PERSONALITY,
+    _build_application_graph,
+    main,
+)
 
 # ---------------------------------------------------------------------------
 # Shared fakes
@@ -24,16 +27,9 @@ class _FakeRunResult:
 class _FakeOrchestrator:
     def __init__(self) -> None:
         self.encounter_id: str | None = None
-        self.player_inputs: tuple[str, ...] | None = None
 
-    def run_encounter(
-        self,
-        *,
-        encounter_id: str,
-        player_inputs: Iterable[str],
-    ) -> _FakeRunResult:
+    def run_encounter(self, *, encounter_id: str) -> _FakeRunResult:
         self.encounter_id = encounter_id
-        self.player_inputs = tuple(player_inputs)
         return _FakeRunResult(output_text="Encounter output\n", completed=True)
 
 
@@ -86,18 +82,26 @@ class _FakeRulesAgent:
 
 
 class _FakeNarratorAgent:
-    def __init__(self, *, adapter: object) -> None:
+    def __init__(self, *, adapter: object, personality: str) -> None:
         self.adapter = adapter
+        self.personality = personality
 
 
 class _FakeEncounterOrchestrator:
-    def __init__(self, **kwargs: object) -> None:
-        self.state_repository = kwargs["state_repository"]
-        self.rules_agent = kwargs["rules_agent"]
-        self.narrator_agent = kwargs["narrator_agent"]
-        self.roll_dice = kwargs["roll_dice"]
-        self.decision_adapter = kwargs["decision_adapter"]
-        self.memory_repository = kwargs["memory_repository"]
+    def __init__(
+        self,
+        *,
+        repositories: object,
+        agents: object,
+        tools: object,
+        io: object,
+        adapter: object | None = None,
+    ) -> None:
+        self.repositories = repositories
+        self.agents = agents
+        self.tools = tools
+        self.io = io
+        self.adapter = adapter
 
 
 class _FakeApplicationOrchestrator:
@@ -111,18 +115,20 @@ class _FakeApplicationOrchestrator:
 
 
 def test_cli_uses_stdin_stdout_loop(monkeypatch, tmp_path: Path) -> None:
-    """The CLI should stream player input into the encounter loop and print output."""
+    """The CLI should wire stdin/stdout through _TerminalIO and call run_encounter."""
 
     fake_orchestrator = _FakeOrchestrator()
     builder_calls: list[Path] = []
 
-    def _build_application_graph(data_root: Path) -> _FakeOrchestrator:
+    def _fake_build(
+        data_root: Path, stdin: object, stdout: object
+    ) -> _FakeOrchestrator:
         builder_calls.append(data_root)
         return fake_orchestrator
 
     monkeypatch.setattr(
         "campaignnarrator.cli._build_application_graph",
-        _build_application_graph,
+        _fake_build,
     )
 
     stdout = StringIO()
@@ -140,7 +146,6 @@ def test_cli_uses_stdin_stdout_loop(monkeypatch, tmp_path: Path) -> None:
     assert exit_code == 0
     assert builder_calls == [tmp_path]
     assert fake_orchestrator.encounter_id == "goblin-camp"
-    assert fake_orchestrator.player_inputs == ("status\n", "exit\n")
     assert stdout.getvalue() == "Encounter output\n"
 
 
@@ -154,7 +159,7 @@ def test_cli_defaults_encounter_id_to_goblin_camp(
 
     monkeypatch.setattr(
         "campaignnarrator.cli._build_application_graph",
-        lambda _data_root: fake_orchestrator,
+        lambda _data_root, *, stdin, stdout: fake_orchestrator,
     )
 
     exit_code = main(
@@ -219,7 +224,7 @@ def test_build_application_graph_wires_repository_paths(
         "campaignnarrator.cli.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
 
-    _build_application_graph(tmp_path)
+    _build_application_graph(tmp_path, stdin=StringIO(), stdout=StringIO())
 
     assert _FakeActorRepository.captured_paths == [tmp_path / "state"]
     assert _FakeEncounterRepository.captured_paths == [tmp_path / "state"]
@@ -262,16 +267,17 @@ def test_build_application_graph_wires_agents_and_orchestrators(
         "campaignnarrator.cli.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
 
-    result = _build_application_graph(tmp_path)
+    result = _build_application_graph(tmp_path, stdin=StringIO(), stdout=StringIO())
 
     assert isinstance(result, _FakeApplicationOrchestrator)
     enc = result.encounter_orchestrator
     assert isinstance(enc, _FakeEncounterOrchestrator)
-    assert isinstance(enc.rules_agent, _FakeRulesAgent)
-    assert isinstance(enc.narrator_agent, _FakeNarratorAgent)
-    assert enc.rules_agent.adapter is adapter
-    assert enc.narrator_agent.adapter is adapter
-    assert enc.decision_adapter is adapter
+    assert isinstance(enc.agents.rules, _FakeRulesAgent)
+    assert isinstance(enc.agents.narrator, _FakeNarratorAgent)
+    assert enc.agents.rules.adapter is adapter
+    assert enc.agents.narrator.adapter is adapter
+    assert enc.agents.narrator.personality == _DEFAULT_NARRATOR_PERSONALITY
+    assert enc.adapter is adapter
     state_repo = _FakeStateRepository.instances[0]
     assert isinstance(state_repo.actor_repo, _FakeActorRepository)
     assert isinstance(state_repo.encounter_repo, _FakeEncounterRepository)

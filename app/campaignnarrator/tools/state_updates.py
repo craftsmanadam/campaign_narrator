@@ -63,6 +63,7 @@ def _apply_append_public_event(
         hidden_facts=_copy_hidden_facts(state),
         combat_turns=state.combat_turns,
         outcome=state.outcome,
+        scene_tone=state.scene_tone,
     )
 
 
@@ -81,6 +82,7 @@ def _apply_set_encounter_outcome(
         hidden_facts=_copy_hidden_facts(state),
         combat_turns=state.combat_turns,
         outcome=_require_string(value, "encounter outcome"),
+        scene_tone=state.scene_tone,
     )
 
 
@@ -153,6 +155,7 @@ def _copy_state_with(
         "hidden_facts": _copy_hidden_facts(state),
         "combat_turns": state.combat_turns,
         "outcome": state.outcome,
+        "scene_tone": state.scene_tone,
     }
     values.update(changes)
     return EncounterState(**values)

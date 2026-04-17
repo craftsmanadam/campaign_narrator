@@ -59,6 +59,7 @@ def _encounter_state_to_json(state: EncounterState) -> dict[str, object]:
             for t in state.combat_turns
         ],
         "outcome": state.outcome,
+        "scene_tone": state.scene_tone,
         "actors": {
             actor_id: _actor_state_to_json(actor)
             for actor_id, actor in state.actors.items()
@@ -167,6 +168,7 @@ def _encounter_state_from_seed(seed: Mapping[str, object]) -> EncounterState:
         hidden_facts=_mapping_from_seed(seed, "hidden_facts"),
         combat_turns=_combat_turns_from_seed(seed),
         outcome=_optional_string_from_seed(seed, "outcome"),
+        scene_tone=_optional_string_from_seed(seed, "scene_tone"),
     )
 
 

@@ -2,27 +2,11 @@
   "priority": 10,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.instructions",
-          "contains": "Choose the next encounter orchestration step"
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "I raise my empty hand"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "Choose the next encounter orchestration step"}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "I raise my empty hand"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "decision-deescalation-success-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "decision-deescalation-success-response.json"}
 }

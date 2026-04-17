@@ -2,27 +2,11 @@
   "priority": 10,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.instructions",
-          "contains": "Choose the next encounter orchestration step"
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "I charge the goblins and attack with my longsword."
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "Choose the next encounter orchestration step"}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "I charge the goblins and attack with my longsword."}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "decision-hostile-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "decision-hostile-response.json"}
 }

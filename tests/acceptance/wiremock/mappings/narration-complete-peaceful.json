@@ -2,27 +2,11 @@
   "priority": 20,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "\"purpose\": \"complete_encounter\""
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "peaceful"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"complete_encounter\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "peaceful"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "bodyFileName": "narration-complete-peaceful-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-complete-peaceful-response.json"}
 }

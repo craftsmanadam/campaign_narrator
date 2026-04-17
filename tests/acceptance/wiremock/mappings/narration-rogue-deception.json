@@ -2,25 +2,11 @@
   "priority": 5,
   "request": {
     "method": "POST",
-    "urlPath": "/v1/responses",
+    "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "\"purpose\": \"social_resolution\""
-        }
-      },
-      {
-        "matchesJsonPath": {
-          "expression": "$.input",
-          "contains": "Talia's merchant tale convinces the goblins"
-        }
-      }
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"social_resolution\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "Talia's merchant tale convinces the goblins"}}
     ]
   },
-  "response": {
-    "status": 200,
-    "headers": { "Content-Type": "application/json" },
-    "bodyFileName": "narration-rogue-deception-response.json"
-  }
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-rogue-deception-response.json"}
 }

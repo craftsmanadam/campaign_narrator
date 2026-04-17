@@ -1,25 +1,23 @@
 {
-  "id": "resp_rules_social_success_001",
-  "object": "response",
-  "created_at": 1710000200,
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
   "model": "gpt-5.4",
-  "output": [
-    {
-      "id": "msg_rules_social_success_001",
-      "type": "message",
+  "choices": [{
+    "index": 0,
+    "message": {
       "role": "assistant",
-      "status": "completed",
-      "content": [
-        {
-          "type": "output_text",
-          "text": "{\"is_legal\":true,\"action_type\":\"persuasion\",\"summary\":\"The goblins back away from the ruined camp.\",\"reasoning_summary\":\"Talia offers a credible nonviolent exit and succeeds at the check.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+5\",\"purpose\":\"Persuasion check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp\",\"value\":\"The goblins back away from the ruined camp.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp\",\"value\":\"encounter_complete\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp\",\"value\":\"de-escalated\"}],\"rule_references\":[]}",
-          "annotations": []
+      "content": null,
+      "tool_calls": [{
+        "id": "call_xxx",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"persuasion\",\"summary\":\"The goblins back away from the ruined camp.\",\"reasoning_summary\":\"Talia offers a credible nonviolent exit and succeeds at the check.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+5\",\"purpose\":\"Persuasion check\"}],\"state_effects\":[{\"effect_type\":\"append_public_event\",\"target\":\"encounter:goblin-camp\",\"value\":\"The goblins back away from the ruined camp.\"},{\"effect_type\":\"set_phase\",\"target\":\"encounter:goblin-camp\",\"value\":\"encounter_complete\"},{\"effect_type\":\"set_encounter_outcome\",\"target\":\"encounter:goblin-camp\",\"value\":\"de-escalated\"}],\"rule_references\":[]}"
         }
-      ]
-    }
-  ],
-  "parallel_tool_calls": false,
-  "tool_choice": "auto",
-  "tools": [],
-  "status": "completed"
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
 }

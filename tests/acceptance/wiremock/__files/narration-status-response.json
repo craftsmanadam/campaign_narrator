@@ -1,25 +1,12 @@
 {
-  "id": "resp_narration_status_001",
-  "object": "response",
-  "created_at": 1710000110,
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
   "model": "gpt-5.4",
-  "output": [
-    {
-      "id": "msg_narration_status_001",
-      "type": "message",
-      "role": "assistant",
-      "status": "completed",
-      "content": [
-        {
-          "type": "output_text",
-          "text": "Status: Talia has 12 of 12 hit points\nVisible creatures: Talia, Goblin Scout",
-          "annotations": []
-        }
-      ]
-    }
-  ],
-  "parallel_tool_calls": false,
-  "tool_choice": "auto",
-  "tools": [],
-  "status": "completed"
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "Status: Talia has 12 of 12 hit points\nVisible creatures: Talia, Goblin Scout"},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
 }

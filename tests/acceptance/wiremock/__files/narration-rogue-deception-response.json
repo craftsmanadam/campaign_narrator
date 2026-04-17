@@ -1,21 +1,12 @@
 {
-  "id": "resp_narration_rogue_deception_001",
-  "object": "response",
-  "created_at": 1710001003,
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
   "model": "gpt-5.4",
-  "output": [{
-    "id": "msg_narration_rogue_deception_001",
-    "type": "message",
-    "role": "assistant",
-    "status": "completed",
-    "content": [{
-      "type": "output_text",
-      "text": "Deception check: Talia rolls with advantage from the shadows.\nThe goblins buy the merchant story.\nEncounter outcome: de-escalated",
-      "annotations": []
-    }]
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "Deception check: Talia rolls with advantage from the shadows.\nThe goblins buy the merchant story.\nEncounter outcome: de-escalated"},
+    "finish_reason": "stop"
   }],
-  "parallel_tool_calls": false,
-  "tool_choice": "auto",
-  "tools": [],
-  "status": "completed"
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
 }

@@ -1,5 +1,7 @@
 """Unit tests for the generic campaign narrator domain models."""
 
+from __future__ import annotations
+
 from dataclasses import FrozenInstanceError, replace
 
 import pytest
@@ -7,6 +9,9 @@ from campaignnarrator.domain import models
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
+    CombatIntent,
+    CombatResult,
+    CombatStatus,
     EncounterPhase,
     EncounterState,
     FeatState,
@@ -17,15 +22,19 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     OrchestrationDecision,
     PlayerInput,
+    PlayerIO,
     RecoveryPeriod,
     ResourceState,
     RollRequest,
     RollVisibility,
     RulesAdjudication,
     RulesAdjudicationRequest,
+    SceneOpeningResponse,
     StateEffect,
+    TurnResources,
     WeaponState,
 )
+from pydantic import ValidationError
 
 from tests.fixtures.fighter_talia import TALIA
 from tests.fixtures.goblin_scout import make_goblin_scout
@@ -325,13 +334,13 @@ def test_actor_state_resources_are_resource_state_objects() -> None:
         ac_breakdown=(),
         resources=(
             ResourceState(
-                "second_wind",
+                resource="second_wind",
                 current=1,
                 max=1,
                 recovers_after=RecoveryPeriod.SHORT_REST,
             ),
             ResourceState(
-                "savage_attacker",
+                resource="savage_attacker",
                 current=1,
                 max=1,
                 recovers_after=RecoveryPeriod.TURN,
@@ -800,3 +809,230 @@ def test_actor_state_references_defaults_to_empty_tuple() -> None:
         ac_breakdown=(),
     )
     assert actor.references == ()
+
+
+# ---------------------------------------------------------------------------
+# PlayerIO
+# ---------------------------------------------------------------------------
+
+
+def test_player_io_protocol_has_prompt_and_display() -> None:
+    assert callable(getattr(PlayerIO, "prompt", None)) or hasattr(
+        PlayerIO, "__protocol_attrs__"
+    )
+
+
+# ---------------------------------------------------------------------------
+# CombatStatus
+# ---------------------------------------------------------------------------
+
+
+def test_combat_status_has_expected_values() -> None:
+    assert CombatStatus.COMPLETE == "complete"
+    assert CombatStatus.PLAYER_DOWN_NO_ALLIES == "player_down_no_allies"
+
+
+# ---------------------------------------------------------------------------
+# TurnResources
+# ---------------------------------------------------------------------------
+
+
+def test_turn_resources_defaults_to_all_available_no_movement() -> None:
+    resources = TurnResources()
+    assert resources.action_available is True
+    assert resources.bonus_action_available is True
+    assert resources.reaction_available is True
+    assert resources.movement_remaining == 0
+
+
+def test_turn_resources_initialized_with_actor_speed() -> None:
+    resources = TurnResources(movement_remaining=30)
+    assert resources.movement_remaining == 30  # noqa: PLR2004
+
+
+def test_turn_resources_replace_marks_action_used() -> None:
+    resources = TurnResources(movement_remaining=30)
+    spent = replace(resources, action_available=False)
+    assert spent.action_available is False
+    assert spent.movement_remaining == 30  # noqa: PLR2004
+
+
+# ---------------------------------------------------------------------------
+# CombatResult
+# ---------------------------------------------------------------------------
+
+
+def test_combat_result_carries_final_state_and_status() -> None:
+    actor = ActorState(
+        actor_id="pc:talia",
+        name="Talia",
+        actor_type=ActorType.PC,
+        hp_max=44,
+        hp_current=44,
+        armor_class=20,
+        strength=16,
+        dexterity=14,
+        constitution=16,
+        intelligence=10,
+        wisdom=12,
+        charisma=8,
+        proficiency_bonus=3,
+        initiative_bonus=5,
+        speed=30,
+        attacks_per_action=2,
+        action_options=(),
+        ac_breakdown=(),
+    )
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actors={"pc:talia": actor},
+    )
+    result = CombatResult(
+        status=CombatStatus.COMPLETE,
+        final_state=state,
+        death_saves_remaining=None,
+    )
+    assert result.status == CombatStatus.COMPLETE
+    assert result.death_saves_remaining is None
+
+
+def test_encounter_state_defaults_scene_tone_to_none() -> None:
+    state = EncounterState(
+        encounter_id="x",
+        phase=EncounterPhase.SOCIAL,
+        setting="Forest",
+        actors={"pc:talia": TALIA},
+    )
+    assert state.scene_tone is None
+
+
+def test_encounter_state_accepts_scene_tone() -> None:
+    state = EncounterState(
+        encounter_id="x",
+        phase=EncounterPhase.SOCIAL,
+        setting="Forest",
+        actors={"pc:talia": TALIA},
+        scene_tone="tense and foreboding",
+    )
+    assert state.scene_tone == "tense and foreboding"
+
+
+def test_narration_defaults_scene_tone_to_none() -> None:
+    n = Narration(text="hello")
+    assert n.scene_tone is None
+
+
+def test_narration_accepts_scene_tone() -> None:
+    n = Narration(text="hello", scene_tone="warm and welcoming")
+    assert n.scene_tone == "warm and welcoming"
+
+
+def test_combat_result_player_down_carries_death_saves() -> None:
+    actor = ActorState(
+        actor_id="pc:talia",
+        name="Talia",
+        actor_type=ActorType.PC,
+        hp_max=44,
+        hp_current=0,
+        armor_class=20,
+        strength=16,
+        dexterity=14,
+        constitution=16,
+        intelligence=10,
+        wisdom=12,
+        charisma=8,
+        proficiency_bonus=3,
+        initiative_bonus=5,
+        speed=30,
+        attacks_per_action=2,
+        action_options=(),
+        ac_breakdown=(),
+    )
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actors={"pc:talia": actor},
+    )
+    result = CombatResult(
+        status=CombatStatus.PLAYER_DOWN_NO_ALLIES,
+        final_state=state,
+        death_saves_remaining=2,
+    )
+    assert result.death_saves_remaining == 2  # noqa: PLR2004
+
+
+# ---------------------------------------------------------------------------
+# BaseModel LLM output model tests
+# ---------------------------------------------------------------------------
+
+
+def test_roll_request_rejects_invalid_dice_expression() -> None:
+    with pytest.raises(ValidationError, match="invalid dice expression"):
+        RollRequest(owner="player", visibility=RollVisibility.PUBLIC, expression="bad")
+
+
+def test_roll_request_accepts_valid_dice_expressions() -> None:
+    vis = RollVisibility.PUBLIC
+    for expr in ("1d20", "2d6+3", "4d6kh3", "1d4-1"):
+        req = RollRequest(owner="player", visibility=vis, expression=expr)
+        assert req.expression == expr
+
+
+def test_rules_adjudication_defaults_to_empty_tuples() -> None:
+    adj = RulesAdjudication(is_legal=True, action_type="attack", summary="ok")
+    assert adj.roll_requests == ()
+    assert adj.state_effects == ()
+    assert adj.rule_references == ()
+    assert adj.reasoning_summary == ""
+
+
+def test_rules_adjudication_accepts_nested_models() -> None:
+    adj = RulesAdjudication(
+        is_legal=True,
+        action_type="attack",
+        summary="ok",
+        roll_requests=(
+            RollRequest(
+                owner="player", visibility=RollVisibility.PUBLIC, expression="1d20"
+            ),
+        ),
+        state_effects=(
+            StateEffect(effect_type="damage", target="npc:goblin-1", value=-5),
+        ),
+        rule_references=("PHB p.192",),
+    )
+    assert len(adj.roll_requests) == 1
+    assert len(adj.state_effects) == 1
+
+
+def test_combat_intent_accepts_valid_literals() -> None:
+    for val in ("end_turn", "query_status", "exit_session", "combat_action"):
+        assert CombatIntent(intent=val).intent == val
+
+
+def test_combat_intent_rejects_invalid_literal() -> None:
+    with pytest.raises(ValidationError):
+        CombatIntent(intent="fly_away")
+
+
+def test_scene_opening_response_stores_text_and_tone() -> None:
+    r = SceneOpeningResponse(text="The ruins loom.", scene_tone="eerie and quiet")
+    assert r.text == "The ruins loom."
+    assert r.scene_tone == "eerie and quiet"
+
+
+def test_orchestration_decision_stores_fields() -> None:
+    d = OrchestrationDecision(
+        next_step="adjudicate_action",
+        next_actor=None,
+        requires_rules_resolution=True,
+        recommended_check="Persuasion",
+        phase_transition=None,
+        player_prompt=None,
+        reason_summary="Player attempts to reason with the goblins.",
+    )
+    assert d.next_step == "adjudicate_action"
+    assert d.requires_rules_resolution is True
