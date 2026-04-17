@@ -2,15 +2,40 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
+from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.domain.models import (
+    CombatAssessment,
+    CritReview,
     EncounterPhase,
     NarrationFrame,
     SceneOpeningResponse,
 )
+from pydantic_ai import Agent
+from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+
+def _make_assess_model(data: dict) -> FunctionModel:
+    """FunctionModel that returns a CombatAssessment tool call."""
+
+    def fn(messages, info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[ToolCallPart("final_result", json.dumps(data))])
+
+    return FunctionModel(fn)
+
+
+def _make_crit_model(data: dict) -> FunctionModel:
+    """FunctionModel that returns a CritReview tool call."""
+
+    def fn(messages, info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[ToolCallPart("final_result", json.dumps(data))])
+
+    return FunctionModel(fn)
 
 
 def _frame(purpose: str = "social_resolution") -> NarrationFrame:
@@ -42,6 +67,8 @@ def _make_narrator(
         adapter=mock_adapter,
         personality="Test narrator.",
         _scene_agent=mock_scene_agent,
+        _assess_agent=MagicMock(),
+        _crit_agent=MagicMock(),
     )
     return narrator, mock_adapter, mock_scene_agent
 
@@ -127,6 +154,186 @@ def test_narrate_scene_opening_prepends_personality_to_scene_instructions() -> N
         adapter=MagicMock(),
         personality="Gothic style.",
         _scene_agent=mock_scene_agent,
+        _assess_agent=MagicMock(),
+        _crit_agent=MagicMock(),
     )
     assert "Gothic style." in narrator._scene_instructions
     assert "opening a new encounter scene" in narrator._scene_instructions
+
+
+# ---------------------------------------------------------------------------
+# declare_npc_intent_from_json
+# ---------------------------------------------------------------------------
+
+
+def test_declare_npc_intent_from_json_returns_prose_string() -> None:
+    """declare_npc_intent_from_json should return the adapter generate_text output."""
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    adapter.generate_text.return_value = (
+        "The goblin scout eyes Talia hungrily and raises its scimitar."
+    )
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=MagicMock(),
+        _crit_agent=MagicMock(),
+    )
+    context_json = json.dumps(
+        {"actor_id": "npc:goblin-1", "name": "Goblin Scout", "hp_current": 7}
+    )
+    result = narrator.declare_npc_intent_from_json(context_json)
+    assert result == "The goblin scout eyes Talia hungrily and raises its scimitar."
+    adapter.generate_text.assert_called_once()
+    _, call_kwargs = adapter.generate_text.call_args
+    assert call_kwargs["input_text"] == context_json
+
+
+def test_declare_npc_intent_from_json_raises_value_error_on_blank_response() -> None:
+    """Blank prose output should fail closed with ValueError."""
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    adapter.generate_text.return_value = "   "
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=MagicMock(),
+        _crit_agent=MagicMock(),
+    )
+    with pytest.raises(ValueError, match="empty npc intent"):
+        narrator.declare_npc_intent_from_json(json.dumps({"actor_id": "npc:goblin-1"}))
+
+
+# ---------------------------------------------------------------------------
+# assess_combat_from_json
+# ---------------------------------------------------------------------------
+
+
+def test_assess_combat_from_json_returns_active_assessment_when_combat_continues() -> (
+    None
+):
+    """When the model signals combat is still active, outcome must be None."""
+    assess_agent = Agent(
+        _make_assess_model({"combat_active": True, "outcome": None}),
+        output_type=CombatAssessment,
+        instructions="assess",
+    )
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=assess_agent,
+        _crit_agent=MagicMock(),
+    )
+    assessment = narrator.assess_combat_from_json(
+        json.dumps({"actors": [], "recent_events": []})
+    )
+    assert isinstance(assessment, CombatAssessment)
+    assert assessment.combat_active is True
+    assert assessment.outcome is None
+
+
+def test_assess_combat_from_json_returns_inactive_assessment_with_outcome() -> None:
+    """When combat ends, the assessment must carry a populated CombatOutcome."""
+    assess_agent = Agent(
+        _make_assess_model(
+            {
+                "combat_active": False,
+                "outcome": {
+                    "short_description": "Goblins routed",
+                    "full_description": (
+                        "The last goblin stumbles away, broken and bleeding."
+                    ),
+                },
+            }
+        ),
+        output_type=CombatAssessment,
+        instructions="assess",
+    )
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=assess_agent,
+        _crit_agent=MagicMock(),
+    )
+    assessment = narrator.assess_combat_from_json(
+        json.dumps({"actors": [], "recent_events": []})
+    )
+    assert assessment.combat_active is False
+    assert assessment.outcome is not None
+    assert assessment.outcome.short_description == "Goblins routed"
+    assert "broken and bleeding" in assessment.outcome.full_description
+
+
+def test_assess_combat_from_json_raises_value_error_when_inactive_but_no_outcome() -> (
+    None
+):
+    """combat_active=False with outcome=None is a semantic error — must raise."""
+    assess_agent = Agent(
+        _make_assess_model({"combat_active": False, "outcome": None}),
+        output_type=CombatAssessment,
+        instructions="assess",
+    )
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=assess_agent,
+        _crit_agent=MagicMock(),
+    )
+    with pytest.raises(ValueError, match="combat_active=False but no outcome"):
+        narrator.assess_combat_from_json(
+            json.dumps({"actors": [], "recent_events": []})
+        )
+
+
+# ---------------------------------------------------------------------------
+# review_crit_from_json
+# ---------------------------------------------------------------------------
+
+
+def test_review_crit_from_json_returns_approved_review() -> None:
+    """Approved critical hit should return CritReview(approved=True)."""
+    crit_agent = Agent(
+        _make_crit_model({"approved": True, "reason": None}),
+        output_type=CritReview,
+        instructions="review crit",
+    )
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=MagicMock(),
+        _crit_agent=crit_agent,
+    )
+    review = narrator.review_crit_from_json(
+        json.dumps({"attacker": "npc:goblin-1", "target": "pc:talia", "damage": 8})
+    )
+    assert isinstance(review, CritReview)
+    assert review.approved is True
+    assert review.reason is None
+
+
+def test_review_crit_from_json_returns_downgraded_review_with_reason() -> None:
+    """Downgraded critical hit should return CritReview(approved=False, reason=...)."""
+    crit_agent = Agent(
+        _make_crit_model(
+            {
+                "approved": False,
+                "reason": "Would be unfair this early in the encounter.",
+            }
+        ),
+        output_type=CritReview,
+        instructions="review crit",
+    )
+    adapter = MagicMock(spec=PydanticAIAdapter)
+    narrator = NarratorAgent(
+        adapter=adapter,
+        _scene_agent=MagicMock(),
+        _assess_agent=MagicMock(),
+        _crit_agent=crit_agent,
+    )
+    review = narrator.review_crit_from_json(
+        json.dumps({"attacker": "npc:goblin-1", "target": "pc:talia", "damage": 8})
+    )
+    assert review.approved is False
+    assert review.reason == "Would be unfair this early in the encounter."

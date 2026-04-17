@@ -12,7 +12,10 @@ import pytest
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
+    CombatAssessment,
     CombatIntent,
+    CombatOutcome,
+    CritReview,
     EncounterPhase,
     EncounterState,
     InitiativeTurn,
@@ -77,6 +80,21 @@ class FakeNarratorAgent:
             audience="player",
             scene_tone=tone,
         )
+
+    def declare_npc_intent_from_json(self, context_json: str) -> str:
+        return "The enemy advances."
+
+    def assess_combat_from_json(self, state_json: str) -> CombatAssessment:
+        return CombatAssessment(
+            combat_active=False,
+            outcome=CombatOutcome(
+                short_description="End",
+                full_description="Combat concluded.",
+            ),
+        )
+
+    def review_crit_from_json(self, context_json: str) -> CritReview:
+        return CritReview(approved=True)
 
 
 class FakeDice:

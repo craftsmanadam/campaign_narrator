@@ -34,6 +34,8 @@ def _apply_state_effect(state: EncounterState, effect: StateEffect) -> Encounter
         return _apply_set_encounter_outcome(state, effect.target, effect.value)
     if effect.effect_type == "change_hp":
         return _apply_change_hp(state, effect.target, effect.value)
+    if effect.effect_type == "inventory_spent":
+        return _apply_inventory_spent(state, effect.target, effect.value)
     raise ValueError(  # noqa: TRY003
         f"unsupported state effect: {effect.effect_type}"
     )
@@ -98,6 +100,27 @@ def _apply_change_hp(
         hp_current=max(0, min(actor.hp_max, actor.hp_current + delta)),
     )
     return _replace_actor(state, updated_actor)
+
+
+def _apply_inventory_spent(
+    state: EncounterState,
+    target: str,
+    value: object,
+) -> EncounterState:
+    actor = _require_actor(state, target)
+    item_id = _require_string(value, "inventory item_id")
+    inventory = list(actor.inventory)
+    for i, inv_item in enumerate(inventory):
+        if inv_item.item_id == item_id:
+            if inv_item.count > 1:
+                inventory[i] = replace(inv_item, count=inv_item.count - 1)
+            else:
+                inventory.pop(i)
+            updated_actor = replace(actor, inventory=tuple(inventory))
+            return _replace_actor(state, updated_actor)
+    raise ValueError(  # noqa: TRY003
+        f"actor {actor.actor_id} does not have item with item_id: {item_id}"
+    )
 
 
 def _replace_actor(state: EncounterState, actor: ActorState) -> EncounterState:

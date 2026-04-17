@@ -10,6 +10,7 @@ from campaignnarrator.domain.models import (
     ActorType,
     EncounterPhase,
     EncounterState,
+    InventoryItem,
     StateEffect,
 )
 from campaignnarrator.tools.state_updates import apply_state_effects
@@ -264,3 +265,72 @@ def test_scene_tone_preserved_through_set_encounter_outcome() -> None:
     result = apply_state_effects(state, (effect,))
 
     assert result.scene_tone == "warm and inviting"
+
+
+def _state_with_inventory(*items: InventoryItem) -> EncounterState:
+    actor = ActorState(
+        actor_id="pc:talia",
+        name="Talia",
+        actor_type=ActorType.PC,
+        hp_current=44,
+        hp_max=44,
+        armor_class=20,
+        strength=18,
+        dexterity=14,
+        constitution=16,
+        intelligence=10,
+        wisdom=12,
+        charisma=8,
+        proficiency_bonus=3,
+        initiative_bonus=5,
+        speed=30,
+        attacks_per_action=2,
+        action_options=(),
+        ac_breakdown=(),
+        inventory=items,
+    )
+    return EncounterState(
+        encounter_id="test-inv",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actors={"pc:talia": actor},
+    )
+
+
+def test_inventory_spent_decrements_count_from_two_to_one() -> None:
+    state = _state_with_inventory(
+        InventoryItem(item_id="potion-1", item="healing potion", count=2),
+    )
+    effect = StateEffect(
+        effect_type="inventory_spent", target="pc:talia", value="potion-1"
+    )
+    updated = apply_state_effects(state, (effect,))
+    remaining = updated.actors["pc:talia"].inventory
+    assert len(remaining) == 1
+    assert remaining[0].item == "healing potion"
+    assert remaining[0].count == 1
+
+
+def test_inventory_spent_removes_item_entirely_when_count_was_one() -> None:
+    state = _state_with_inventory(
+        InventoryItem(item_id="potion-1", item="healing potion", count=1),
+        InventoryItem(item_id="rope-1", item="rope", count=1),
+    )
+    effect = StateEffect(
+        effect_type="inventory_spent", target="pc:talia", value="potion-1"
+    )
+    updated = apply_state_effects(state, (effect,))
+    remaining = updated.actors["pc:talia"].inventory
+    assert len(remaining) == 1
+    assert remaining[0].item == "rope"
+
+
+def test_inventory_spent_raises_value_error_for_unknown_item() -> None:
+    state = _state_with_inventory(
+        InventoryItem(item_id="rope-1", item="rope", count=1),
+    )
+    effect = StateEffect(
+        effect_type="inventory_spent", target="pc:talia", value="lantern"
+    )
+    with pytest.raises(ValueError, match=r"does not have item with item_id: lantern"):
+        apply_state_effects(state, (effect,))

@@ -115,6 +115,7 @@ def _resource_state_to_json(resource: ResourceState) -> dict[str, object]:
 
 def _inventory_item_to_json(item: InventoryItem) -> dict[str, object]:
     return {
+        "item_id": item.item_id,
         "item": item.item,
         "count": item.count,
         "charges": item.charges,
@@ -373,6 +374,7 @@ def _inventory_from_seed(seed: Mapping[str, object]) -> tuple[InventoryItem, ...
             )
             items.append(
                 InventoryItem(
+                    item_id=str(i.get("item_id", "")),
                     item=str(i.get("item", "")),
                     count=int(i.get("count", 0)),
                     charges=int(i["charges"]) if i.get("charges") is not None else None,

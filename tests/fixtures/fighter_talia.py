@@ -114,6 +114,7 @@ TALIA = ActorState(
     # Inventory
     inventory=(
         InventoryItem(
+            item_id="potion-1",
             item="Potion of Healing",
             count=2,
             reference="equipment/potions.json#potion-of-healing",

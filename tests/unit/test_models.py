@@ -9,9 +9,12 @@ from campaignnarrator.domain import models
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
+    CombatAssessment,
     CombatIntent,
+    CombatOutcome,
     CombatResult,
     CombatStatus,
+    CritReview,
     EncounterPhase,
     EncounterState,
     FeatState,
@@ -374,7 +377,9 @@ def test_actor_state_inventory_holds_items() -> None:
         attacks_per_action=1,
         action_options=("Attack",),
         ac_breakdown=(),
-        inventory=(InventoryItem(item="Potion of Healing", count=2),),
+        inventory=(
+            InventoryItem(item_id="potion-1", item="Potion of Healing", count=2),
+        ),
     )
     assert actor.inventory[0].item == "Potion of Healing"
     assert actor.inventory[0].count == 2  # noqa: PLR2004
@@ -604,7 +609,8 @@ def test_resource_state_is_immutable() -> None:
 
 
 def test_inventory_item_minimal_construction() -> None:
-    item = InventoryItem(item="Potion of Healing", count=2)
+    item = InventoryItem(item_id="potion-1", item="Potion of Healing", count=2)
+    assert item.item_id == "potion-1"
     assert item.item == "Potion of Healing"
     assert item.count == 2  # noqa: PLR2004
     assert item.charges is None
@@ -615,6 +621,7 @@ def test_inventory_item_minimal_construction() -> None:
 
 def test_inventory_item_with_charges() -> None:
     item = InventoryItem(
+        item_id="wand-1",
         item="Wand of Magic Missiles",
         count=1,
         charges=7,
@@ -627,7 +634,7 @@ def test_inventory_item_with_charges() -> None:
 
 
 def test_inventory_item_is_immutable() -> None:
-    item = InventoryItem(item="Torch", count=5)
+    item = InventoryItem(item_id="torch-1", item="Torch", count=5)
     with pytest.raises(FrozenInstanceError):
         item.count = 4  # type: ignore[misc]
 
@@ -1036,3 +1043,50 @@ def test_orchestration_decision_stores_fields() -> None:
     )
     assert d.next_step == "adjudicate_action"
     assert d.requires_rules_resolution is True
+
+
+# ---------------------------------------------------------------------------
+# CombatOutcome, CombatAssessment, CritReview
+# ---------------------------------------------------------------------------
+
+
+def test_combat_outcome_stores_short_and_full_description() -> None:
+    outcome = CombatOutcome(
+        short_description="Goblins defeated",
+        full_description=(
+            "With a final blow, Talia drives the last goblin back into the forest."
+        ),
+    )
+    assert outcome.short_description == "Goblins defeated"
+    assert outcome.full_description == (
+        "With a final blow, Talia drives the last goblin back into the forest."
+    )
+
+
+def test_combat_assessment_active_has_no_outcome() -> None:
+    assessment = CombatAssessment(combat_active=True, outcome=None)
+    assert assessment.combat_active is True
+    assert assessment.outcome is None
+
+
+def test_combat_assessment_inactive_has_populated_outcome() -> None:
+    outcome = CombatOutcome(
+        short_description="Victory",
+        full_description="The goblins flee in terror.",
+    )
+    assessment = CombatAssessment(combat_active=False, outcome=outcome)
+    assert assessment.combat_active is False
+    assert assessment.outcome is not None
+    assert assessment.outcome.short_description == "Victory"
+
+
+def test_crit_review_defaults_reason_to_none() -> None:
+    review = CritReview(approved=True)
+    assert review.approved is True
+    assert review.reason is None
+
+
+def test_crit_review_stores_approved_and_reason() -> None:
+    review = CritReview(approved=False, reason="Would be anti-climactic here.")
+    assert review.approved is False
+    assert review.reason == "Would be anti-climactic here."

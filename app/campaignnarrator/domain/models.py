@@ -91,7 +91,8 @@ class ResourceState:
 class InventoryItem:
     """A physical item carried by an actor."""
 
-    item: str
+    item_id: str  # unique within actor inventory, e.g. "potion-1", "rope-1"
+    item: str  # display name
     count: int
     charges: int | None = None  # current charges (e.g. wand)
     max_charges: int | None = None
@@ -289,6 +290,30 @@ class CombatResult:
     death_saves_remaining: int | None  # None unless status is PLAYER_DOWN_NO_ALLIES
 
 
+class CombatOutcome(BaseModel):
+    """Compact and rich description of how a combat encounter ended."""
+
+    model_config = ConfigDict(frozen=True)
+    short_description: str  # compact, for future encounter logs
+    full_description: str  # rich prose shown to player
+
+
+class CombatAssessment(BaseModel):
+    """Narrator's assessment of whether combat should continue."""
+
+    model_config = ConfigDict(frozen=True)
+    combat_active: bool
+    outcome: CombatOutcome | None  # None when combat_active is True
+
+
+class CritReview(BaseModel):
+    """Narrator's decision on an NPC critical hit against a PC."""
+
+    model_config = ConfigDict(frozen=True)
+    approved: bool
+    reason: str | None = None  # explanation when approved=False
+
+
 class OrchestrationDecision(BaseModel):
     """Structured output from the orchestrator."""
 
@@ -432,9 +457,12 @@ __all__ = [
     "ActorState",
     "ActorType",
     "Adjudication",
+    "CombatAssessment",
     "CombatIntent",
+    "CombatOutcome",
     "CombatResult",
     "CombatStatus",
+    "CritReview",
     "EncounterPhase",
     "EncounterState",
     "FeatState",
