@@ -30,7 +30,7 @@ class ActorRepository:
             raise FileNotFoundError(  # noqa: TRY003
                 f"player actor file not found: {self._player_path}"
             )
-        return _actor_state_from_seed(json.loads(self._player_path.read_text()))
+        return actor_state_from_seed(json.loads(self._player_path.read_text()))
 
     def save(self, actor: ActorState) -> None:
         """Persist actor to disk. Strips references before writing."""
@@ -79,6 +79,9 @@ def _actor_state_to_json(actor: ActorState) -> dict[str, object]:
         "available_spells": list(actor.available_spells),
         "concentration": actor.concentration,
         "personality": actor.personality,
+        "race": actor.race,
+        "description": actor.description,
+        "background": actor.background,
         "is_visible": actor.is_visible,
     }
 
@@ -127,7 +130,7 @@ def _inventory_item_to_json(item: InventoryItem) -> dict[str, object]:
     }
 
 
-def _actor_state_from_seed(
+def actor_state_from_seed(
     seed: object,
     *,
     actor_id: str = "unknown",
@@ -214,6 +217,9 @@ def _actor_state_from_seed(
         ),
         concentration=_optional_string_from_seed(seed, "concentration"),
         personality=_optional_string_from_seed(seed, "personality"),
+        race=_optional_string_from_seed(seed, "race"),
+        description=_optional_string_from_seed(seed, "description"),
+        background=_optional_string_from_seed(seed, "background"),
         is_visible=_bool_field_from_seed(seed, resolved_actor_id, "is_visible"),
     )
 

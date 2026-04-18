@@ -47,6 +47,70 @@ class RecoveryPeriod(str, Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class Milestone:
+    """A campaign story anchor point. Narrator-only — never shown to the player."""
+
+    milestone_id: str
+    title: str
+    description: str
+    completed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignState:
+    """Top-level campaign definition.
+
+    Narrator-only fields must never appear in player-facing prompts.
+    """
+
+    campaign_id: str
+    name: str
+    setting: str
+    narrator_personality: str
+    # --- Narrator-only fields (never send to player-facing prompts) ---
+    hidden_goal: str
+    bbeg_name: str
+    bbeg_description: str
+    milestones: tuple[Milestone, ...]
+    # --- Progress tracking ---
+    current_milestone_index: int
+    starting_level: int
+    target_level: int
+    # --- Player inputs ---
+    player_brief: str
+    player_actor_id: str
+    bbeg_actor_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ModuleState:
+    """One story arc within a campaign. Generated lazily as play progresses."""
+
+    module_id: str
+    campaign_id: str
+    title: str
+    summary: str
+    guiding_milestone_id: str
+    encounters: tuple[str, ...]
+    current_encounter_index: int
+    completed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignEvent:
+    """A summarised story event appended to the campaign event log."""
+
+    campaign_id: str
+    # encounter_completed | milestone_reached | notable_moment
+    # player_downed | npc_death | module_completed
+    event_type: str
+    summary: str  # narrator-written, 1-3 sentences
+    timestamp: str  # ISO 8601
+    module_id: str | None = None
+    encounter_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class FeatState:
     """A feat carried by an actor, with LLM-readable effect text."""
 
@@ -192,6 +256,11 @@ class ActorState:
     # --- Visibility ---
     is_visible: bool = True
 
+    # --- Character creation fields (persisted) ---
+    race: str | None = None
+    description: str | None = None  # physical appearance
+    background: str | None = None  # backstory text
+
     # --- Compendium references (transient — populated at load time, not persisted) ---
     references: tuple[str, ...] = field(default_factory=tuple)
 
@@ -240,9 +309,11 @@ class EncounterState:
 
 @dataclass(frozen=True, slots=True)
 class GameState:
-    """Top-level game state: always-present player + optional active encounter."""
+    """Top-level game state: player + optional campaign/module/encounter."""
 
     player: ActorState
+    campaign: CampaignState | None = None
+    module: ModuleState | None = None
     encounter: EncounterState | None = None
 
 
@@ -457,6 +528,8 @@ __all__ = [
     "ActorState",
     "ActorType",
     "Adjudication",
+    "CampaignEvent",
+    "CampaignState",
     "CombatAssessment",
     "CombatIntent",
     "CombatOutcome",
@@ -469,6 +542,8 @@ __all__ = [
     "GameState",
     "InitiativeTurn",
     "InventoryItem",
+    "Milestone",
+    "ModuleState",
     "Narration",
     "NarrationFrame",
     "OrchestrationDecision",

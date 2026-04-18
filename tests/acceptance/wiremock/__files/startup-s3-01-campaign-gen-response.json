@@ -1,0 +1,23 @@
+{
+  "id": "resp_s3_01",
+  "object": "chat.completion",
+  "created": 1710000020,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s3_01",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"name\":\"The Cursed Coast\",\"setting\":\"A fog-draped coastal city where the dead walk at low tide.\",\"narrator_personality\":\"Grim and theatrical.\",\"hidden_goal\":\"Awaken the drowned god.\",\"bbeg_name\":\"Malachar\",\"bbeg_description\":\"A lich bound to the tides.\",\"milestones\":[{\"milestone_id\":\"m1\",\"title\":\"First Blood\",\"description\":\"Survive.\"},{\"milestone_id\":\"m2\",\"title\":\"The Cult\",\"description\":\"Unmask.\"},{\"milestone_id\":\"m3\",\"title\":\"Reckoning\",\"description\":\"Face.\"}],\"target_level\":5}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 200, "completion_tokens": 150, "total_tokens": 350}
+}

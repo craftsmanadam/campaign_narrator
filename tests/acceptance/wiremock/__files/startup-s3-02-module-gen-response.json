@@ -1,0 +1,23 @@
+{
+  "id": "resp_s3_02",
+  "object": "chat.completion",
+  "created": 1710000021,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s3_02",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"title\":\"The Dockside Murders\",\"summary\":\"Bodies wash ashore nightly.\",\"guiding_milestone_id\":\"m1\",\"opening_encounter_seed\":\"You arrive at the fog-shrouded docks of Darkholm at dusk. A sailor's corpse bobs in the black water. A hooded figure watches from the shadows.\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 150, "completion_tokens": 80, "total_tokens": 230}
+}

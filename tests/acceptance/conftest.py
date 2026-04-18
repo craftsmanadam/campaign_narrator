@@ -35,6 +35,9 @@ _WIREMOCK_SCENARIO_TERMINAL_STATE: dict[str, str] = {
     "combat-s1": "S1-Done",
     "combat-s2": "S2-Done",
     "combat-s3": "S3-Done",
+    "startup-s1": "S1-Done",
+    "startup-s2": "S2-Done",
+    "startup-s3": "S3-Done",
 }
 
 
@@ -273,3 +276,132 @@ def cli_output_includes(
     """The CLI output should contain the expected text."""
 
     assert expected in cli_result.stdout
+
+
+_STARTUP_SCENARIO_TO_WIREMOCK: dict[str, str] = {
+    "startup-s1": "startup-s1",
+    "startup-s2": "startup-s2",
+    "startup-s3": "startup-s3",
+}
+
+_STARTUP_FIXTURE_DIR: dict[str, str] = {
+    "startup-s1": "new-player",
+    "startup-s2": "returning-with-campaign",
+    "startup-s3": "returning-without-campaign",
+}
+
+STARTUP_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "startup"
+
+
+@given(
+    parsers.parse("the game state is empty for scenario {scenario_name}"),
+    target_fixture="startup_config",
+)
+def game_state_empty(
+    scenario_name: str,
+    runtime_data_root: Path,
+    wiremock_stack: None,
+    request: pytest.FixtureRequest,
+) -> dict[str, str]:
+    """Set up an empty state (no player, no campaign) for the startup flow."""
+    state_dir = runtime_data_root / "state"
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+    state_dir.mkdir(parents=True)
+
+    wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
+    env: dict[str, str] = request.getfixturevalue("compose_environment")
+    _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)
+    return {"scenario_name": scenario_name}
+
+
+@given(
+    parsers.parse("the game state has a saved campaign for scenario {scenario_name}"),
+    target_fixture="startup_config",
+)
+def game_state_with_campaign(
+    scenario_name: str,
+    runtime_data_root: Path,
+    wiremock_stack: None,
+    request: pytest.FixtureRequest,
+) -> dict[str, str]:
+    """Set up player + campaign + active encounter for returning-player scenario."""
+    fixture_dir = STARTUP_FIXTURE_ROOT / _STARTUP_FIXTURE_DIR[scenario_name]
+    _copy_startup_fixtures(fixture_dir, runtime_data_root)
+    wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
+    env: dict[str, str] = request.getfixturevalue("compose_environment")
+    _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)
+    return {"scenario_name": scenario_name}
+
+
+_GIVEN_PLAYER_NO_CAMPAIGN = (
+    "the game state has a player but no campaign for scenario {scenario_name}"
+)
+
+
+@given(
+    parsers.parse(_GIVEN_PLAYER_NO_CAMPAIGN),
+    target_fixture="startup_config",
+)
+def game_state_player_no_campaign(
+    scenario_name: str,
+    runtime_data_root: Path,
+    wiremock_stack: None,
+    request: pytest.FixtureRequest,
+) -> dict[str, str]:
+    """Set up player-only state (no campaign) for returning-without-campaign."""
+    fixture_dir = STARTUP_FIXTURE_ROOT / _STARTUP_FIXTURE_DIR[scenario_name]
+    _copy_startup_fixtures(fixture_dir, runtime_data_root)
+    wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
+    env: dict[str, str] = request.getfixturevalue("compose_environment")
+    _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)
+    return {"scenario_name": scenario_name}
+
+
+def _copy_startup_fixtures(fixture_dir: Path, runtime_data_root: Path) -> None:
+    """Copy startup-specific fixtures into the runtime data root."""
+    if not fixture_dir.exists():
+        return
+    for source in fixture_dir.rglob("*"):
+        if not source.is_file():
+            continue
+        target = runtime_data_root / source.relative_to(fixture_dir)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+
+@when(
+    "the player runs the game with scripted input:",
+    target_fixture="cli_result",
+)
+def run_game_with_scripted_input(
+    compose_environment: dict[str, str],
+    startup_config: dict[str, str],
+    wiremock_stack: None,
+    docstring: str = "",
+) -> CompletedProcess[str]:
+    """Run the production CLI (no --encounter-id) with scripted stdin."""
+    completed_process = run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(PROJECT_ROOT / "docker-compose.acceptance.yml"),
+            "run",
+            "--rm",
+            "--no-deps",
+            "-T",
+            "app",
+            "--data-root",
+            "/runtime/data",
+        ],
+        input=docstring,
+        text=True,
+        capture_output=True,
+        timeout=90,
+        env=compose_environment,
+        cwd=PROJECT_ROOT,
+        check=False,
+    )
+    assert completed_process.returncode == 0, completed_process.stderr
+    return completed_process

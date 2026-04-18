@@ -1,0 +1,23 @@
+{
+  "scenarioName": "startup-s2",
+  "requiredScenarioState": "S2-02",
+  "newScenarioState": "S2-Done",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "scene_opening"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "startup-s2-02-narrator-scene-response.json"
+  }
+}

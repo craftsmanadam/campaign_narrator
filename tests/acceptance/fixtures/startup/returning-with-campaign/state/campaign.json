@@ -1,0 +1,20 @@
+{
+  "campaign_id": "c-startup-s2",
+  "name": "The Cursed Coast",
+  "setting": "A fog-draped coastal city where the dead walk at low tide.",
+  "narrator_personality": "Grim and theatrical, with a taste for irony.",
+  "hidden_goal": "Awaken the drowned god Malachar.",
+  "bbeg_name": "Malachar",
+  "bbeg_description": "A lich bound to the tides.",
+  "milestones": [
+    {"milestone_id": "m1", "title": "First Blood", "description": "Survive the docks.", "completed": false},
+    {"milestone_id": "m2", "title": "The Cult", "description": "Unmask the sea cult.", "completed": false},
+    {"milestone_id": "m3", "title": "Reckoning", "description": "Face Malachar.", "completed": false}
+  ],
+  "current_milestone_index": 0,
+  "starting_level": 1,
+  "target_level": 5,
+  "player_brief": "Dark coastal horror with undead.",
+  "player_actor_id": "pc:player",
+  "bbeg_actor_id": null
+}

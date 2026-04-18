@@ -1,0 +1,23 @@
+{
+  "scenarioName": "startup-s1",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "S1-02",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "warrior"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "startup-s1-01-class-choice-response.json"
+  }
+}

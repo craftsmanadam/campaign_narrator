@@ -9,6 +9,8 @@ from campaignnarrator.domain import models
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
+    CampaignEvent,
+    CampaignState,
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
@@ -21,6 +23,8 @@ from campaignnarrator.domain.models import (
     GameState,
     InitiativeTurn,
     InventoryItem,
+    Milestone,
+    ModuleState,
     Narration,
     NarrationFrame,
     OrchestrationDecision,
@@ -1090,3 +1094,185 @@ def test_crit_review_stores_approved_and_reason() -> None:
     review = CritReview(approved=False, reason="Would be anti-climactic here.")
     assert review.approved is False
     assert review.reason == "Would be anti-climactic here."
+
+
+# ---------------------------------------------------------------------------
+# Milestone
+# ---------------------------------------------------------------------------
+
+
+def test_milestone_is_frozen() -> None:
+    m = Milestone(milestone_id="m1", title="The Awakening", description="Evil stirs.")
+    with pytest.raises(FrozenInstanceError):
+        m.milestone_id = "x"  # type: ignore[misc]
+
+
+def test_milestone_default_not_completed() -> None:
+    m = Milestone(milestone_id="m1", title="T", description="D")
+    assert m.completed is False
+
+
+# ---------------------------------------------------------------------------
+# CampaignState
+# ---------------------------------------------------------------------------
+
+
+def test_campaign_state_is_frozen() -> None:
+    campaign = _make_campaign()
+    with pytest.raises(FrozenInstanceError):
+        campaign.name = "other"  # type: ignore[misc]
+
+
+def test_campaign_state_bbeg_actor_id_defaults_none() -> None:
+    assert _make_campaign().bbeg_actor_id is None
+
+
+# ---------------------------------------------------------------------------
+# ModuleState
+# ---------------------------------------------------------------------------
+
+
+def test_module_state_is_frozen() -> None:
+    mod = _make_module()
+    with pytest.raises(FrozenInstanceError):
+        mod.module_id = "x"  # type: ignore[misc]
+
+
+def test_module_state_completed_defaults_false() -> None:
+    assert _make_module().completed is False
+
+
+# ---------------------------------------------------------------------------
+# CampaignEvent
+# ---------------------------------------------------------------------------
+
+
+def test_campaign_event_is_frozen() -> None:
+    evt = CampaignEvent(
+        campaign_id="c1",
+        event_type="encounter_completed",
+        summary="The goblins were defeated.",
+        timestamp="2026-04-18T12:00:00Z",
+    )
+    with pytest.raises(FrozenInstanceError):
+        evt.campaign_id = "x"  # type: ignore[misc]
+
+
+def test_campaign_event_optional_fields_default_none() -> None:
+    evt = CampaignEvent(
+        campaign_id="c1",
+        event_type="encounter_completed",
+        summary="Done.",
+        timestamp="2026-04-18T12:00:00Z",
+    )
+    assert evt.module_id is None
+    assert evt.encounter_id is None
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_campaign() -> CampaignState:
+    return CampaignState(
+        campaign_id="c1",
+        name="The Cursed Coast",
+        setting="A dark coastal city.",
+        narrator_personality="Grim and dramatic.",
+        hidden_goal="Awaken the sea god.",
+        bbeg_name="Malachar",
+        bbeg_description="A lich who walks the tides.",
+        milestones=(
+            Milestone(
+                milestone_id="m1", title="First Blood", description="Enter the city."
+            ),
+        ),
+        current_milestone_index=0,
+        starting_level=1,
+        target_level=5,
+        player_brief="I want dark coastal horror.",
+        player_actor_id="pc:player",
+    )
+
+
+def _make_module() -> ModuleState:
+    return ModuleState(
+        module_id="module-001",
+        campaign_id="c1",
+        title="The Dockside Murders",
+        summary="Bodies wash ashore nightly.",
+        guiding_milestone_id="m1",
+        encounters=("enc-001",),
+        current_encounter_index=0,
+    )
+
+
+# ---------------------------------------------------------------------------
+# ActorState — new character creation fields
+# ---------------------------------------------------------------------------
+
+
+def test_actor_state_new_fields_default_none() -> None:
+    """race, description, background are optional and default to None."""
+    actor = ActorState(
+        actor_id="pc:player",
+        name="Aldric",
+        actor_type=ActorType.PC,
+        hp_max=12,
+        hp_current=12,
+        armor_class=16,
+        strength=17,
+        dexterity=14,
+        constitution=14,
+        intelligence=8,
+        wisdom=10,
+        charisma=12,
+        proficiency_bonus=2,
+        initiative_bonus=2,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack", "Dodge", "Dash"),
+        ac_breakdown=("Chain Mail: 16",),
+    )
+    assert actor.race is None
+    assert actor.description is None
+    assert actor.background is None
+
+
+def test_actor_state_new_fields_can_be_set() -> None:
+    actor = ActorState(
+        actor_id="pc:player",
+        name="Aldric",
+        actor_type=ActorType.PC,
+        hp_max=12,
+        hp_current=12,
+        armor_class=16,
+        strength=17,
+        dexterity=14,
+        constitution=14,
+        intelligence=8,
+        wisdom=10,
+        charisma=12,
+        proficiency_bonus=2,
+        initiative_bonus=2,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack", "Dodge", "Dash"),
+        ac_breakdown=("Chain Mail: 16",),
+        race="Human",
+        description="Broad-shouldered with a scar across the jaw.",
+        background="Served the king's guard for six years.",
+    )
+    assert actor.race == "Human"
+    assert actor.description == "Broad-shouldered with a scar across the jaw."
+    assert actor.background == "Served the king's guard for six years."
+
+
+def test_game_state_includes_campaign_and_module() -> None:
+    campaign = _make_campaign()
+    module = _make_module()
+    state = GameState(player=TALIA, campaign=campaign, module=module)
+    assert state.campaign is campaign
+    assert state.module is module
+    assert state.encounter is None

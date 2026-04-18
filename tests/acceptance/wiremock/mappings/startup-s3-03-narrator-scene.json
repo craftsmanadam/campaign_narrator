@@ -1,0 +1,23 @@
+{
+  "scenarioName": "startup-s3",
+  "requiredScenarioState": "S3-03",
+  "newScenarioState": "S3-Done",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "scene_opening"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "startup-s3-03-narrator-scene-response.json"
+  }
+}

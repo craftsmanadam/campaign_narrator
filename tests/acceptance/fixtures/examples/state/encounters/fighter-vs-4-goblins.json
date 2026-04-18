@@ -31,6 +31,7 @@
       "hp_current": 44,
       "hp_max": 44,
       "hp_temp": 0,
+      "armor_class": 20,
       "ac_breakdown": ["Plate: 18", "Shield: +2"],
       "saving_throws": [
         ["strength", 7],
@@ -151,6 +152,7 @@
       "hp_current": 7,
       "hp_max": 7,
       "hp_temp": 0,
+      "armor_class": 15,
       "ac_breakdown": ["Leather: 11", "Shield: +2", "DEX: +2"],
       "saving_throws": [
         ["dexterity", 4]
@@ -202,6 +204,7 @@
       "hp_current": 7,
       "hp_max": 7,
       "hp_temp": 0,
+      "armor_class": 15,
       "ac_breakdown": ["Leather: 11", "Shield: +2", "DEX: +2"],
       "saving_throws": [
         ["dexterity", 4]
@@ -253,6 +256,7 @@
       "hp_current": 7,
       "hp_max": 7,
       "hp_temp": 0,
+      "armor_class": 15,
       "ac_breakdown": ["Leather: 11", "Shield: +2", "DEX: +2"],
       "saving_throws": [
         ["dexterity", 4]
@@ -304,6 +308,7 @@
       "hp_current": 7,
       "hp_max": 7,
       "hp_temp": 0,
+      "armor_class": 15,
       "ac_breakdown": ["Leather: 11", "Shield: +2", "DEX: +2"],
       "saving_throws": [
         ["dexterity", 4]

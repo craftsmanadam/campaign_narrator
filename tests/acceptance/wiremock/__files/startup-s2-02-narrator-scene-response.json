@@ -1,0 +1,23 @@
+{
+  "id": "resp_s2_02",
+  "object": "chat.completion",
+  "created": 1710000011,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s2_02",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"text\":\"The docks of Darkholm await your return. The fog is thicker than you remember.\",\"scene_tone\":\"tense and familiar\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 80, "completion_tokens": 40, "total_tokens": 120}
+}

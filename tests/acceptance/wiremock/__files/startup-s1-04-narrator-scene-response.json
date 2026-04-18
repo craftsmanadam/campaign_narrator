@@ -1,0 +1,23 @@
+{
+  "id": "resp_s1_04",
+  "object": "chat.completion",
+  "created": 1710000004,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_04",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"text\":\"The docks of Darkholm reek of salt and decay. Your boots sink into the rotting planks as fog curls around the lanterns. Somewhere ahead, something moves in the water.\",\"scene_tone\":\"dark and foreboding\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 60, "total_tokens": 160}
+}

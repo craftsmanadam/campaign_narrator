@@ -1,0 +1,23 @@
+{
+  "scenarioName": "startup-s1",
+  "requiredScenarioState": "S1-03",
+  "newScenarioState": "S1-04",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "campaign_name"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "startup-s1-03-module-gen-response.json"
+  }
+}

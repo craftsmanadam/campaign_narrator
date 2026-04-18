@@ -1,0 +1,60 @@
+{
+  "actor_id": "pc:player",
+  "name": null,
+  "actor_type": "pc",
+  "hp_max": 10,
+  "hp_current": 10,
+  "hp_temp": 0,
+  "armor_class": 14,
+  "strength": 10,
+  "dexterity": 17,
+  "constitution": 14,
+  "intelligence": 14,
+  "wisdom": 8,
+  "charisma": 10,
+  "proficiency_bonus": 2,
+  "initiative_bonus": 3,
+  "speed": 30,
+  "attacks_per_action": 1,
+  "action_options": ["Attack", "Dodge", "Dash", "Disengage", "Hide", "Help"],
+  "bonus_action_options": ["Cunning Action: Dash", "Cunning Action: Disengage", "Cunning Action: Hide"],
+  "reaction_options": ["Uncanny Dodge", "Opportunity Attack"],
+  "ac_breakdown": ["Leather: 11", "DEX mod: +3"],
+  "saving_throws": [["dexterity", 5], ["intelligence", 4]],
+  "equipped_weapons": [
+    {
+      "name": "Shortsword",
+      "attack_bonus": 5,
+      "damage_dice": "1d6",
+      "damage_bonus": 3,
+      "damage_type": "piercing",
+      "properties": ["finesse", "light"]
+    }
+  ],
+  "feats": [
+    {
+      "name": "Sneak Attack",
+      "effect_summary": "Once per turn, deal an extra 1d6 damage when you have advantage on the attack roll or an ally is adjacent to the target and you don't have disadvantage.",
+      "reference": "character_options/class_features.json#sneak-attack",
+      "per_turn_uses": null
+    }
+  ],
+  "resources": [],
+  "inventory": [],
+  "damage_resistances": [],
+  "damage_vulnerabilities": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "conditions": [],
+  "death_save_successes": 0,
+  "death_save_failures": 0,
+  "spell_slots": [],
+  "spell_slots_max": [],
+  "available_spells": [],
+  "concentration": null,
+  "personality": null,
+  "is_visible": true,
+  "race": null,
+  "description": null,
+  "background": null
+}

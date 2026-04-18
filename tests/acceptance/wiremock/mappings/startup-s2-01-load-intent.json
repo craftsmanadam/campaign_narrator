@@ -1,0 +1,23 @@
+{
+  "scenarioName": "startup-s2",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "S2-02",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "has_campaign"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "startup-s2-01-load-intent-response.json"
+  }
+}
