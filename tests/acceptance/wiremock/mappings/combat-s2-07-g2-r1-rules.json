@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s2",
+  "requiredScenarioState": "S2-07",
+  "newScenarioState": "S2-08",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "rules adjudication engine"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s2-07-g2-r1-rules-response.json"
+  }
+}

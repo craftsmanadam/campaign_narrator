@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s1_19",
+  "object": "chat.completion",
+  "created": 1710000118,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_19",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"intent\":\"combat_action\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

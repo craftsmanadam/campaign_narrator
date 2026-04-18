@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s1",
+  "requiredScenarioState": "S1-08",
+  "newScenarioState": "S1-09",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Write player-facing tabletop RPG narration"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s1-08-g2-r1-narrate-response.json"
+  }
+}

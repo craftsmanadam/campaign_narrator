@@ -1,0 +1,240 @@
+{
+  "encounter_id": "fighter-vs-2-goblins",
+  "setting": "A narrow forest path blocked by two goblin scouts.",
+  "phase": "combat",
+  "public_events": [],
+  "hidden_facts": {},
+  "combat_turns": [
+    {"actor_id": "pc:talia", "initiative_roll": 22},
+    {"actor_id": "npc:goblin-1", "initiative_roll": 14},
+    {"actor_id": "npc:goblin-2", "initiative_roll": 10}
+  ],
+  "outcome": null,
+  "actors": {
+    "pc:talia": {
+      "actor_id": "pc:talia",
+      "actor_type": "pc",
+      "name": "Talia Ironveil",
+      "personality": null,
+      "is_visible": true,
+      "strength": 18,
+      "dexterity": 14,
+      "constitution": 16,
+      "intelligence": 10,
+      "wisdom": 12,
+      "charisma": 8,
+      "proficiency_bonus": 3,
+      "initiative_bonus": 5,
+      "speed": 30,
+      "armor_class": 20,
+      "hp_current": 44,
+      "hp_max": 44,
+      "hp_temp": 0,
+      "ac_breakdown": ["Plate: 18", "Shield: +2"],
+      "saving_throws": [
+        ["strength", 7],
+        ["dexterity", 2],
+        ["constitution", 6],
+        ["intelligence", 0],
+        ["wisdom", 1],
+        ["charisma", -1]
+      ],
+      "conditions": [],
+      "death_save_successes": 0,
+      "death_save_failures": 0,
+      "resources": [
+        {
+          "resource": "second_wind",
+          "current": 1,
+          "max": 1,
+          "recovers_after": "short_rest",
+          "reference": "PHB p.72"
+        },
+        {
+          "resource": "action_surge",
+          "current": 1,
+          "max": 1,
+          "recovers_after": "short_rest",
+          "reference": "PHB p.72"
+        },
+        {
+          "resource": "savage_attacker",
+          "current": 1,
+          "max": 1,
+          "recovers_after": "turn",
+          "reference": "PHB p.170"
+        }
+      ],
+      "inventory": [
+        {
+          "item_id": "potion-1",
+          "item": "Potion of Healing",
+          "count": 2,
+          "charges": null,
+          "max_charges": null,
+          "recovers_after": null,
+          "reference": "PHB p.187"
+        }
+      ],
+      "action_options": [
+        "Attack",
+        "Dodge",
+        "Disengage",
+        "Dash",
+        "Help",
+        "Grapple",
+        "Shove",
+        "Action Surge"
+      ],
+      "attacks_per_action": 2,
+      "bonus_action_options": [
+        "Second Wind (regain 1d10+5 HP, uses Second Wind resource)"
+      ],
+      "reaction_options": ["Opportunity Attack"],
+      "equipped_weapons": [
+        {
+          "name": "Longsword (one hand)",
+          "attack_bonus": 7,
+          "damage_dice": "1d8",
+          "damage_bonus": 4,
+          "damage_type": "slashing",
+          "properties": ["versatile"]
+        },
+        {
+          "name": "Longsword (two hands)",
+          "attack_bonus": 7,
+          "damage_dice": "1d10",
+          "damage_bonus": 4,
+          "damage_type": "slashing",
+          "properties": ["versatile"]
+        }
+      ],
+      "feats": [
+        {
+          "name": "Alert",
+          "effect_summary": "Add proficiency bonus (+3) to initiative rolls. Cannot be surprised.",
+          "reference": "PHB p.165",
+          "per_turn_uses": null
+        },
+        {
+          "name": "Savage Attacker",
+          "effect_summary": "Once per turn, reroll weapon damage dice and use the higher result. Tracked via savage_attacker resource (1/turn).",
+          "reference": "PHB p.170",
+          "per_turn_uses": 1
+        }
+      ],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "damage_immunities": [],
+      "condition_immunities": [],
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "available_spells": [],
+      "concentration": null
+    },
+    "npc:goblin-1": {
+      "actor_id": "npc:goblin-1",
+      "actor_type": "npc",
+      "name": "Goblin Scout 1",
+      "personality": "Cowardly and cruel. Attacks when it has the advantage. Flees when wounded.",
+      "is_visible": true,
+      "strength": 8,
+      "dexterity": 14,
+      "constitution": 10,
+      "intelligence": 10,
+      "wisdom": 8,
+      "charisma": 8,
+      "proficiency_bonus": 2,
+      "initiative_bonus": 2,
+      "speed": 30,
+      "armor_class": 15,
+      "hp_current": 7,
+      "hp_max": 7,
+      "hp_temp": 0,
+      "ac_breakdown": ["Leather: 11", "Shield: +2", "DEX: +2"],
+      "saving_throws": [
+        ["dexterity", 4]
+      ],
+      "conditions": [],
+      "death_save_successes": 0,
+      "death_save_failures": 0,
+      "resources": [],
+      "inventory": [],
+      "action_options": ["Attack", "Disengage", "Hide"],
+      "attacks_per_action": 1,
+      "bonus_action_options": [],
+      "reaction_options": [],
+      "equipped_weapons": [
+        {
+          "name": "Scimitar",
+          "attack_bonus": 4,
+          "damage_dice": "1d6",
+          "damage_bonus": 2,
+          "damage_type": "slashing",
+          "properties": []
+        }
+      ],
+      "feats": [],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "damage_immunities": [],
+      "condition_immunities": [],
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "available_spells": [],
+      "concentration": null
+    },
+    "npc:goblin-2": {
+      "actor_id": "npc:goblin-2",
+      "actor_type": "npc",
+      "name": "Goblin Scout 2",
+      "personality": "Cowardly and cruel. Attacks when it has the advantage. Flees when wounded.",
+      "is_visible": true,
+      "strength": 8,
+      "dexterity": 14,
+      "constitution": 10,
+      "intelligence": 10,
+      "wisdom": 8,
+      "charisma": 8,
+      "proficiency_bonus": 2,
+      "initiative_bonus": 2,
+      "speed": 30,
+      "armor_class": 15,
+      "hp_current": 7,
+      "hp_max": 7,
+      "hp_temp": 0,
+      "ac_breakdown": ["Leather: 11", "Shield: +2", "DEX: +2"],
+      "saving_throws": [
+        ["dexterity", 4]
+      ],
+      "conditions": [],
+      "death_save_successes": 0,
+      "death_save_failures": 0,
+      "resources": [],
+      "inventory": [],
+      "action_options": ["Attack", "Disengage", "Hide"],
+      "attacks_per_action": 1,
+      "bonus_action_options": [],
+      "reaction_options": [],
+      "equipped_weapons": [
+        {
+          "name": "Scimitar",
+          "attack_bonus": 4,
+          "damage_dice": "1d6",
+          "damage_bonus": 2,
+          "damage_type": "slashing",
+          "properties": []
+        }
+      ],
+      "feats": [],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "damage_immunities": [],
+      "condition_immunities": [],
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "available_spells": [],
+      "concentration": null
+    }
+  }
+}

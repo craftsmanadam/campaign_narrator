@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s3",
+  "requiredScenarioState": "S3-15",
+  "newScenarioState": "S3-16",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Write player-facing tabletop RPG narration"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s3-15-g4-r1-narrate-response.json"
+  }
+}

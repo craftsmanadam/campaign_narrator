@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s2",
+  "requiredScenarioState": "S2-05",
+  "newScenarioState": "S2-06",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Assess whether combat should continue"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s2-05-r1-talia-assess-response.json"
+  }
+}

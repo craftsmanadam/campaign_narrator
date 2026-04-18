@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s1_17",
+  "object": "chat.completion",
+  "created": 1710000116,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "The goblin's desperate swing catches Talia off-guard."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

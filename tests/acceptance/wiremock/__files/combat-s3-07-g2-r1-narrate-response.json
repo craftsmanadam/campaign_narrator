@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s3_07",
+  "object": "chat.completion",
+  "created": 1710000306,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "A second blade finds a gap in Talia's armor. The wounds are mounting."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

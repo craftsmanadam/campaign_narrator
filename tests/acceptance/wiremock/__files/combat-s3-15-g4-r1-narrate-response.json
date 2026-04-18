@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s3_15",
+  "object": "chat.completion",
+  "created": 1710000314,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "The fourth goblin's blade finds its mark. Talia has fallen. She lies still on the ravine floor."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

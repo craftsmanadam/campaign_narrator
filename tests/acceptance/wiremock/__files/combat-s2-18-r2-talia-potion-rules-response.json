@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s2_18",
+  "object": "chat.completion",
+  "created": 1710000217,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s2_18",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"bonus_action\",\"summary\":\"Talia uncorks a Potion of Healing and drinks it as a bonus action.\",\"reasoning_summary\":\"Player declared use of Potion of Healing; item is in inventory with count 2; bonus action is available.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"heal\",\"target\":\"pc:talia\",\"value\":\"2d4+2\"},{\"effect_type\":\"inventory_spent\",\"target\":\"pc:talia\",\"value\":\"potion-1\"}],\"rule_references\":[]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

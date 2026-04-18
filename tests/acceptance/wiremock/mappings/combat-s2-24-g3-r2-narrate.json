@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s2",
+  "requiredScenarioState": "S2-24",
+  "newScenarioState": "S2-25",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Write player-facing tabletop RPG narration"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s2-24-g3-r2-narrate-response.json"
+  }
+}

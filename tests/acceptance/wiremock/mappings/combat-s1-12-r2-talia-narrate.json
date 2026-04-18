@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s1",
+  "requiredScenarioState": "S1-12",
+  "newScenarioState": "S1-13",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Write player-facing tabletop RPG narration"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s1-12-r2-talia-narrate-response.json"
+  }
+}

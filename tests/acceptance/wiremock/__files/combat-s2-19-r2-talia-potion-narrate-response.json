@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s2_19",
+  "object": "chat.completion",
+  "created": 1710000218,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Talia reaches for her pack and uncorks a Potion of Healing, drinking it in a swift motion. Warmth floods through her wounds."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

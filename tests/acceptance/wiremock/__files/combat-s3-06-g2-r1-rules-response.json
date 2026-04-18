@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s3_06",
+  "object": "chat.completion",
+  "created": 1710000305,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s3_06",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Goblin Scout 2 drives its scimitar into Talia.\",\"reasoning_summary\":\"NPC declared attack; Talia is in range; hit resolves.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"pc:talia\",\"value\":-11}],\"rule_references\":[]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

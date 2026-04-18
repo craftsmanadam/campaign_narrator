@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s1_20",
+  "object": "chat.completion",
+  "created": 1710000119,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_20",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia brings her longsword down on Goblin Scout 2 for the killing blow.\",\"reasoning_summary\":\"Player declared attack; target is alive and in range.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-2\",\"value\":-4}],\"rule_references\":[]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

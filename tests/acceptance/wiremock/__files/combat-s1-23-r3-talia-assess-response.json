@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s1_23",
+  "object": "chat.completion",
+  "created": 1710000122,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_23",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"combat_active\":false,\"outcome\":{\"short_description\":\"Talia defeats both goblins\",\"full_description\":\"Victory! Both goblin scouts lie defeated. The forest falls silent.\"}}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

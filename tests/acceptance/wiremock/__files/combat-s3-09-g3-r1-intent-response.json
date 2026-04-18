@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s3_09",
+  "object": "chat.completion",
+  "created": 1710000308,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Goblin Scout 3 presses the advantage and swings at Talia."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

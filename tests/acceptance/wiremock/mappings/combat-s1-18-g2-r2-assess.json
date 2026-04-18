@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s1",
+  "requiredScenarioState": "S1-18",
+  "newScenarioState": "S1-19",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Assess whether combat should continue"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s1-18-g2-r2-assess-response.json"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s1",
+  "requiredScenarioState": "S1-04",
+  "newScenarioState": "S1-05",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Classify the player's input"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s1-04-r1-talia-intent-end-response.json"
+  }
+}

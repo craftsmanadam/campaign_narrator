@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s1_02",
+  "object": "chat.completion",
+  "created": 1710000101,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_02",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia strikes Goblin Scout 1 with her longsword — a critical hit!\",\"reasoning_summary\":\"Player declared attack; target is in range; crit applied.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-1\",\"value\":-14}],\"rule_references\":[]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

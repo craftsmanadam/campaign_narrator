@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s3_11",
+  "object": "chat.completion",
+  "created": 1710000310,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "A third blade rakes across Talia. She staggers but holds her ground."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

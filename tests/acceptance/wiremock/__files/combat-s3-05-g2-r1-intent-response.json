@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s3_05",
+  "object": "chat.completion",
+  "created": 1710000304,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Goblin Scout 2 circles and drives its blade at Talia's side."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

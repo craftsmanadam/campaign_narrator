@@ -14,6 +14,7 @@ from pathlib import Path
 from subprocess import CompletedProcess, run
 
 import pytest
+from pytest_bdd import given, parsers, then, when
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures"
@@ -22,6 +23,19 @@ RUNTIME_ROOT = FIXTURE_ROOT / "runtime"
 
 
 WIREMOCK_READY_STATUS = 200
+_HTTP_NOT_FOUND = 404
+
+_ENCOUNTER_TO_WIREMOCK_SCENARIO: dict[str, str] = {
+    "fighter-vs-2-goblins": "combat-s1",
+    "fighter-vs-3-goblins": "combat-s2",
+    "fighter-vs-4-goblins": "combat-s3",
+}
+
+_WIREMOCK_SCENARIO_TERMINAL_STATE: dict[str, str] = {
+    "combat-s1": "S1-Done",
+    "combat-s2": "S2-Done",
+    "combat-s3": "S3-Done",
+}
 
 
 def _get_free_port() -> int:
@@ -61,6 +75,36 @@ def _wait_for_wiremock(port: int) -> None:
             last_error = exc
             time.sleep(0.5)
     raise TimeoutError from last_error
+
+
+def _deactivate_wiremock_scenarios(port: int, active_scenario: str) -> None:
+    """Advance all inactive WireMock combat scenarios to their terminal state.
+
+    Prevents stubs from non-active scenarios from matching requests when
+    multiple combat scenario stub sets coexist in the same WireMock instance.
+    WireMock only accepts states declared by existing stubs; terminal states
+    (e.g. S1-Done, S2-Done) have no matching stubs, so advancing to them
+    effectively disables that scenario for the duration of the test.
+    """
+    for scenario, terminal_state in _WIREMOCK_SCENARIO_TERMINAL_STATE.items():
+        if scenario == active_scenario:
+            continue
+        url = f"http://127.0.0.1:{port}/__admin/scenarios/{scenario}/state"
+        payload = json.dumps({"state": terminal_state}).encode()
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5.0):
+                pass
+        except urllib.error.HTTPError as exc:
+            if exc.code != _HTTP_NOT_FOUND:
+                raise
+            # 404 means the scenario does not exist yet; WireMock creates
+            # scenario state on the first stub match, not on registration.
 
 
 @pytest.fixture
@@ -144,3 +188,88 @@ def wiremock_stack(docker_compose, compose_environment: dict[str, str]):
     assert build.returncode == 0, build.stderr
     yield
     docker_compose("down", "--volumes", "--remove-orphans")
+
+
+@given(
+    parsers.parse(
+        "the OpenAI API is configured for {scenario_name} on encounter {encounter_id}"
+    ),
+    target_fixture="encounter_config",
+)
+def configure_openai_api_for_scenario_with_encounter(
+    scenario_name: str,
+    encounter_id: str,
+    request: pytest.FixtureRequest,
+    runtime_data_root: Path,
+    wiremock_stack: None,
+) -> dict[str, str]:
+    """Start the acceptance stack with a specific encounter ID."""
+
+    request.node._encounter_scenario_name = scenario_name
+    named_encounter = EXAMPLES_ROOT / "state" / "encounters" / f"{encounter_id}.json"
+    if named_encounter.exists():
+        active_path = runtime_data_root / "state" / "encounters" / "active.json"
+        active_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(named_encounter, active_path)
+    active_wiremock_scenario = _ENCOUNTER_TO_WIREMOCK_SCENARIO.get(scenario_name)
+    if active_wiremock_scenario is not None:
+        env: dict[str, str] = request.getfixturevalue("compose_environment")
+        _deactivate_wiremock_scenarios(
+            int(env["WIREMOCK_PORT"]),
+            active_wiremock_scenario,
+        )
+    return {"scenario_name": scenario_name, "encounter_id": encounter_id}
+
+
+@when(
+    "the player runs the encounter with scripted input:",
+    target_fixture="cli_result",
+)
+def run_encounter_with_scripted_input(
+    compose_environment: dict[str, str],
+    encounter_config: dict[str, str],
+    request: pytest.FixtureRequest,
+    wiremock_stack: None,
+    docstring: str = "",
+) -> CompletedProcess[str]:
+    """Run the production CLI through Docker Compose with scripted stdin."""
+
+    request.node._encounter_scenario_name = encounter_config["scenario_name"]
+    scripted_input = docstring
+    completed_process = run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(PROJECT_ROOT / "docker-compose.acceptance.yml"),
+            "run",
+            "--rm",
+            "--no-deps",
+            "-T",
+            "app",
+            "--data-root",
+            "/runtime/data",
+            "--encounter-id",
+            encounter_config["encounter_id"],
+        ],
+        input=scripted_input,
+        text=True,
+        capture_output=True,
+        timeout=60,
+        env=compose_environment,
+        cwd=PROJECT_ROOT,
+        check=False,
+    )
+    request.node._cli_result = completed_process
+    assert completed_process.returncode == 0, completed_process.stderr
+    return completed_process
+
+
+@then(parsers.parse('the CLI output includes "{expected}"'))
+def cli_output_includes(
+    cli_result: CompletedProcess[str],
+    expected: str,
+) -> None:
+    """The CLI output should contain the expected text."""
+
+    assert expected in cli_result.stdout

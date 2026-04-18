@@ -1,0 +1,23 @@
+{
+  "id": "resp_combat_s1_11",
+  "object": "chat.completion",
+  "created": 1710000110,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_11",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia swings at Goblin Scout 2, connecting solidly.\",\"reasoning_summary\":\"Player declared attack; target is alive and in range.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-2\",\"value\":-3}],\"rule_references\":[]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+}

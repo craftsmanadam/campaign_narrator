@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
-from subprocess import CompletedProcess, run
+from subprocess import CompletedProcess
 
 import pytest
-from pytest_bdd import given, parsers, scenario, then, when
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_FIXTURE_EXAMPLES = Path(__file__).resolve().parent / "fixtures" / "examples"
+from pytest_bdd import given, parsers, scenario, then
 
 
 @scenario(
@@ -91,7 +87,14 @@ def _read_encounter(runtime_data_root: Path, encounter_id: str) -> dict[str, obj
 
 
 @given(
-    parsers.parse("the OpenAI API is configured for {scenario_name}"),
+    # The negative lookahead (?!.*\bon encounter\b) prevents this step from
+    # matching any step text that contains "on encounter", which would otherwise
+    # create an ambiguous match with the conftest.py step
+    # `configure_openai_api_for_scenario_with_encounter`. If you add new
+    # scenario names containing "on encounter", use the conftest step instead.
+    parsers.re(
+        r"the OpenAI API is configured for (?P<scenario_name>(?!.*\bon encounter\b).+)"
+    ),
     target_fixture="encounter_config",
 )
 def configure_openai_api_for_scenario(
@@ -103,86 +106,6 @@ def configure_openai_api_for_scenario(
 
     request.node._encounter_scenario_name = scenario_name
     return {"scenario_name": scenario_name, "encounter_id": "goblin-camp"}
-
-
-@given(
-    parsers.parse(
-        "the OpenAI API is configured for {scenario_name} on encounter {encounter_id}"
-    ),
-    target_fixture="encounter_config",
-)
-def configure_openai_api_for_scenario_with_encounter(
-    scenario_name: str,
-    encounter_id: str,
-    request: pytest.FixtureRequest,
-    runtime_data_root: Path,
-    wiremock_stack: None,
-) -> dict[str, str]:
-    """Start the acceptance stack with a specific encounter ID."""
-
-    request.node._encounter_scenario_name = scenario_name
-    named_encounter = (
-        _FIXTURE_EXAMPLES / "state" / "encounters" / f"{encounter_id}.json"
-    )
-    if named_encounter.exists():
-        active_path = runtime_data_root / "state" / "encounters" / "active.json"
-        active_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(named_encounter, active_path)
-    return {"scenario_name": scenario_name, "encounter_id": encounter_id}
-
-
-@when(
-    "the player runs the encounter with scripted input:",
-    target_fixture="cli_result",
-)
-def run_encounter_with_scripted_input(
-    compose_environment: dict[str, str],
-    encounter_config: dict[str, str],
-    docstring: str,
-    request: pytest.FixtureRequest,
-    wiremock_stack: None,
-) -> CompletedProcess[str]:
-    """Run the production CLI through Docker Compose with scripted stdin."""
-
-    request.node._encounter_scenario_name = encounter_config["scenario_name"]
-    scripted_input = docstring
-    completed_process = run(
-        [
-            "docker",
-            "compose",
-            "-f",
-            str(PROJECT_ROOT / "docker-compose.acceptance.yml"),
-            "run",
-            "--rm",
-            "--no-deps",
-            "-T",
-            "app",
-            "--data-root",
-            "/runtime/data",
-            "--encounter-id",
-            encounter_config["encounter_id"],
-        ],
-        input=scripted_input,
-        text=True,
-        capture_output=True,
-        timeout=60,
-        env=compose_environment,
-        cwd=PROJECT_ROOT,
-        check=False,
-    )
-    request.node._cli_result = completed_process
-    assert completed_process.returncode == 0, completed_process.stderr
-    return completed_process
-
-
-@then(parsers.parse('the CLI output includes "{expected}"'))
-def cli_output_includes(
-    cli_result: CompletedProcess[str],
-    expected: str,
-) -> None:
-    """The CLI output should contain the expected text."""
-
-    assert expected in cli_result.stdout
 
 
 @then(parsers.parse('the CLI output does not include "{unexpected}"'))

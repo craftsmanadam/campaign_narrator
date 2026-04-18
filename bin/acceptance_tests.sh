@@ -19,4 +19,7 @@ fi
 
 echo "🤖 ⟶  Running acceptance tests…"
 poetry run pytest tests/acceptance \
+  --gherkin-terminal-reporter \
+  -p no:sugar \
+  -vv \
   --junit-xml="tests/reports/xunit-result-acceptance.xml"

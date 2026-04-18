@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s1",
+  "requiredScenarioState": "S1-19",
+  "newScenarioState": "S1-20",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "Classify the player's input"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s1-19-r3-talia-intent-attack-response.json"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "scenarioName": "combat-s3",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "S3-02",
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "declare this NPC's combat intent"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "combat-s3-01-g1-r1-intent-response.json"
+  }
+}

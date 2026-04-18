@@ -1,0 +1,15 @@
+{
+  "id": "resp_combat_s1_03",
+  "object": "chat.completion",
+  "created": 1710000102,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Talia's blade finds its mark. Goblin Scout 1 falls dead."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}
