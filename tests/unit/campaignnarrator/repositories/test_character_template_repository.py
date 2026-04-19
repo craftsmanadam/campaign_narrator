@@ -9,7 +9,7 @@ from campaignnarrator.repositories.character_template_repository import (
     CharacterTemplateRepository,
 )
 
-TEMPLATE_ROOT = Path(__file__).resolve().parents[2] / "data" / "character_templates"
+TEMPLATE_ROOT = Path(__file__).resolve().parents[4] / "data" / "character_templates"
 
 
 def test_available_classes_lists_fighter_and_rogue() -> None:

@@ -76,7 +76,7 @@ def test_save_and_load_new_fields_default_to_none(tmp_path: Path) -> None:
 def test_actor_state_from_seed_is_public() -> None:
     """actor_state_from_seed should be importable as a public function."""
     fixture = (
-        Path(__file__).parent.parent
+        Path(__file__).parents[3]
         / "acceptance"
         / "fixtures"
         / "examples"

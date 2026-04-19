@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+import tempfile
 from dataclasses import FrozenInstanceError, replace
 
 import pytest
@@ -27,6 +29,7 @@ from campaignnarrator.domain.models import (
     ModuleState,
     Narration,
     NarrationFrame,
+    NextEncounterPlan,
     OrchestrationDecision,
     PlayerInput,
     PlayerIO,
@@ -43,6 +46,8 @@ from campaignnarrator.domain.models import (
 )
 from pydantic import ValidationError
 
+from campaignnarrator.repositories.campaign_repository import CampaignRepository
+from campaignnarrator.repositories.module_repository import ModuleRepository
 from tests.fixtures.fighter_talia import TALIA
 from tests.fixtures.goblin_scout import make_goblin_scout
 
@@ -1174,36 +1179,40 @@ def test_campaign_event_optional_fields_default_none() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_campaign() -> CampaignState:
-    return CampaignState(
-        campaign_id="c1",
-        name="The Cursed Coast",
-        setting="A dark coastal city.",
-        narrator_personality="Grim and dramatic.",
-        hidden_goal="Awaken the sea god.",
-        bbeg_name="Malachar",
-        bbeg_description="A lich who walks the tides.",
-        milestones=(
+def _make_campaign(**overrides: object) -> CampaignState:
+    defaults: dict[str, object] = {
+        "campaign_id": "c1",
+        "name": "The Cursed Coast",
+        "setting": "A dark coastal city.",
+        "narrator_personality": "Grim and dramatic.",
+        "hidden_goal": "Awaken the sea god.",
+        "bbeg_name": "Malachar",
+        "bbeg_description": "A lich who walks the tides.",
+        "milestones": (
             Milestone(
                 milestone_id="m1", title="First Blood", description="Enter the city."
             ),
         ),
-        current_milestone_index=0,
-        starting_level=1,
-        target_level=5,
-        player_brief="I want dark coastal horror.",
-        player_actor_id="pc:player",
-    )
+        "current_milestone_index": 0,
+        "starting_level": 1,
+        "target_level": 5,
+        "player_brief": "I want dark coastal horror.",
+        "player_actor_id": "pc:player",
+    }
+    defaults.update(overrides)
+    return CampaignState(**defaults)  # type: ignore[arg-type]
 
 
-def _make_module() -> ModuleState:
-    return ModuleState(
-        module_id="module-001",
-        campaign_id="c1",
-        title="The Dockside Murders",
-        summary="Bodies wash ashore nightly.",
-        guiding_milestone_id="m1",
-    )
+def _make_module(**overrides: object) -> ModuleState:
+    defaults: dict[str, object] = {
+        "module_id": "module-001",
+        "campaign_id": "c1",
+        "title": "The Dockside Murders",
+        "summary": "Bodies wash ashore nightly.",
+        "guiding_milestone_id": "m1",
+    }
+    defaults.update(overrides)
+    return ModuleState(**defaults)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -1274,3 +1283,100 @@ def test_game_state_includes_campaign_and_module() -> None:
     assert state.campaign is campaign
     assert state.module is module
     assert state.encounter is None
+
+
+# ---------------------------------------------------------------------------
+# CampaignState and ModuleState — module tracking fields
+# ---------------------------------------------------------------------------
+
+
+def test_campaign_state_default_module_id_is_none() -> None:
+    campaign = _make_campaign()
+    assert campaign.current_module_id is None
+
+
+def test_campaign_state_accepts_module_id() -> None:
+    campaign = _make_campaign(current_module_id="module-001")
+    assert campaign.current_module_id == "module-001"
+
+
+def test_campaign_repository_round_trips_current_module_id() -> None:
+    campaign = _make_campaign(current_module_id="module-002")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = CampaignRepository(tmp)
+        repo.save(campaign)
+        loaded = repo.load()
+    assert loaded is not None
+    assert loaded.current_module_id == "module-002"
+
+
+def test_campaign_repository_round_trips_null_module_id() -> None:
+    campaign = _make_campaign()
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = CampaignRepository(tmp)
+        repo.save(campaign)
+        loaded = repo.load()
+    assert loaded is not None
+    assert loaded.current_module_id is None
+
+
+def test_module_state_default_log_fields_are_empty() -> None:
+    module = _make_module()
+    assert module.completed_encounter_ids == ()
+    assert module.completed_encounter_summaries == ()
+    assert module.next_encounter_seed is None
+
+
+def test_module_state_accepts_completed_encounters() -> None:
+    module = _make_module(
+        completed_encounter_ids=("module-001-enc-001",),
+        completed_encounter_summaries=("The player fought a goblin at the docks.",),
+        next_encounter_seed="A shadowy figure waits near the warehouse.",
+    )
+    assert len(module.completed_encounter_ids) == 1
+    assert module.next_encounter_seed == "A shadowy figure waits near the warehouse."
+
+
+def test_module_state_has_no_encounters_field() -> None:
+    field_names = {f.name for f in dataclasses.fields(ModuleState)}
+    assert "encounters" not in field_names
+    assert "current_encounter_index" not in field_names
+
+
+def test_module_repository_round_trips_new_fields() -> None:
+    module = _make_module(
+        completed_encounter_ids=("module-001-enc-001",),
+        completed_encounter_summaries=("The goblin fell at the docks.",),
+        next_encounter_seed="Shadows move near the warehouse.",
+        completed=False,
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = ModuleRepository(tmp)
+        repo.save(module)
+        loaded = repo.load("module-001")
+    assert loaded is not None
+    assert loaded.completed_encounter_ids == ("module-001-enc-001",)
+    assert loaded.completed_encounter_summaries == ("The goblin fell at the docks.",)
+    assert loaded.next_encounter_seed == "Shadows move near the warehouse."
+
+
+def test_module_repository_round_trips_empty_log() -> None:
+    module = _make_module()
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = ModuleRepository(tmp)
+        repo.save(module)
+        loaded = repo.load("module-001")
+    assert loaded is not None
+    assert loaded.completed_encounter_ids == ()
+    assert loaded.next_encounter_seed is None
+
+
+def test_next_encounter_plan_fields() -> None:
+    plan = NextEncounterPlan(seed="The docks at midnight.", milestone_achieved=False)
+    assert plan.seed == "The docks at midnight."
+    assert plan.milestone_achieved is False
+
+
+def test_next_encounter_plan_milestone_achieved() -> None:
+    plan = NextEncounterPlan(seed="", milestone_achieved=True)
+    assert plan.milestone_achieved is True
