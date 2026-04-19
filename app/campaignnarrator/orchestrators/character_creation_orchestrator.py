@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
 from campaignnarrator.agents.character_interpreter_agent import (
+    CharacterIntake,
     CharacterInterpreterAgent,
 )
 from campaignnarrator.domain.models import ActorState, PlayerIO
@@ -52,10 +53,11 @@ class CharacterCreationOrchestrator:
 
     def run(self) -> ActorState:
         """Walk through all creation steps and return the saved ActorState."""
-        class_name = self._choose_class()
+        intake = self._choose_class()
+        class_name = intake.class_name
         template = self._repos.template.load(class_name)
-        name = self._choose_name()
-        race = self._choose_race()
+        name = intake.name or self._choose_name()
+        race = intake.race or self._choose_race()
         background = self._choose_background(
             character_name=name, race=race, class_name=class_name
         )
@@ -84,7 +86,7 @@ class CharacterCreationOrchestrator:
 
         return actor
 
-    def _choose_class(self) -> str:
+    def _choose_class(self) -> CharacterIntake:
         self._io.display(
             "\nBefore your story begins, tell me — are you a warrior who meets "
             "challenges head-on, or a shadow who moves unseen?\n"

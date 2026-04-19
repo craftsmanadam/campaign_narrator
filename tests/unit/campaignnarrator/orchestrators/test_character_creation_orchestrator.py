@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from unittest.mock import MagicMock
 
+from campaignnarrator.agents.character_interpreter_agent import CharacterIntake
 from campaignnarrator.orchestrators.character_creation_orchestrator import (
     CharacterCreationAgents,
     CharacterCreationOrchestrator,
@@ -25,7 +26,7 @@ def _make_io(inputs: list[str]) -> MagicMock:
 def _make_orchestrator(
     inputs: list[str],
     *,
-    class_choice: str = "fighter",
+    intake: CharacterIntake | None = None,
     backstory_draft: str = "You served the king.",
 ) -> tuple[CharacterCreationOrchestrator, MagicMock, MagicMock]:
     io = _make_io(inputs)
@@ -39,7 +40,9 @@ def _make_orchestrator(
     mock_template_repo.load.return_value = replace(
         TALIA, name="", race=None, description=None, background=None
     )
-    mock_class_agent.interpret.return_value = class_choice
+    mock_class_agent.interpret.return_value = (
+        intake if intake is not None else CharacterIntake(class_name="fighter")
+    )
     mock_backstory_agent.draft.return_value = backstory_draft
 
     repos = CharacterCreationRepositories(
@@ -90,6 +93,53 @@ def test_run_uses_backstory_agent_when_player_requests_help() -> None:
     )
     actor = orch.run()
     assert actor.background == "You served the king."
+
+
+def test_run_skips_name_prompt_when_already_extracted() -> None:
+    """When the intake includes a name, the name prompt is not shown."""
+    orch, _, __ = _make_orchestrator(
+        inputs=[
+            "I am Gareth, a warrior.",  # class choice text
+            "Human",  # race still prompted
+            "I saved my village.",  # backstory
+            "",  # description
+        ],
+        intake=CharacterIntake(class_name="fighter", name="Gareth of Halsforth"),
+    )
+    actor = orch.run()
+    assert actor.name == "Gareth of Halsforth"
+
+
+def test_run_skips_race_prompt_when_already_extracted() -> None:
+    """When the intake includes a race, the race prompt is not shown."""
+    orch, _, __ = _make_orchestrator(
+        inputs=[
+            "I'm a human fighter.",  # class choice text
+            "Aldric",  # name still prompted
+            "I served the guard.",  # backstory
+            "",  # description
+        ],
+        intake=CharacterIntake(class_name="fighter", race="Human"),
+    )
+    actor = orch.run()
+    assert actor.race == "Human"
+
+
+def test_run_skips_both_name_and_race_when_fully_extracted() -> None:
+    """When intake has name and race, only backstory and description are prompted."""
+    orch, _, __ = _make_orchestrator(
+        inputs=[
+            "I am Gareth of Halsforth, a human warrior.",  # class choice text
+            "I saved my village from bandits.",  # backstory
+            "",  # description
+        ],
+        intake=CharacterIntake(
+            class_name="fighter", name="Gareth of Halsforth", race="Human"
+        ),
+    )
+    actor = orch.run()
+    assert actor.name == "Gareth of Halsforth"
+    assert actor.race == "Human"
 
 
 def test_run_assigns_actor_id_pc_player() -> None:
