@@ -71,8 +71,10 @@ curl -sf http://localhost:11434/api/chat \
   > /dev/null
 puts "${GREEN}Model warm.${RESET}"
 
-# Create data root if absent
+# Create data root and seed static game data (no-clobber: preserves live state)
 mkdir -p "$DATA_ROOT"
+puts "${BLUE}Seeding game data into ${DATA_ROOT}...${RESET}"
+rsync -rl --ignore-existing data/ "$DATA_ROOT/"
 
 # Run CLI
 puts "${GREEN}Starting CampaignNarrator (profile: ${ENV_FILE}, data: ${DATA_ROOT})${RESET}"
