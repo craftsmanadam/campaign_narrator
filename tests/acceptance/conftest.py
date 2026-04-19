@@ -153,6 +153,10 @@ def compose_environment(
     monkeypatch.setenv("OPENAI_MODEL", env["OPENAI_MODEL"])
     monkeypatch.setenv("OPENAI_BASE_URL", env["OPENAI_BASE_URL"])
     monkeypatch.setenv("CAMPAIGNNARRATOR_DICE_SEED", env["CAMPAIGNNARRATOR_DICE_SEED"])
+    env["EMBEDDING_PROVIDER"] = "stub"
+    env["LANCEDB_PATH"] = "/runtime/data/memory/lancedb"
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "stub")
+    monkeypatch.setenv("LANCEDB_PATH", "/runtime/data/memory/lancedb")
     return env
 
 

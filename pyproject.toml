@@ -7,8 +7,11 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "lancedb (>=0.30.2,<0.31.0)",
     "multi-dice (>=1.0.1,<2.0.0)",
-    "pydantic-ai-slim[openai] (>=1.80.0,<2.0.0)"
+    "pyarrow (>=23.0.1,<24.0.0)",
+    "pydantic-ai-slim[openai] (>=1.80.0,<2.0.0)",
+    "pydantic-settings (>=2.0.0,<3.0.0)"
 ]
 
 [build-system]
@@ -42,3 +45,5 @@ select = ["E", "W", "F", "PL", "I", "FAST", "ASYNC", "B", "INP", "PT", "Q", "SIM
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["S"]
+# StubEmbeddingAdapter uses seeded random for deterministic test doubles, not cryptography.
+"app/campaignnarrator/adapters/embedding_adapter.py" = ["S311"]

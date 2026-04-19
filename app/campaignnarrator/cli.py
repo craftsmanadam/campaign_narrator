@@ -9,6 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
+from campaignnarrator.adapters.embedding_adapter import (
+    EmbeddingAdapter,
+    OllamaEmbeddingAdapter,
+    StubEmbeddingAdapter,
+)
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
 from campaignnarrator.agents.campaign_generator_agent import CampaignGeneratorAgent
@@ -56,7 +61,19 @@ from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
 from campaignnarrator.repositories.rules_repository import RulesRepository
 from campaignnarrator.repositories.state_repository import StateRepository
+from campaignnarrator.settings import Settings
 from campaignnarrator.tools.dice import roll as roll_dice
+
+
+def _build_embedding_adapter(settings: Settings) -> EmbeddingAdapter:
+    """Construct the correct EmbeddingAdapter from settings."""
+    if settings.embedding_provider == "stub":
+        return StubEmbeddingAdapter()
+    return OllamaEmbeddingAdapter(
+        base_url=settings.embedding_base_url,
+        model=settings.embedding_model,
+    )
+
 
 _DEFAULT_NARRATOR_PERSONALITY: str = (
     "You are a seasoned dungeon master with a flair for the dramatic. "
@@ -176,13 +193,25 @@ class ApplicationFactory:
         return self._build_graph(repos, agents)
 
     def _build_repositories(self) -> _Repositories:
+        settings = Settings()
+        embedding_adapter = _build_embedding_adapter(settings)
+        lancedb_path = (
+            Path(settings.lancedb_path)
+            if settings.lancedb_path
+            else self._data_root / "memory" / "lancedb"
+        )
+
         actor = ActorRepository(self._data_root / "state")
         encounter = EncounterRepository(self._data_root / "state")
         campaign = CampaignRepository(self._data_root)
         module = ModuleRepository(self._data_root)
         rules = RulesRepository(self._data_root / "rules")
         compendium = CompendiumRepository(self._data_root / "compendium")
-        memory = MemoryRepository(self._data_root / "memory")
+        memory = MemoryRepository(
+            self._data_root / "memory",
+            embedding_adapter=embedding_adapter,
+            lancedb_path=lancedb_path,
+        )
         template = CharacterTemplateRepository(self._data_root / "character_templates")
         state = StateRepository(
             actor_repo=actor,

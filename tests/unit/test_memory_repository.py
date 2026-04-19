@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
+import lancedb
+from campaignnarrator.adapters.embedding_adapter import StubEmbeddingAdapter
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 
 
@@ -132,3 +135,223 @@ def test_retrieve_relevant_no_match_returns_empty_list() -> None:
         )
         results = repo.retrieve_relevant("dragon")
         assert results == []
+
+
+def _make_lancedb_repo(tmp: str) -> MemoryRepository:
+    """MemoryRepository in LanceDB mode using StubEmbeddingAdapter."""
+    adapter = StubEmbeddingAdapter()
+    lancedb_path = Path(tmp) / "lancedb"
+    return MemoryRepository(
+        tmp,
+        embedding_adapter=adapter,
+        lancedb_path=lancedb_path,
+    )
+
+
+def test_lancedb_mode_creates_lancedb_directory(tmp_path: Path) -> None:
+    _make_lancedb_repo(str(tmp_path))
+    lancedb_dir = tmp_path / "lancedb"
+    assert lancedb_dir.exists()
+
+
+def test_lancedb_mode_creates_narrative_memory_table(tmp_path: Path) -> None:
+    _make_lancedb_repo(str(tmp_path))
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    assert "narrative_memory" in db.list_tables().tables
+
+
+def test_lancedb_mode_table_starts_empty(tmp_path: Path) -> None:
+    _make_lancedb_repo(str(tmp_path))
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    table = db.open_table("narrative_memory")
+    assert table.count_rows() == 0
+
+
+def test_lancedb_mode_opens_existing_table_on_reconnect(tmp_path: Path) -> None:
+    """Second construction reuses the existing table rather than failing."""
+    _make_lancedb_repo(str(tmp_path))
+    _make_lancedb_repo(str(tmp_path))
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    assert "narrative_memory" in db.list_tables().tables
+
+
+def test_no_adapter_does_not_create_lancedb_directory(tmp_path: Path) -> None:
+    """JSONL-only mode: no LanceDB directory created."""
+    MemoryRepository(str(tmp_path))
+    assert not (tmp_path / "lancedb").exists()
+
+
+def test_store_narrative_lancedb_inserts_record(tmp_path: Path) -> None:
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative(
+        "Malachar stood at the docks.",
+        {"event_type": "encounter_summary", "campaign_id": "c-1"},
+    )
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    table = db.open_table("narrative_memory")
+    assert table.count_rows() == 1
+
+
+def test_store_narrative_lancedb_stores_text_field(tmp_path: Path) -> None:
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative(
+        "Malachar stood at the docks.",
+        {"event_type": "encounter_summary", "campaign_id": "c-1"},
+    )
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    rows = db.open_table("narrative_memory").search([0.0] * 768).limit(1).to_list()
+    assert rows[0]["text"] == "Malachar stood at the docks."
+
+
+def test_store_narrative_lancedb_stores_metadata_fields(tmp_path: Path) -> None:
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative(
+        "Campaign: The Sunken City. Setting: coastal noir.",
+        {
+            "event_type": "campaign_setting",
+            "campaign_id": "c-1",
+            "module_id": "m-1",
+            "encounter_id": "e-1",
+        },
+    )
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    rows = db.open_table("narrative_memory").search([0.0] * 768).limit(1).to_list()
+    row = rows[0]
+    assert row["event_type"] == "campaign_setting"
+    assert row["campaign_id"] == "c-1"
+    assert row["module_id"] == "m-1"
+    assert row["encounter_id"] == "e-1"
+
+
+def test_store_narrative_lancedb_also_writes_jsonl_audit_log(tmp_path: Path) -> None:
+    """JSONL file is always written regardless of LanceDB mode."""
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative(
+        "Malachar stood at the docks.",
+        {"event_type": "encounter_summary", "campaign_id": "c-1"},
+    )
+    narrative_path = tmp_path / "narrative_memory.jsonl"
+    assert narrative_path.exists()
+    record = json.loads(narrative_path.read_text().strip())
+    assert record["text"] == "Malachar stood at the docks."
+
+
+def test_store_narrative_lancedb_multiple_records(tmp_path: Path) -> None:
+    expected_count = 2
+    meta = {"event_type": "encounter_summary", "campaign_id": "c-1"}
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative("First.", meta)
+    repo.store_narrative("Second.", meta)
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    assert db.open_table("narrative_memory").count_rows() == expected_count
+
+
+def test_retrieve_relevant_lancedb_finds_by_keyword(tmp_path: Path) -> None:
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative(
+        "Malachar stood at the docks.",
+        {"event_type": "encounter_summary", "campaign_id": "c-1"},
+    )
+    repo.store_narrative(
+        "The barmaid served ale.",
+        {"event_type": "encounter_summary", "campaign_id": "c-1"},
+    )
+    results = repo.retrieve_relevant("Malachar")
+    assert len(results) >= 1
+    assert any("Malachar" in r for r in results)
+
+
+def test_retrieve_relevant_lancedb_returns_plain_strings(tmp_path: Path) -> None:
+    repo = _make_lancedb_repo(str(tmp_path))
+    repo.store_narrative(
+        "Malachar stood at the docks.",
+        {"event_type": "encounter_summary", "campaign_id": "c-1"},
+    )
+    results = repo.retrieve_relevant("Malachar")
+    assert all(isinstance(r, str) for r in results)
+
+
+def test_retrieve_relevant_lancedb_respects_limit(tmp_path: Path) -> None:
+    entry_count = 10
+    result_limit = 3
+    repo = _make_lancedb_repo(str(tmp_path))
+    for i in range(entry_count):
+        repo.store_narrative(
+            f"Entry {i} about the docks.",
+            {"event_type": "encounter_summary", "campaign_id": "c-1"},
+        )
+    results = repo.retrieve_relevant("docks", limit=result_limit)
+    assert len(results) <= result_limit
+
+
+def test_retrieve_relevant_lancedb_empty_store_returns_empty(tmp_path: Path) -> None:
+    repo = _make_lancedb_repo(str(tmp_path))
+    assert repo.retrieve_relevant("anything") == []
+
+
+def test_retrieve_relevant_delegates_to_lancedb_when_adapter_configured(
+    tmp_path: Path,
+) -> None:
+    """Proves retrieve_relevant calls _retrieve_from_lancedb, not the JSONL fallback."""
+    repo = _make_lancedb_repo(str(tmp_path))
+    sentinel = ["__lancedb_was_called__"]
+    with patch.object(repo, "_retrieve_from_lancedb", return_value=sentinel) as mock:
+        result = repo.retrieve_relevant("anything")
+    mock.assert_called_once_with("anything", limit=5)
+    assert result is sentinel
+
+
+_MALACHAR_JSONL = (
+    '{"text": "Malachar stood at the docks.", '
+    '"metadata": {"event_type": "encounter_summary", "campaign_id": "c-1"}}\n'
+)
+_FIRST_ENTRY_JSONL = (
+    '{"text": "First entry.", '
+    '"metadata": {"event_type": "encounter_summary", "campaign_id": "c-1"}}\n'
+)
+_SECOND_ENTRY_JSONL = (
+    '{"text": "Second entry.", '
+    '"metadata": {"event_type": "encounter_summary", "campaign_id": "c-1"}}\n'
+)
+
+
+def test_migration_imports_existing_jsonl_into_lancedb(tmp_path: Path) -> None:
+    """Existing JSONL entries are migrated into LanceDB on first construction."""
+    narrative_path = tmp_path / "narrative_memory.jsonl"
+    narrative_path.write_text(_MALACHAR_JSONL)
+    _make_lancedb_repo(str(tmp_path))
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    assert db.open_table("narrative_memory").count_rows() == 1
+
+
+def test_migration_skipped_when_table_already_has_rows(tmp_path: Path) -> None:
+    """Migration does not run if the LanceDB table already has rows (idempotent)."""
+    narrative_path = tmp_path / "narrative_memory.jsonl"
+    narrative_path.write_text(_FIRST_ENTRY_JSONL)
+    # First construction: migrates the 1 JSONL entry
+    _make_lancedb_repo(str(tmp_path))
+    # Add another JSONL entry manually (simulating out-of-band write)
+    with narrative_path.open("a") as f:
+        f.write(_SECOND_ENTRY_JSONL)
+    # Second construction: table already has 1 row, so migration is skipped
+    _make_lancedb_repo(str(tmp_path))
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    # Only the original migrated row; second entry was not re-migrated
+    assert db.open_table("narrative_memory").count_rows() == 1
+
+
+def test_migration_skipped_when_no_jsonl_file(tmp_path: Path) -> None:
+    """No migration attempted when narrative_memory.jsonl does not exist."""
+    _make_lancedb_repo(str(tmp_path))
+    db = lancedb.connect(str(tmp_path / "lancedb"))
+    assert db.open_table("narrative_memory").count_rows() == 0
+
+
+def test_migration_migrated_records_are_retrievable(tmp_path: Path) -> None:
+    """Migrated JSONL records are retrievable via retrieve_relevant."""
+    narrative_path = tmp_path / "narrative_memory.jsonl"
+    narrative_path.write_text(_MALACHAR_JSONL)
+    repo = _make_lancedb_repo(str(tmp_path))
+    results = repo.retrieve_relevant("Malachar")
+    assert len(results) >= 1
+    assert any("Malachar" in r for r in results)

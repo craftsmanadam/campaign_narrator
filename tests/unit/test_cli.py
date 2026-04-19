@@ -8,13 +8,19 @@ from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
+from campaignnarrator.adapters.embedding_adapter import (
+    OllamaEmbeddingAdapter,
+    StubEmbeddingAdapter,
+)
 from campaignnarrator.cli import (
     _DEFAULT_NARRATOR_PERSONALITY,
     ApplicationFactory,
     _ApplicationGraph,
     _build_application_graph,
+    _build_embedding_adapter,
     main,
 )
+from campaignnarrator.settings import Settings
 
 # ---------------------------------------------------------------------------
 # Shared fakes
@@ -237,7 +243,7 @@ def test_build_application_graph_wires_repository_paths(
     )
     monkeypatch.setattr(
         "campaignnarrator.cli.MemoryRepository",
-        lambda path: memory_paths.append(path) or object(),
+        lambda path, **_kw: memory_paths.append(path) or object(),
     )
     monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr("campaignnarrator.cli.NarratorAgent", _FakeNarratorAgent)
@@ -313,7 +319,9 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     monkeypatch.setattr(
         "campaignnarrator.cli.CompendiumRepository", lambda _path: compendium_instance
     )
-    monkeypatch.setattr("campaignnarrator.cli.MemoryRepository", lambda _path: object())
+    monkeypatch.setattr(
+        "campaignnarrator.cli.MemoryRepository", lambda _path, **_kw: object()
+    )
     monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr("campaignnarrator.cli.NarratorAgent", _FakeNarratorAgent)
     monkeypatch.setattr(
@@ -446,6 +454,10 @@ def _noop_repo_kw(**_kw: object) -> object:
     return object()
 
 
+def _noop_repo_with_kw(_path: object, **_kw: object) -> object:
+    return object()
+
+
 def test_application_factory_build_returns_application_graph(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -469,7 +481,7 @@ def test_application_factory_build_returns_application_graph(
     monkeypatch.setattr(f"{cli_ns}.ModuleRepository", _noop_repo)
     monkeypatch.setattr(f"{cli_ns}.RulesRepository", _noop_repo)
     monkeypatch.setattr(f"{cli_ns}.CompendiumRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.MemoryRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.MemoryRepository", _noop_repo_with_kw)
     monkeypatch.setattr(f"{cli_ns}.CharacterTemplateRepository", _noop_repo)
     monkeypatch.setattr(f"{cli_ns}.StateRepository", _noop_repo_kw)
     monkeypatch.setattr(f"{cli_ns}.CharacterCreationOrchestrator", _noop_repo_kw)
@@ -482,3 +494,35 @@ def test_application_factory_build_returns_application_graph(
     assert graph is not None
     assert graph.game_orchestrator is not None
     assert graph.application_orchestrator is not None
+
+
+# ---------------------------------------------------------------------------
+# _build_embedding_adapter tests
+# ---------------------------------------------------------------------------
+
+
+def test_build_embedding_adapter_returns_stub_when_provider_is_stub() -> None:
+    settings = Settings(embedding_provider="stub")
+    adapter = _build_embedding_adapter(settings)
+    assert isinstance(adapter, StubEmbeddingAdapter)
+
+
+def test_build_embedding_adapter_returns_ollama_when_provider_is_ollama() -> None:
+    settings = Settings(
+        embedding_provider="ollama",
+        embedding_model="nomic-embed-text",
+        embedding_base_url="http://localhost:11434",
+    )
+    adapter = _build_embedding_adapter(settings)
+    assert isinstance(adapter, OllamaEmbeddingAdapter)
+
+
+def test_build_embedding_adapter_ollama_uses_configured_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EMBEDDING_MODEL", "my-custom-model")
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "ollama")
+    settings = Settings()
+    adapter = _build_embedding_adapter(settings)
+    assert isinstance(adapter, OllamaEmbeddingAdapter)
+    assert adapter._model == "my-custom-model"
