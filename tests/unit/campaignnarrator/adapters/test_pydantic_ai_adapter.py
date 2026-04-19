@@ -46,33 +46,67 @@ class _FakeModel:
         self.provider = provider
 
 
-class _FakeProvider:
+class _FakeOpenAIProvider:
     def __init__(self, *, api_key: str, base_url: str | None = None) -> None:
         self.api_key = api_key
         self.base_url = base_url
 
 
-def test_from_env_configures_the_pydantic_ai_model_boundary(
+class _FakeOllamaProvider:
+    def __init__(
+        self, *, base_url: str | None = None, api_key: str | None = None
+    ) -> None:
+        self.base_url = base_url
+        self.api_key = api_key
+
+
+# Keep _FakeProvider as an alias used by generate_text tests (OpenAI-style signature)
+_FakeProvider = _FakeOpenAIProvider
+
+
+def test_from_env_configures_openai_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Environment configuration should flow into Pydantic AI provider/model setup."""
+    """LLM_PROVIDER=openai should wire an OpenAIProvider with env credentials."""
     expected_timeout_seconds = 7.5
 
-    monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeOpenAIProvider)
+    monkeypatch.setattr(adapter_module, "OllamaProvider", _FakeOllamaProvider)
     monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-5.4")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://example.invalid/v1")
     monkeypatch.setenv("OPENAI_TIMEOUT_SECONDS", str(expected_timeout_seconds))
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
 
     adapter = PydanticAIAdapter.from_env()
 
-    assert isinstance(adapter.provider, _FakeProvider)
+    assert isinstance(adapter.provider, _FakeOpenAIProvider)
     assert adapter.provider.api_key == "test-key"
     assert adapter.provider.base_url == "https://example.invalid/v1"
     assert isinstance(adapter.model, _FakeModel)
     assert adapter.model.model_name == "gpt-5.4"
     assert adapter.timeout_seconds == expected_timeout_seconds
+
+
+def test_from_env_configures_ollama_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LLM_PROVIDER=ollama should wire OllamaProvider for structured output."""
+    monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeOpenAIProvider)
+    monkeypatch.setattr(adapter_module, "OllamaProvider", _FakeOllamaProvider)
+    monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
+    monkeypatch.setenv("OPENAI_API_KEY", "ollama")
+    monkeypatch.setenv("OPENAI_MODEL", "orieg/gemma3-tools:12b-ft-v2")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+
+    adapter = PydanticAIAdapter.from_env()
+
+    assert isinstance(adapter.provider, _FakeOllamaProvider)
+    assert adapter.provider.base_url == "http://localhost:11434/v1"
+    assert isinstance(adapter.model, _FakeModel)
+    assert adapter.model.model_name == "orieg/gemma3-tools:12b-ft-v2"
 
 
 def test_generate_text_returns_plain_output(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -92,6 +126,7 @@ def test_generate_text_returns_plain_output(monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OllamaProvider", _FakeOllamaProvider)
     monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
 
     adapter = PydanticAIAdapter(api_key="test-key", model="gpt-5.4")
@@ -121,6 +156,7 @@ def test_generate_text_rejects_empty_output(monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OllamaProvider", _FakeOllamaProvider)
     monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
 
     adapter = PydanticAIAdapter(api_key="test-key", model="gpt-5.4")
@@ -145,6 +181,7 @@ def test_generate_text_forwards_timeout_in_model_settings(
 
     monkeypatch.setattr(adapter_module, "Agent", _agent_factory)
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OllamaProvider", _FakeOllamaProvider)
     monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
 
     adapter = PydanticAIAdapter(api_key="key", model="gpt-5.4", timeout_seconds=15.0)
@@ -158,6 +195,7 @@ def test_adapter_exposes_model_for_agent_construction(
 ) -> None:
     """adapter.model should return the OpenAIChatModel instance."""
     monkeypatch.setattr(adapter_module, "OpenAIProvider", _FakeProvider)
+    monkeypatch.setattr(adapter_module, "OllamaProvider", _FakeOllamaProvider)
     monkeypatch.setattr(adapter_module, "OpenAIChatModel", _FakeModel)
 
     adapter = PydanticAIAdapter(api_key="key", model="gpt-5.4")

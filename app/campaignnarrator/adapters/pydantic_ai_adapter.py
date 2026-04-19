@@ -6,6 +6,7 @@ import os
 
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 
@@ -19,9 +20,19 @@ class PydanticAIAdapter:
         model: str,
         base_url: str | None = None,
         timeout_seconds: float | None = None,
+        llm_provider: str = "ollama",
     ) -> None:
-        self.provider = OpenAIProvider(api_key=api_key, base_url=base_url)
-        self._model = OpenAIChatModel(model, provider=self.provider)
+        if llm_provider == "openai":
+            provider: OllamaProvider | OpenAIProvider = OpenAIProvider(
+                api_key=api_key, base_url=base_url
+            )
+        else:
+            provider = OllamaProvider(
+                base_url=base_url or "http://localhost:11434/v1",
+                api_key=api_key,
+            )
+        self.provider = provider
+        self._model = OpenAIChatModel(model, provider=provider)
         self.timeout_seconds = timeout_seconds
 
     @property
@@ -41,11 +52,13 @@ class PydanticAIAdapter:
         base_url = os.getenv("OPENAI_BASE_URL")
         timeout_raw = os.getenv("OPENAI_TIMEOUT_SECONDS")
         timeout_seconds = float(timeout_raw) if timeout_raw is not None else None
+        llm_provider = os.getenv("LLM_PROVIDER", "ollama")
         return cls(
             api_key=api_key,
             model=model,
             base_url=base_url,
             timeout_seconds=timeout_seconds,
+            llm_provider=llm_provider,
         )
 
     def generate_text(self, *, instructions: str, input_text: str) -> str:
