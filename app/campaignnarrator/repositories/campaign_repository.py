@@ -72,6 +72,7 @@ def _campaign_to_json(c: CampaignState) -> dict[str, object]:
         "player_brief": c.player_brief,
         "player_actor_id": c.player_actor_id,
         "bbeg_actor_id": c.bbeg_actor_id,
+        "current_module_id": c.current_module_id,
     }
 
 
@@ -115,6 +116,11 @@ def _campaign_from_seed(seed: object) -> CampaignState:
         bbeg_actor_id=(
             str(seed["bbeg_actor_id"])
             if seed.get("bbeg_actor_id") is not None
+            else None
+        ),
+        current_module_id=(
+            str(seed["current_module_id"])
+            if seed.get("current_module_id") is not None
             else None
         ),
     )

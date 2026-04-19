@@ -6,8 +6,11 @@ from dataclasses import replace
 from unittest.mock import MagicMock
 
 from campaignnarrator.orchestrators.character_creation_orchestrator import (
+    CharacterCreationAgents,
     CharacterCreationOrchestrator,
+    CharacterCreationRepositories,
 )
+from campaignnarrator.repositories.memory_repository import MemoryRepository
 
 from tests.fixtures.fighter_talia import TALIA
 
@@ -28,6 +31,7 @@ def _make_orchestrator(
     io = _make_io(inputs)
     mock_actor_repo = MagicMock()
     mock_template_repo = MagicMock()
+    mock_memory_repo = MagicMock(spec=MemoryRepository)
     mock_class_agent = MagicMock()
     mock_backstory_agent = MagicMock()
 
@@ -38,14 +42,17 @@ def _make_orchestrator(
     mock_class_agent.interpret.return_value = class_choice
     mock_backstory_agent.draft.return_value = backstory_draft
 
-    orch = CharacterCreationOrchestrator(
-        io=io,
-        actor_repository=mock_actor_repo,
-        template_repository=mock_template_repo,
-        class_agent=mock_class_agent,
-        backstory_agent=mock_backstory_agent,
+    repos = CharacterCreationRepositories(
+        actor=mock_actor_repo,
+        template=mock_template_repo,
+        memory=mock_memory_repo,
     )
-    return orch, mock_actor_repo, io
+    agents = CharacterCreationAgents(
+        class_interpreter=mock_class_agent,
+        backstory=mock_backstory_agent,
+    )
+    orch = CharacterCreationOrchestrator(io=io, repositories=repos, agents=agents)
+    return orch, mock_actor_repo, mock_memory_repo
 
 
 def test_run_saves_actor_with_name_race_background() -> None:
@@ -117,3 +124,21 @@ def test_run_backstory_revision_loop() -> None:
     )
     actor = orch.run()
     assert actor.background == "You served the king."
+
+
+def test_grouped_run_saves_actor() -> None:
+    orch, mock_actor_repo, _ = _make_orchestrator(
+        ["fighter", "Aldric", "Human", "Soldier background.", "Tall and scarred."]
+    )
+    orch.run()
+    mock_actor_repo.save.assert_called_once()
+
+
+def test_grouped_run_stores_player_background_in_memory() -> None:
+    orch, _, mock_memory_repo = _make_orchestrator(
+        ["fighter", "Aldric", "Human", "Soldier background.", "Tall and scarred."]
+    )
+    orch.run()
+    mock_memory_repo.store_narrative.assert_called_once()
+    args = mock_memory_repo.store_narrative.call_args
+    assert args[0][1]["event_type"] == "player_background"

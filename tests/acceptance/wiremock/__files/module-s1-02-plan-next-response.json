@@ -1,0 +1,23 @@
+{
+  "id": "resp_ms1_02",
+  "object": "chat.completion",
+  "created": 1710000021,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_ms1_02",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"seed\":\"The docks at midnight — a hooded figure descends toward the harbormaster's office.\",\"milestone_achieved\":false}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 120, "completion_tokens": 50, "total_tokens": 170}
+}

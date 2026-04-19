@@ -1,0 +1,15 @@
+{
+  "id": "resp_ms1_01",
+  "object": "chat.completion",
+  "created": 1710000020,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Aldric arrived at the fog-shrouded docks of Darkholm as dusk settled. A robed cultist blocked the warehouse entrance. After a tense confrontation, the cultist revealed the name the Drowned Lady before fleeing into the mist. The outcome: the player learned of the Drowned Lady cult."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 80, "completion_tokens": 60, "total_tokens": 140}
+}

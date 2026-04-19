@@ -8,12 +8,19 @@ from pydantic_ai import Agent
 
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.domain.models import (
+    ActorState,
+    CampaignState,
     CombatAssessment,
     CritReview,
+    EncounterState,
+    Milestone,
+    ModuleState,
     Narration,
     NarrationFrame,
+    NextEncounterPlan,
     SceneOpeningResponse,
 )
+from campaignnarrator.repositories.memory_repository import MemoryRepository
 
 _BASE_NARRATE_INSTRUCTIONS = (
     "Write player-facing tabletop RPG narration. "
@@ -50,6 +57,30 @@ _CRIT_REVIEW_INSTRUCTIONS = (
     "When downgrading, provide a reason."
 )
 
+_SUMMARIZE_INSTRUCTIONS = (
+    "You are a dungeon master writing session notes after an encounter. "
+    "Write in rich prose, not bullet points. Your notes must include: "
+    "physical descriptions of any named NPCs introduced or featured, "
+    "sensory and atmospheric details for locations visited, "
+    "notable player choices that should create future narrative callbacks, "
+    "key dialogue or story beats, "
+    "and the encounter outcome in one sentence. "
+    "Write as if reminding yourself before the next session — be specific enough "
+    "that you could describe the same NPC, location, or event consistently next time."
+)
+
+_PLAN_NEXT_INSTRUCTIONS = (
+    "You are a dungeon master planning the next encounter for a campaign. "
+    "Given the campaign setting, module context, completed encounter summaries, "
+    "and current player state, decide: "
+    "(1) Has the guiding milestone been narratively achieved? "
+    "(2) What is the opening scene description for the next encounter? "
+    "Set milestone_achieved=True only when the milestone's narrative goal is clearly "
+    "demonstrated by the completed encounters. "
+    "The seed is a 2-3 sentence scene description used verbatim as the encounter "
+    "opening."
+)
+
 
 class NarratorAgent:
     """Convert public encounter frames into short player-facing narration."""
@@ -59,12 +90,15 @@ class NarratorAgent:
         *,
         adapter: PydanticAIAdapter,
         personality: str = "",
+        memory_repository: MemoryRepository | None = None,
         _scene_agent: object | None = None,
         _assess_agent: object | None = None,
         _crit_agent: object | None = None,
+        _plan_agent: object | None = None,
     ) -> None:
         self._adapter = adapter
         self._personality = personality
+        self._memory_repository = memory_repository
         self._scene_instructions = self._instructions(_SCENE_OPENING_INSTRUCTIONS)
         if _scene_agent is not None:
             self._scene_agent: object = _scene_agent
@@ -92,6 +126,20 @@ class NarratorAgent:
                 instructions=_CRIT_REVIEW_INSTRUCTIONS,
             )
         )
+        self._plan_agent = (
+            _plan_agent
+            if _plan_agent is not None
+            else Agent(
+                adapter.model,
+                output_type=NextEncounterPlan,
+                instructions=_PLAN_NEXT_INSTRUCTIONS,
+            )
+        )
+
+    @property
+    def adapter(self) -> PydanticAIAdapter:
+        """Return the underlying adapter."""
+        return self._adapter
 
     def _instructions(self, base: str) -> str:
         return f"{self._personality}\n\n{base}" if self._personality else base
@@ -167,3 +215,74 @@ class NarratorAgent:
         by pydantic-ai.
         """
         return self._crit_agent.run_sync(context_json).output
+
+    def retrieve_memory(self, query: str) -> str:
+        """Return relevant prior narrative entries for the given query.
+
+        Designed for future pydantic-ai tool registration; call signature is stable.
+        Returns a sentinel string when no records match so callers never receive None.
+        """
+        if self._memory_repository is None:
+            return "No prior records found."
+        results = self._memory_repository.retrieve_relevant(query, limit=5)
+        return "\n---\n".join(results) if results else "No prior records found."
+
+    def summarize_encounter(
+        self,
+        encounter: EncounterState,
+        module: ModuleState,
+        campaign: CampaignState,
+    ) -> str:
+        """Write session-notes-style summary of a completed encounter.
+
+        Called by ModuleOrchestrator after natural encounter completion. The summary
+        is stored in both ModuleState.completed_encounter_summaries and
+        MemoryRepository. Rich summaries are essential for cross-encounter narrative
+        consistency.
+        """
+        context = {
+            "encounter_id": encounter.encounter_id,
+            "setting": encounter.setting,
+            "public_events": list(encounter.public_events),
+            "outcome": encounter.outcome,
+            "module_title": module.title,
+            "campaign_setting": campaign.setting,
+        }
+        return self._adapter.generate_text(
+            instructions=self._instructions(_SUMMARIZE_INSTRUCTIONS),
+            input_text=json.dumps(context, indent=2, sort_keys=True),
+        )
+
+    def plan_next_encounter(
+        self,
+        campaign: CampaignState,
+        module: ModuleState,
+        milestone: Milestone,
+        player: ActorState,
+        last_outcome: str,
+    ) -> NextEncounterPlan:
+        """Plan the next encounter after archiving the completed one.
+
+        The guiding Milestone is narrator-internal context for planning judgment.
+        It must not be emitted verbatim in player-facing output.
+        """
+        context = {
+            "campaign_setting": campaign.setting,
+            "narrator_personality": campaign.narrator_personality,
+            "module_title": module.title,
+            "module_summary": module.summary,
+            "guiding_milestone": {
+                "title": milestone.title,
+                "description": milestone.description,
+            },
+            "completed_encounter_summaries": list(module.completed_encounter_summaries),
+            "player_name": player.name,
+            "player_race": player.race,
+            "player_hp_current": player.hp_current,
+            "player_hp_max": player.hp_max,
+            "last_outcome": last_outcome,
+        }
+        result = self._plan_agent.run_sync(  # type: ignore[union-attr]
+            json.dumps(context, indent=2, sort_keys=True)
+        )
+        return result.output

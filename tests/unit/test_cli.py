@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from campaignnarrator.cli import (
     _DEFAULT_NARRATOR_PERSONALITY,
+    ApplicationFactory,
     _ApplicationGraph,
     _build_application_graph,
     main,
@@ -93,9 +94,17 @@ class _FakeRulesAgent:
 
 
 class _FakeNarratorAgent:
-    def __init__(self, *, adapter: object, personality: str) -> None:
+    def __init__(
+        self,
+        *,
+        adapter: object,
+        personality: str,
+        memory_repository: object = None,
+    ) -> None:
         self.adapter = adapter
+        self._adapter = adapter  # mirrors real NarratorAgent for wiring assertions
         self.personality = personality
+        self.memory_repository = memory_repository
 
 
 class _FakeEncounterOrchestrator:
@@ -261,6 +270,15 @@ def test_build_application_graph_wires_repository_paths(
     monkeypatch.setattr(
         "campaignnarrator.cli.CharacterCreationOrchestrator", lambda **_kw: object()
     )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.ModuleOrchestrator", lambda **_kw: object()
+    )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.CampaignCreationOrchestrator", lambda **_kw: object()
+    )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.StartupOrchestrator", lambda **_kw: object()
+    )
 
     _build_application_graph(tmp_path, stdin=StringIO(), stdout=StringIO())
 
@@ -326,6 +344,15 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     )
     monkeypatch.setattr(
         "campaignnarrator.cli.CharacterCreationOrchestrator", lambda **_kw: object()
+    )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.ModuleOrchestrator", lambda **_kw: object()
+    )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.CampaignCreationOrchestrator", lambda **_kw: object()
+    )
+    monkeypatch.setattr(
+        "campaignnarrator.cli.StartupOrchestrator", lambda **_kw: object()
     )
 
     result = _build_application_graph(tmp_path, stdin=StringIO(), stdout=StringIO())
@@ -396,3 +423,62 @@ def test_main_with_encounter_id_calls_application_orchestrator(
 
     mock_app_orch.run_encounter.assert_called_once_with(encounter_id="goblin-camp")
     mock_game_orch.run.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# ApplicationFactory tests
+# ---------------------------------------------------------------------------
+
+
+def test_application_factory_exists() -> None:
+    assert ApplicationFactory is not None
+
+
+def _noop_agent(**_kw: object) -> object:
+    return object()
+
+
+def _noop_repo(_path: object) -> object:
+    return object()
+
+
+def _noop_repo_kw(**_kw: object) -> object:
+    return object()
+
+
+def test_application_factory_build_returns_application_graph(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ApplicationFactory.build() returns a valid _ApplicationGraph."""
+    cli_ns = "campaignnarrator.cli"
+    monkeypatch.setattr(f"{cli_ns}.PydanticAIAdapter.from_env", object)
+    monkeypatch.setattr(f"{cli_ns}.RulesAgent", _FakeRulesAgent)
+    monkeypatch.setattr(f"{cli_ns}.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(f"{cli_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
+    monkeypatch.setattr(
+        f"{cli_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
+    )
+    monkeypatch.setattr(f"{cli_ns}.StartupInterpreterAgent", _noop_agent)
+    monkeypatch.setattr(f"{cli_ns}.CharacterInterpreterAgent", _noop_agent)
+    monkeypatch.setattr(f"{cli_ns}.BackstoryAgent", _noop_agent)
+    monkeypatch.setattr(f"{cli_ns}.CampaignGeneratorAgent", _noop_agent)
+    monkeypatch.setattr(f"{cli_ns}.ModuleGeneratorAgent", _noop_agent)
+    monkeypatch.setattr(f"{cli_ns}.ActorRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.EncounterRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.CampaignRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.ModuleRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.RulesRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.CompendiumRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.MemoryRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.CharacterTemplateRepository", _noop_repo)
+    monkeypatch.setattr(f"{cli_ns}.StateRepository", _noop_repo_kw)
+    monkeypatch.setattr(f"{cli_ns}.CharacterCreationOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{cli_ns}.ModuleOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{cli_ns}.CampaignCreationOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{cli_ns}.StartupOrchestrator", _noop_repo_kw)
+
+    factory = ApplicationFactory(tmp_path, StringIO(), StringIO())
+    graph = factory.build()
+    assert graph is not None
+    assert graph.game_orchestrator is not None
+    assert graph.application_orchestrator is not None

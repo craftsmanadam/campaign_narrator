@@ -1203,8 +1203,6 @@ def _make_module() -> ModuleState:
         title="The Dockside Murders",
         summary="Bodies wash ashore nightly.",
         guiding_milestone_id="m1",
-        encounters=("enc-001",),
-        current_encounter_index=0,
     )
 
 

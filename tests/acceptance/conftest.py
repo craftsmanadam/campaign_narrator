@@ -38,6 +38,7 @@ _WIREMOCK_SCENARIO_TERMINAL_STATE: dict[str, str] = {
     "startup-s1": "S1-Done",
     "startup-s2": "S2-Done",
     "startup-s3": "S3-Done",
+    "module-s1": "S1-Done",
 }
 
 
@@ -291,6 +292,25 @@ _STARTUP_FIXTURE_DIR: dict[str, str] = {
 }
 
 STARTUP_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "startup"
+MODULE_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "module"
+
+
+@given(
+    parsers.parse("the module has a completed encounter for scenario {scenario_name}"),
+    target_fixture="startup_config",
+)
+def module_has_completed_encounter(
+    scenario_name: str,
+    runtime_data_root: Path,
+    wiremock_stack: None,
+    request: pytest.FixtureRequest,
+) -> dict[str, str]:
+    """Set up a module with a completed active encounter for progression testing."""
+    fixture_dir = MODULE_FIXTURE_ROOT / scenario_name
+    _copy_fixture_tree(fixture_dir, runtime_data_root)
+    env: dict[str, str] = request.getfixturevalue("compose_environment")
+    _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), scenario_name)
+    return {"scenario_name": scenario_name}
 
 
 @given(
@@ -327,7 +347,7 @@ def game_state_with_campaign(
 ) -> dict[str, str]:
     """Set up player + campaign + active encounter for returning-player scenario."""
     fixture_dir = STARTUP_FIXTURE_ROOT / _STARTUP_FIXTURE_DIR[scenario_name]
-    _copy_startup_fixtures(fixture_dir, runtime_data_root)
+    _copy_fixture_tree(fixture_dir, runtime_data_root)
     wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)
@@ -351,15 +371,15 @@ def game_state_player_no_campaign(
 ) -> dict[str, str]:
     """Set up player-only state (no campaign) for returning-without-campaign."""
     fixture_dir = STARTUP_FIXTURE_ROOT / _STARTUP_FIXTURE_DIR[scenario_name]
-    _copy_startup_fixtures(fixture_dir, runtime_data_root)
+    _copy_fixture_tree(fixture_dir, runtime_data_root)
     wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)
     return {"scenario_name": scenario_name}
 
 
-def _copy_startup_fixtures(fixture_dir: Path, runtime_data_root: Path) -> None:
-    """Copy startup-specific fixtures into the runtime data root."""
+def _copy_fixture_tree(fixture_dir: Path, runtime_data_root: Path) -> None:
+    """Copy fixture files from fixture_dir into the runtime data root."""
     if not fixture_dir.exists():
         return
     for source in fixture_dir.rglob("*"):

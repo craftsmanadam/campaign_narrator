@@ -39,8 +39,9 @@ def _module_to_json(m: ModuleState) -> dict[str, object]:
         "title": m.title,
         "summary": m.summary,
         "guiding_milestone_id": m.guiding_milestone_id,
-        "encounters": list(m.encounters),
-        "current_encounter_index": m.current_encounter_index,
+        "completed_encounter_ids": list(m.completed_encounter_ids),
+        "completed_encounter_summaries": list(m.completed_encounter_summaries),
+        "next_encounter_seed": m.next_encounter_seed,
         "completed": m.completed,
     }
 
@@ -54,7 +55,16 @@ def _module_from_seed(seed: object) -> ModuleState:
         title=str(seed["title"]),
         summary=str(seed["summary"]),
         guiding_milestone_id=str(seed["guiding_milestone_id"]),
-        encounters=tuple(str(e) for e in seed.get("encounters", [])),
-        current_encounter_index=int(seed["current_encounter_index"]),
+        completed_encounter_ids=tuple(
+            str(e) for e in seed.get("completed_encounter_ids", [])
+        ),
+        completed_encounter_summaries=tuple(
+            str(s) for s in seed.get("completed_encounter_summaries", [])
+        ),
+        next_encounter_seed=(
+            str(seed["next_encounter_seed"])
+            if seed.get("next_encounter_seed") is not None
+            else None
+        ),
         completed=bool(seed.get("completed", False)),
     )

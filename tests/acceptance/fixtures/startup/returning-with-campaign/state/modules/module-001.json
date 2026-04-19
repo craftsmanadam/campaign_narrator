@@ -1,0 +1,11 @@
+{
+  "module_id": "module-001",
+  "campaign_id": "c-startup-s2",
+  "title": "The Dockside Murders",
+  "summary": "Bodies wash ashore nightly along the Darkholm waterfront.",
+  "guiding_milestone_id": "m1",
+  "completed_encounter_ids": [],
+  "completed_encounter_summaries": [],
+  "next_encounter_seed": null,
+  "completed": false
+}

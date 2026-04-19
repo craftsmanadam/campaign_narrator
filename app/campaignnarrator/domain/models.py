@@ -80,6 +80,7 @@ class CampaignState:
     player_brief: str
     player_actor_id: str
     bbeg_actor_id: str | None = None
+    current_module_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,8 +92,9 @@ class ModuleState:
     title: str
     summary: str
     guiding_milestone_id: str
-    encounters: tuple[str, ...]
-    current_encounter_index: int
+    completed_encounter_ids: tuple[str, ...] = ()
+    completed_encounter_summaries: tuple[str, ...] = ()
+    next_encounter_seed: str | None = None
     completed: bool = False
 
 
@@ -385,6 +387,21 @@ class CritReview(BaseModel):
     reason: str | None = None  # explanation when approved=False
 
 
+class NextEncounterPlan(BaseModel):
+    """Structured output from NarratorAgent.plan_next_encounter().
+
+    seed: Opening scene description for the next encounter. Used verbatim as
+          EncounterState.setting. Ignored when milestone_achieved=True.
+    milestone_achieved: True when the module's guiding milestone is narratively
+                        complete. ModuleOrchestrator transitions to next module.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    seed: str
+    milestone_achieved: bool
+
+
 class OrchestrationDecision(BaseModel):
     """Structured output from the orchestrator."""
 
@@ -546,6 +563,7 @@ __all__ = [
     "ModuleState",
     "Narration",
     "NarrationFrame",
+    "NextEncounterPlan",
     "OrchestrationDecision",
     "PlayerIO",
     "PlayerInput",

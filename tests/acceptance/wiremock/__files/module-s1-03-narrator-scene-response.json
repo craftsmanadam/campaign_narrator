@@ -1,0 +1,23 @@
+{
+  "id": "resp_ms1_03",
+  "object": "chat.completion",
+  "created": 1710000022,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_ms1_03",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"text\":\"You return to the docks as midnight settles over Darkholm. The fog is thicker now, muffling the black water. A hooded figure descends toward the harbormaster's office, lantern in hand.\",\"scene_tone\":\"dark and ominous\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 60, "total_tokens": 160}
+}
