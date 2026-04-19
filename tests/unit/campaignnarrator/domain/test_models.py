@@ -44,10 +44,10 @@ from campaignnarrator.domain.models import (
     TurnResources,
     WeaponState,
 )
-from pydantic import ValidationError
-
 from campaignnarrator.repositories.campaign_repository import CampaignRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
+from pydantic import ValidationError
+
 from tests.fixtures.fighter_talia import TALIA
 from tests.fixtures.goblin_scout import make_goblin_scout
 
