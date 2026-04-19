@@ -22,13 +22,14 @@ done
 ENV_FILE=".env${ENV_SUFFIX:+.$ENV_SUFFIX}"
 
 if [ ! -f "$ENV_FILE" ]; then
-  puts "${RED}ERROR: $ENV_FILE not found.${RESET}"
   if [ -f "${ENV_FILE}.example" ]; then
-    puts "Copy ${ENV_FILE}.example to ${ENV_FILE} and configure it."
+    puts "${YELLOW}${ENV_FILE} not found — creating from ${ENV_FILE}.example${RESET}"
+    cp "${ENV_FILE}.example" "$ENV_FILE"
   else
-    puts "No example found. Check available .env*.example files."
+    puts "${RED}ERROR: $ENV_FILE not found and no ${ENV_FILE}.example to copy from.${RESET}"
+    puts "Check available .env*.example files."
+    exit 1
   fi
-  exit 1
 fi
 
 puts "${BLUE}Loading env profile: ${ENV_FILE}${RESET}"
