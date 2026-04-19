@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     set directly in the environment always take precedence.
 
     Fields:
+        data_root: Directory for all runtime state (actors, campaign, modules,
+            encounters, memory). Relative paths are resolved from the working
+            directory. Defaults to tmp/data_store.
         embedding_provider: "ollama" or "stub". Controls which EmbeddingAdapter
             ApplicationFactory constructs. Use "stub" in acceptance tests.
         embedding_model: Model name passed to the embedding provider.
@@ -25,6 +28,7 @@ class Settings(BaseSettings):
             from data_root: {data_root}/memory/lancedb/.
     """
 
+    data_root: str = "tmp/data_store"
     embedding_provider: Literal["stub", "ollama"] = "ollama"
     embedding_model: str = "nomic-embed-text"
     embedding_base_url: str = "http://localhost:11434"

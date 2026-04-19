@@ -68,3 +68,17 @@ def test_settings_ignores_unrelated_env_vars(
     monkeypatch.setenv("CAMPAIGNNARRATOR_DICE_SEED", "7")
     s = Settings()
     assert s.embedding_provider == "ollama"
+
+
+def test_settings_data_root_default() -> None:
+    """data_root defaults to tmp/data_store when DATA_ROOT is not set."""
+    s = Settings()
+    assert s.data_root == "tmp/data_store"
+
+
+def test_settings_data_root_overridden_by_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATA_ROOT", "custom/path")
+    s = Settings()
+    assert s.data_root == "custom/path"

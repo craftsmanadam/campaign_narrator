@@ -359,7 +359,7 @@ def main(
     stdout = sys.stdout if stdout is None else stdout
 
     parser = argparse.ArgumentParser(prog="campaignnarrator")
-    parser.add_argument("--data-root", required=True, type=Path)
+    parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument(
         "--encounter-id",
         default=None,
@@ -367,7 +367,11 @@ def main(
     )
     args = parser.parse_args(argv)
 
-    graph = _build_application_graph(args.data_root, stdin=stdin, stdout=stdout)
+    if args.data_root is not None:
+        data_root = args.data_root
+    else:
+        data_root = Path(Settings().data_root)
+    graph = _build_application_graph(data_root, stdin=stdin, stdout=stdout)
 
     if args.encounter_id:
         result = graph.application_orchestrator.run_encounter(

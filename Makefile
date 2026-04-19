@@ -1,5 +1,5 @@
 # All our targets are phony (no files to check), so performance should increase if implicit rule search is skipped.
-.PHONY: bootstrap clean analyze_code format build analyze_image unit_test integration_test watch_unit_tests acceptance_test test verify start stop
+.PHONY: bootstrap clean analyze_code format build analyze_image unit_test integration_test watch_unit_tests acceptance_test test verify start stop run_local clear_state stop_local
 
 bootstrap:
 	./bin/bootstrap.sh
@@ -27,3 +27,9 @@ start: build
 	./bin/start.sh
 stop:
 	./bin/stop.sh
+run_local: bootstrap
+	./bin/run_local.sh $(ARGS)
+clear_state:
+	./bin/clear_state.sh
+stop_local:
+	./bin/stop_local.sh

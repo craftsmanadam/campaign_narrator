@@ -209,6 +209,64 @@ def test_cli_rejects_legacy_input_flag(tmp_path: Path) -> None:
         main(["--data-root", str(tmp_path), "--input", "I drink a potion"])
 
 
+def test_main_uses_settings_data_root_as_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--data-root is optional; omitting it uses DATA_ROOT from env (via Settings)."""
+    monkeypatch.setenv("DATA_ROOT", "tmp/test_store")
+    captured: list[Path] = []
+
+    def _fake_build(
+        data_root: Path, stdin: object, stdout: object
+    ) -> _ApplicationGraph:
+        captured.append(data_root)
+        return _ApplicationGraph(
+            game_orchestrator=_FakeGameOrchestrator(),
+            application_orchestrator=_FakeApplicationOrchestrator(
+                encounter_orchestrator=object()
+            ),
+        )
+
+    monkeypatch.setattr(
+        "campaignnarrator.cli._build_application_graph",
+        _fake_build,
+    )
+
+    exit_code = main([], stdin=StringIO(), stdout=StringIO())
+
+    assert exit_code == 0
+    assert captured == [Path("tmp/test_store")]
+
+
+def test_main_uses_settings_default_data_root_when_env_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When DATA_ROOT is not set, --data-root defaults to Settings field default."""
+    monkeypatch.delenv("DATA_ROOT", raising=False)
+    captured: list[Path] = []
+
+    def _fake_build(
+        data_root: Path, stdin: object, stdout: object
+    ) -> _ApplicationGraph:
+        captured.append(data_root)
+        return _ApplicationGraph(
+            game_orchestrator=_FakeGameOrchestrator(),
+            application_orchestrator=_FakeApplicationOrchestrator(
+                encounter_orchestrator=object()
+            ),
+        )
+
+    monkeypatch.setattr(
+        "campaignnarrator.cli._build_application_graph",
+        _fake_build,
+    )
+
+    exit_code = main([], stdin=StringIO(), stdout=StringIO())
+
+    assert exit_code == 0
+    assert captured == [Path("tmp/data_store")]
+
+
 # ---------------------------------------------------------------------------
 # Wiring tests
 # ---------------------------------------------------------------------------
