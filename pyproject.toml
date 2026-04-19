@@ -34,6 +34,9 @@ packages = [
     { include = "campaignnarrator", from = "app" }
 ]
 
+[tool.poetry.scripts]
+campaignnarrator = "campaignnarrator.cli:main"
+
 [project.scripts]
 campaignnarrator = "campaignnarrator.cli:main"
 
