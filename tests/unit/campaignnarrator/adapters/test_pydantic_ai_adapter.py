@@ -8,7 +8,7 @@ import campaignnarrator.adapters.pydantic_ai_adapter as adapter_module
 import pytest
 from campaignnarrator.adapters.pydantic_ai_adapter import (
     PydanticAIAdapter,
-    _ollama_native_profile,
+    _ollama_structured_output_profile,
 )
 
 
@@ -113,18 +113,19 @@ def test_from_env_configures_ollama_provider(
     assert adapter.provider.base_url == "http://localhost:11434/v1"
     assert isinstance(adapter.model, _FakeModel)
     assert adapter.model.model_name == "orieg/gemma3-tools:12b-ft-v2"
-    assert adapter.model.profile is adapter_module._ollama_native_profile
+    assert adapter.model.profile is adapter_module._ollama_structured_output_profile
 
 
-def test_ollama_native_profile_forces_native_structured_output_mode() -> None:
-    """_ollama_native_profile must set default_structured_output_mode to 'native'.
+def test_ollama_structured_output_profile_uses_prompted_mode() -> None:
+    """Profile must use prompted mode for Ollama structured output.
 
-    This ensures pydantic-ai uses response_format: json_schema instead of
-    tool-calling, which would produce null content that Ollama rejects (HTTP 400).
+    Tool mode: null content in tool-call messages → Ollama HTTP 400.
+    Native mode: complex JSON schema in response_format → Ollama HTTP 500.
+    Prompted mode: schema embedded in prompt + json_object format → works.
     """
-    profile = _ollama_native_profile("orieg/gemma3-tools:12b-ft-v2")
+    profile = _ollama_structured_output_profile("orieg/gemma3-tools:12b-ft-v2")
     assert profile is not None
-    assert profile.default_structured_output_mode == "native"
+    assert profile.default_structured_output_mode == "prompted"
 
 
 def test_generate_text_returns_plain_output(monkeypatch: pytest.MonkeyPatch) -> None:

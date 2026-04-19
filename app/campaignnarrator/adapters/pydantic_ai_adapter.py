@@ -13,17 +13,18 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 
 
-def _ollama_native_profile(model_name: str) -> ModelProfile | None:
-    """Return an Ollama model profile that forces native structured output mode.
+def _ollama_structured_output_profile(model_name: str) -> ModelProfile | None:
+    """Return an Ollama model profile that uses prompted structured output mode.
 
-    Ollama rejects tool-call messages with null content (HTTP 400).  Setting
-    default_structured_output_mode='native' routes structured output through
-    response_format: json_schema instead of tool-calling.
+    Ollama rejects tool-call messages with null content (HTTP 400) and rejects
+    complex JSON schemas in response_format: json_schema (HTTP 500).  Prompted
+    mode embeds the schema in the system prompt and sends the simpler
+    response_format: {"type": "json_object"}, which Ollama handles correctly.
     """
     base = OllamaProvider.model_profile(model_name)
     if base is None:
         return None
-    return replace(base, default_structured_output_mode="native")
+    return replace(base, default_structured_output_mode="prompted")
 
 
 class PydanticAIAdapter:
@@ -48,7 +49,7 @@ class PydanticAIAdapter:
                 api_key=api_key,
             )
             self._model = OpenAIChatModel(
-                model, provider=provider, profile=_ollama_native_profile
+                model, provider=provider, profile=_ollama_structured_output_profile
             )
         self.provider = provider
         self.timeout_seconds = timeout_seconds
