@@ -27,7 +27,10 @@ BASE_NARRATE_INSTRUCTIONS: str = (
     "given names.\n"
     "4. If name_known is false for an NPC, refer to them only by their "
     "description label. Never use their display_name until the player has "
-    "learned it."
+    "learned it.\n\n"
+    "When purpose is 'npc_dialogue', player_action contains the player's exact "
+    "words. The NPC must reply directly — answer specific questions, react to "
+    "statements, speak in character. Do not re-describe or re-establish the scene."
 )
 
 SCENE_OPENING_INSTRUCTIONS: str = (

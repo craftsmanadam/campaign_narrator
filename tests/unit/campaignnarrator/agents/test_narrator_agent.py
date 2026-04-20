@@ -803,3 +803,43 @@ def test_narrate_serializes_npc_presences_in_frame() -> None:
     assert input_text is not None
     assert "ESTABLISHED NPCs" in input_text
     assert "the innkeeper" in input_text
+
+
+def test_narrate_includes_player_action_in_frame_when_present() -> None:
+    """player_action must appear in the LLM input when set on the frame."""
+    narrator, mock_adapter, _ = _make_narrator()
+    mock_adapter.generate_text.return_value = "The man stammers his name."
+
+    frame = NarrationFrame(
+        purpose="npc_dialogue",
+        phase=EncounterPhase.SOCIAL,
+        setting="A muddy road.",
+        public_actor_summaries=("Fighter (uninjured)",),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+        player_action="What is your name and who is the Baron's Shadow?",
+    )
+    narrator.narrate(frame)
+
+    call_args = mock_adapter.generate_text.call_args
+    input_text = call_args.kwargs.get("input_text") or (
+        call_args.args[1] if len(call_args.args) > 1 else None
+    )
+    assert input_text is not None
+    assert "player_action" in input_text
+    assert "Baron's Shadow" in input_text
+
+
+def test_narrate_omits_player_action_key_when_none() -> None:
+    """player_action must not appear in the LLM input when not set."""
+    narrator, mock_adapter, _ = _make_narrator()
+
+    narrator.narrate(_frame("scene_response"))
+
+    call_args = mock_adapter.generate_text.call_args
+    input_text = call_args.kwargs.get("input_text") or (
+        call_args.args[1] if len(call_args.args) > 1 else None
+    )
+    assert input_text is not None
+    assert "player_action" not in input_text

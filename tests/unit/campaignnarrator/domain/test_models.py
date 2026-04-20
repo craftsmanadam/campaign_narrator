@@ -1667,3 +1667,33 @@ def test_roll_request_rejects_symbolic_without_braces() -> None:
             visibility=RollVisibility.PUBLIC,
             expression="d20 + wisdom_modifier",
         )
+
+
+def test_roll_request_normalizes_spaces_around_operators() -> None:
+    """Spaces around + or - (common Ollama output) are stripped and accepted."""
+    req = RollRequest(
+        owner="pc:talia",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20 + {wisdom_mod} + {proficiency_bonus}",
+    )
+    assert req.expression == "1d20+{wisdom_mod}+{proficiency_bonus}"
+
+
+def test_roll_request_auto_braces_bare_known_tokens() -> None:
+    """Bare known token names (Ollama omits braces) are auto-braced and accepted."""
+    req = RollRequest(
+        owner="pc:talia",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+charisma_mod+proficiency_bonus",
+    )
+    assert req.expression == "1d20+{charisma_mod}+{proficiency_bonus}"
+
+
+def test_roll_request_normalizes_spaces_and_bare_tokens_together() -> None:
+    """Combined spaces + missing braces are both fixed in one pass."""
+    req = RollRequest(
+        owner="pc:talia",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20 + wisdom_mod",
+    )
+    assert req.expression == "1d20+{wisdom_mod}"

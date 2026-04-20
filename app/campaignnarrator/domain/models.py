@@ -462,9 +462,25 @@ class RollRequest(BaseModel):
     @field_validator("expression")
     @classmethod
     def valid_dice(cls, v: str) -> str:
-        if not re.fullmatch(r"\d+d\d+(k[lh]?\d+)?([+-](\d+|\{[a-z_]+\}))*", v):
+        # Normalize whitespace around operators (Ollama sometimes adds spaces).
+        normalized = re.sub(r"\s*([+-])\s*", r"\1", v.strip())
+        # Auto-brace bare known token names (Ollama sometimes omits braces).
+        for token in (
+            "strength_mod",
+            "dexterity_mod",
+            "constitution_mod",
+            "intelligence_mod",
+            "wisdom_mod",
+            "charisma_mod",
+            "proficiency_bonus",
+            "level",
+        ):
+            normalized = re.sub(
+                rf"(?<!\{{){re.escape(token)}(?!\}})", f"{{{token}}}", normalized
+            )
+        if not re.fullmatch(r"\d+d\d+(k[lh]?\d+)?([+-](\d+|\{[a-z_]+\}))*", normalized):
             raise ValueError(f"invalid dice expression: {v!r}")  # noqa: TRY003
-        return v
+        return normalized
 
 
 class StateEffect(BaseModel):
@@ -516,6 +532,7 @@ class NarrationFrame:
     resolved_outcomes: tuple[str, ...]
     allowed_disclosures: tuple[str, ...]
     tone_guidance: str | None = None
+    player_action: str | None = None
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
     npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
 

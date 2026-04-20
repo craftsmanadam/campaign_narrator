@@ -166,6 +166,8 @@ class NarratorAgent:
         }
         if npc_block:
             frame_dict["npc_presences"] = npc_block
+        if frame.player_action:
+            frame_dict["player_action"] = frame.player_action
         if frame.purpose == "scene_opening":
             frame_dict["prior_narrative_context"] = self.retrieve_memory(
                 frame.setting or ""

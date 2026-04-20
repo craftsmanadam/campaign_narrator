@@ -337,6 +337,7 @@ class EncounterOrchestrator:
             _frame(
                 state,
                 purpose,
+                player_action=player_input.raw_text,
                 resolved_outcomes=(decision.reason_summary,),
             )
         )
@@ -377,6 +378,7 @@ class EncounterOrchestrator:
             _frame(
                 updated_state,
                 "social_resolution",
+                player_action=player_input.raw_text,
                 resolved_outcomes=(*roll_events, adjudication.summary),
                 compendium_context=compendium_context,
             )
@@ -571,6 +573,7 @@ def _frame(
     state: EncounterState,
     purpose: str,
     *,
+    player_action: str | None = None,
     resolved_outcomes: tuple[str, ...] = (),
     allowed_disclosures: tuple[str, ...] = ("public encounter state",),
     compendium_context: tuple[str, ...] = (),
@@ -586,6 +589,7 @@ def _frame(
         allowed_disclosures=allowed_disclosures,
         compendium_context=compendium_context,
         tone_guidance=state.scene_tone,
+        player_action=player_action,
     )
 
 

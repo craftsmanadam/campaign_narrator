@@ -469,6 +469,7 @@ def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> No
     assert state is not None
     assert state.outcome == "de-escalated"
     assert "Roll: calm goblins = 16." in narrator_agent.frames[-1].resolved_outcomes
+    assert narrator_agent.frames[-1].player_action == "I try to calm them down."
     assert "social_resolution:" in result.output_text
 
 
@@ -575,6 +576,7 @@ def test_non_combat_narrative_decisions_route_to_narrator(
 
     assert narrator_agent.frames[-1].purpose == purpose
     assert narrator_agent.frames[-1].resolved_outcomes == ("The goblin answers.",)
+    assert narrator_agent.frames[-1].player_action == "I ask what they want."
     assert f"{purpose}: The goblin answers." in result.output_text
 
 
