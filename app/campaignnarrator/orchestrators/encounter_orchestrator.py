@@ -173,6 +173,11 @@ class EncounterOrchestrator:
             self._io.display(text)
             output.append(text)
 
+        if not scene_texts and state.phase is EncounterPhase.SOCIAL:
+            recap_text = self._narrate(_recap_frame(state)).text
+            self._io.display(recap_text)
+            output.append(recap_text)
+
         if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
             return EncounterRunResult(
                 encounter_id=state.encounter_id,

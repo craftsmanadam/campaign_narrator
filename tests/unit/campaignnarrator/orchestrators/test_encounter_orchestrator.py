@@ -1260,3 +1260,28 @@ def test_decision_agent_instructions_contain_survival_example() -> None:
         "I try to track the creature through the forest."
         in _DECISION_AGENT_INSTRUCTIONS
     )
+
+
+def test_resume_encounter_displays_recap_before_prompt(tmp_path: Path) -> None:
+    """When resuming a SOCIAL-phase encounter, a recap must appear before the prompt."""
+    io = ScriptedIO(["exit"])
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_social_repository(tmp_path),
+        io=io,
+    )
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+    assert "recap_response" in result.output_text
+
+
+def test_fresh_encounter_does_not_show_recap(tmp_path: Path) -> None:
+    """A brand-new SCENE_OPENING encounter must show the scene narration, not a recap."""
+    io = ScriptedIO(["exit"])
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_scene_opening_repository(tmp_path),
+        io=io,
+    )
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+    assert "scene_opening" in result.output_text
+    assert "recap_response" not in result.output_text
