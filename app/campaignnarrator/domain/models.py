@@ -143,6 +143,22 @@ class InitiativeTurn:
 
 
 @dataclass(frozen=True, slots=True)
+class NpcPresence:
+    """Identity anchor for an NPC established in the encounter scene.
+
+    Prevents the narrator from inventing new named characters mid-scene.
+    When name_known=False the narrator uses description; when True it uses
+    display_name.
+    """
+
+    actor_id: str  # FK to EncounterState.actors
+    display_name: str  # Canonical name used when name_known=True
+    description: str  # Narrative label used when name_known=False ("the innkeeper")
+    name_known: bool  # Has the player learned this NPC's name?
+    visible: bool  # Is the NPC currently in the scene?
+
+
+@dataclass(frozen=True, slots=True)
 class ResourceState:
     """A character class resource with current/max tracking and recovery metadata."""
 
@@ -266,6 +282,9 @@ class ActorState:
     # --- Compendium references (transient — populated at load time, not persisted) ---
     references: tuple[str, ...] = field(default_factory=tuple)
 
+    # --- Compendium text (transient — populated at load time, not persisted) ---
+    compendium_text: str | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class EncounterState:
@@ -280,6 +299,7 @@ class EncounterState:
     combat_turns: tuple[InitiativeTurn, ...] = field(default_factory=tuple)
     outcome: str | None = None
     scene_tone: str | None = None
+    npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         """Snapshot mutable mappings so encounter state cannot be mutated externally."""
@@ -482,12 +502,12 @@ class NarrationFrame:
     phase: EncounterPhase
     setting: str
     public_actor_summaries: tuple[str, ...]
-    visible_npc_summaries: tuple[str, ...]
     recent_public_events: tuple[str, ...]
     resolved_outcomes: tuple[str, ...]
     allowed_disclosures: tuple[str, ...]
     tone_guidance: str | None = None
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
+    npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True, slots=True)
@@ -527,6 +547,25 @@ class Adjudication:
     rule_references: tuple[RuleReference, ...] = field(default_factory=tuple)
 
 
+class NpcPresenceResult(BaseModel):
+    """Structured NPC declaration from the scene opening LLM response.
+
+    stat_source controls how ActorState is populated at encounter creation:
+    - 'monster_compendium': look up monster_name in the monster index and parse
+      combat stats from the SRD markdown via MonsterLoader.
+    - 'simple_npc': create a minimal ActorState with placeholder combat stats
+      (HP=1, AC=10, no attacks). Use for social NPCs not expected to fight.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    display_name: str
+    description: str
+    name_known: bool
+    stat_source: Literal["monster_compendium", "simple_npc"]
+    monster_name: str | None = None
+
+
 class SceneOpeningResponse(BaseModel):
     """Structured LLM output for scene opening narration."""
 
@@ -534,6 +573,7 @@ class SceneOpeningResponse(BaseModel):
 
     text: str
     scene_tone: str
+    introduced_npcs: list[NpcPresenceResult] = []
 
 
 class CombatIntent(BaseModel):
@@ -568,6 +608,8 @@ __all__ = [
     "Narration",
     "NarrationFrame",
     "NextEncounterPlan",
+    "NpcPresence",
+    "NpcPresenceResult",
     "OrchestrationDecision",
     "PlayerIO",
     "PlayerInput",

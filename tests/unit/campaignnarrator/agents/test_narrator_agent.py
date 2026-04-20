@@ -8,7 +8,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
-from campaignnarrator.agents.narrator_agent import NarratorAgent
+from campaignnarrator.agents.narrator_agent import (
+    _BASE_NARRATE_INSTRUCTIONS,
+    _SCENE_OPENING_INSTRUCTIONS,
+    NarratorAgent,
+)
 from campaignnarrator.domain.models import (
     ActorState,
     CampaignState,
@@ -20,6 +24,7 @@ from campaignnarrator.domain.models import (
     ModuleState,
     NarrationFrame,
     NextEncounterPlan,
+    NpcPresence,
     SceneOpeningResponse,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -54,7 +59,6 @@ def _frame(purpose: str = "social_resolution") -> NarrationFrame:
         phase=EncounterPhase.SOCIAL,
         setting="A ruined roadside camp.",
         public_actor_summaries=("Talia has 12 of 12 hit points.",),
-        visible_npc_summaries=("Goblin Scout is wary.",),
         recent_public_events=("Talia offers peace.",),
         resolved_outcomes=("Encounter outcome: peaceful",),
         allowed_disclosures=("visible_npcs", "public_events"),
@@ -138,7 +142,6 @@ def test_narrate_scene_opening_calls_scene_agent() -> None:
             phase=EncounterPhase.SCENE_OPENING,
             setting="Forest",
             public_actor_summaries=(),
-            visible_npc_summaries=(),
             recent_public_events=(),
             resolved_outcomes=(),
             allowed_disclosures=(),
@@ -575,7 +578,6 @@ def _make_scene_frame(setting: str = "The docks at midnight.") -> NarrationFrame
         phase=EncounterPhase.SCENE_OPENING,
         setting=setting,
         public_actor_summaries=(),
-        visible_npc_summaries=(),
         recent_public_events=(),
         resolved_outcomes=(),
         allowed_disclosures=(),
@@ -676,3 +678,128 @@ def test_plan_next_encounter_includes_prior_narrative_context() -> None:
 
     call_args = mock_plan_agent.run_sync.call_args[0][0]
     assert "Aldric fought the cultist." in call_args
+
+
+# ---------------------------------------------------------------------------
+# open_scene
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def narrator_with_mock_scene_agent() -> tuple[NarratorAgent, MagicMock]:
+    """Return (narrator, mock_scene_agent) for open_scene tests."""
+    mock_scene_agent = MagicMock()
+    narrator = NarratorAgent(
+        adapter=MagicMock(),
+        _scene_agent=mock_scene_agent,
+        _assess_agent=MagicMock(),
+        _crit_agent=MagicMock(),
+        _plan_agent=MagicMock(),
+    )
+    return narrator, mock_scene_agent
+
+
+def test_open_scene_returns_scene_opening_response(
+    narrator_with_mock_scene_agent: tuple[NarratorAgent, MagicMock],
+) -> None:
+    """open_scene() returns SceneOpeningResponse directly (not wrapped in Narration)."""
+    narrator, mock_scene_agent = narrator_with_mock_scene_agent
+    fake_response = SceneOpeningResponse(
+        text="A flickering torch lights the room.",
+        scene_tone="tense and foreboding",
+        introduced_npcs=[],
+    )
+    mock_scene_agent.run_sync.return_value.output = fake_response
+
+    frame = NarrationFrame(
+        purpose="scene_opening",
+        phase=EncounterPhase.SCENE_OPENING,
+        setting="A dungeon corridor.",
+        public_actor_summaries=(),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+    )
+    result = narrator.open_scene(frame)
+    assert result.text == "A flickering torch lights the room."
+    assert result.scene_tone == "tense and foreboding"
+    assert result.introduced_npcs == []
+
+
+def test_open_scene_raises_on_empty_text(
+    narrator_with_mock_scene_agent: tuple[NarratorAgent, MagicMock],
+) -> None:
+    """open_scene() raises ValueError when narration text is blank."""
+    narrator, mock_scene_agent = narrator_with_mock_scene_agent
+    mock_scene_agent.run_sync.return_value.output = SceneOpeningResponse(
+        text="   ",
+        scene_tone="quiet",
+        introduced_npcs=[],
+    )
+
+    frame = NarrationFrame(
+        purpose="scene_opening",
+        phase=EncounterPhase.SCENE_OPENING,
+        setting="An empty room.",
+        public_actor_summaries=(),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=(),
+    )
+    with pytest.raises(ValueError, match="empty narration output"):
+        narrator.open_scene(frame)
+
+
+# ---------------------------------------------------------------------------
+# Hard rules and NPC presence serialization
+# ---------------------------------------------------------------------------
+
+
+def test_base_narrate_instructions_contain_hard_rules() -> None:
+    """_BASE_NARRATE_INSTRUCTIONS must include all four hard rules."""
+    assert "Never expose mechanical stats" in _BASE_NARRATE_INSTRUCTIONS
+    assert "Do not reset or re-describe the opening scene" in _BASE_NARRATE_INSTRUCTIONS
+    assert "Do not introduce new named characters" in _BASE_NARRATE_INSTRUCTIONS
+    assert "name_known is false" in _BASE_NARRATE_INSTRUCTIONS
+
+
+def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
+    """_SCENE_OPENING_INSTRUCTIONS must reference NPC declaration fields."""
+    assert "introduced_npcs" in _SCENE_OPENING_INSTRUCTIONS
+    assert "monster_compendium" in _SCENE_OPENING_INSTRUCTIONS
+    assert "simple_npc" in _SCENE_OPENING_INSTRUCTIONS
+    assert "public_actor_summaries" in _SCENE_OPENING_INSTRUCTIONS
+
+
+def test_narrate_serializes_npc_presences_in_frame() -> None:
+    """NarrationFrame.npc_presences appear as ESTABLISHED NPCs block in LLM context."""
+    narrator, mock_adapter, _ = _make_narrator()
+    mock_adapter.generate_text.return_value = "Mira greets you warmly."
+
+    presence = NpcPresence(
+        actor_id="npc:mira-000",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=False,
+        visible=True,
+    )
+    frame = NarrationFrame(
+        purpose="scene_response",
+        phase=EncounterPhase.SOCIAL,
+        setting="A tavern.",
+        public_actor_summaries=("Fighter (uninjured)",),
+        npc_presences=(presence,),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+    )
+    narrator.narrate(frame)
+
+    call_args = mock_adapter.generate_text.call_args
+    # input_text can be positional or keyword
+    input_text = call_args.kwargs.get("input_text") or (
+        call_args.args[1] if len(call_args.args) > 1 else None
+    )
+    assert input_text is not None
+    assert "ESTABLISHED NPCs" in input_text
+    assert "the innkeeper" in input_text

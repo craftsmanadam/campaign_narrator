@@ -12,7 +12,6 @@ from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     ActorState,
-    ActorType,
     CombatResult,
     CombatStatus,
     EncounterPhase,
@@ -30,6 +29,7 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
 )
+from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.state_repository import StateRepository
@@ -43,6 +43,32 @@ _ALLOWED_SOCIAL_NEXT_STEPS = {
     "enter_combat",
     "complete_encounter",
 }
+
+_DECISION_AGENT_INSTRUCTIONS = (
+    "Choose the next encounter orchestration step based on the player's latest "
+    "input.\n\n"
+    "Allowed next_step values: npc_dialogue, narrate_scene, adjudicate_action, "
+    "roll_initiative, enter_combat, complete_encounter.\n\n"
+    "ROUTING RULES:\n"
+    "- Route to enter_combat when the player's action is an attack, uses a weapon, "
+    "or is hostile toward a creature (e.g. 'I attack', 'I stab', 'I shoot', "
+    "'I cast Fireball at the guards', 'I try to kill it', 'I charge').\n"
+    "- Route to adjudicate_action for skill checks, saving throws, and non-combat "
+    "actions (e.g. 'I pick the lock', 'I try to persuade', 'I search the room').\n"
+    "- Route to npc_dialogue when the player addresses or responds to a character "
+    "directly (e.g. 'I ask the innkeeper', 'What do you know about the bandits?').\n"
+    "- Route to complete_encounter when the scene is fully resolved and there is "
+    "nothing more to do here.\n"
+    "- Route to narrate_scene when the player is observing or moving without "
+    "triggering any of the above.\n\n"
+    "EXAMPLES:\n"
+    "'I draw my sword and attack the orc.' → enter_combat\n"
+    "'I fire an arrow at the bandit.' → enter_combat\n"
+    "'I cast Sleep on the guards.' → enter_combat\n"
+    "'I ask the innkeeper about the rumor.' → npc_dialogue\n"
+    "'I try to pick the lock.' → adjudicate_action\n\n"
+    "Do not resolve rules yourself. Do not narrate. Only choose next_step."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,12 +136,7 @@ class EncounterOrchestrator:
             self._decision_agent = Agent(
                 adapter.model,
                 output_type=OrchestrationDecision,
-                instructions=(
-                    "Choose the next encounter orchestration step. "
-                    "Allowed next_step values are npc_dialogue, narrate_scene, "
-                    "adjudicate_action, roll_initiative, enter_combat, and "
-                    "complete_encounter. Do not resolve rules yourself."
-                ),
+                instructions=_DECISION_AGENT_INSTRUCTIONS,
             )
 
     def run_encounter(self, *, encounter_id: str) -> EncounterRunResult:
@@ -533,7 +554,7 @@ def _look_frame(state: EncounterState) -> NarrationFrame:
     return _frame(
         state,
         "status_response",
-        resolved_outcomes=(state.setting, *_visible_npc_summaries(state)),
+        resolved_outcomes=(state.setting,),
         allowed_disclosures=("setting", "visible actors"),
     )
 
@@ -551,7 +572,7 @@ def _frame(
         phase=state.phase,
         setting=state.setting,
         public_actor_summaries=_public_actor_summaries(state),
-        visible_npc_summaries=_visible_npc_summaries(state),
+        npc_presences=state.npc_presences,
         recent_public_events=state.public_events[-5:],
         resolved_outcomes=resolved_outcomes,
         allowed_disclosures=allowed_disclosures,
@@ -561,19 +582,7 @@ def _frame(
 
 
 def _public_actor_summaries(state: EncounterState) -> tuple[str, ...]:
-    return tuple(_actor_summary(actor) for actor in state.actors.values())
-
-
-def _visible_npc_summaries(state: EncounterState) -> tuple[str, ...]:
-    return tuple(
-        _actor_summary(actor)
-        for actor in state.actors.values()
-        if actor.actor_type == ActorType.NPC and actor.is_visible
-    )
-
-
-def _actor_summary(actor: ActorState) -> str:
-    return f"{actor.name} HP {actor.hp_current}/{actor.hp_max}, AC {actor.armor_class}"
+    return tuple(actor_narrative_summary(actor) for actor in state.actors.values())
 
 
 def _public_roll_event(roll_request: RollRequest, total: int) -> str:

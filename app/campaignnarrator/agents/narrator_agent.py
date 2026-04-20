@@ -18,6 +18,7 @@ from campaignnarrator.domain.models import (
     Narration,
     NarrationFrame,
     NextEncounterPlan,
+    NpcPresence,
     SceneOpeningResponse,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -28,7 +29,19 @@ _BASE_NARRATE_INSTRUCTIONS = (
     "Do not invent mechanics, rolls, HP changes, inventory changes, "
     "or hidden facts. "
     "For status_response and recap_response, concise status-like output "
-    "is allowed."
+    "is allowed.\n\n"
+    "HARD RULES — violating any of these is an error:\n"
+    "1. Never expose mechanical stats to the player. No HP numbers, no AC, "
+    "no modifiers. Use injury states: uninjured, lightly wounded, bloodied, "
+    "barely standing, defeated.\n"
+    "2. Do not reset or re-describe the opening scene. The scene has already "
+    "been established. Advance the story; do not replay the introduction.\n"
+    "3. Do not introduce new named characters. Only use names from the "
+    "ESTABLISHED NPCs list. Unnamed characters may interact but must not be "
+    "given names.\n"
+    "4. If name_known is false for an NPC, refer to them only by their "
+    "description label. Never use their display_name until the player has "
+    "learned it."
 )
 
 _SCENE_OPENING_INSTRUCTIONS = (
@@ -36,7 +49,14 @@ _SCENE_OPENING_INSTRUCTIONS = (
     "Write immersive player-facing narration that sets the scene. "
     "Also choose a short scene tone phrase (8 words or fewer) that captures the "
     "emotional register (e.g. 'tense and foreboding', 'warm and welcoming', "
-    "'chaotic and urgent')."
+    "'chaotic and urgent'). "
+    "Declare all NPCs present in the scene using introduced_npcs. "
+    "For each NPC, choose stat_source='monster_compendium' if it is a "
+    "recognizable creature (e.g. Goblin, Zombie) and set monster_name to the "
+    "SRD creature name. Use stat_source='simple_npc' for human innkeepers, "
+    "merchants, quest-givers, and other social characters not expected to fight.\n\n"
+    "HARD RULE: The player character appears in public_actor_summaries with a "
+    "'(player)' label. Do not assign their name to any NPC or background character."
 )
 
 _ASSESS_COMBAT_INSTRUCTIONS = (
@@ -80,6 +100,21 @@ _PLAN_NEXT_INSTRUCTIONS = (
     "The seed is a 2-3 sentence scene description used verbatim as the encounter "
     "opening."
 )
+
+
+def _serialize_npc_presences(presences: tuple[NpcPresence, ...]) -> str:
+    """Serialize NPC presences as a structured block for the narrator LLM."""
+    if not presences:
+        return ""
+    lines = ["ESTABLISHED NPCs IN SCENE:"]
+    for p in presences:
+        name_state = "named" if p.name_known else "unnamed"
+        visibility = "visible" if p.visible else "not visible"
+        label = p.display_name if p.name_known else p.description
+        lines.append(
+            f"- {label} [{name_state}] ({visibility}) — actor_id: {p.actor_id}"
+        )
+    return "\n".join(lines)
 
 
 class NarratorAgent:
@@ -147,17 +182,19 @@ class NarratorAgent:
 
     def narrate(self, frame: NarrationFrame) -> Narration:
         """Render narration for the supplied public frame."""
-        frame_dict = {
+        npc_block = _serialize_npc_presences(frame.npc_presences)
+        frame_dict: dict[str, object] = {
             "purpose": frame.purpose,
             "phase": frame.phase.value,
             "setting": frame.setting,
             "public_actor_summaries": list(frame.public_actor_summaries),
-            "visible_npc_summaries": list(frame.visible_npc_summaries),
             "recent_public_events": list(frame.recent_public_events),
             "resolved_outcomes": list(frame.resolved_outcomes),
             "allowed_disclosures": list(frame.allowed_disclosures),
             "tone_guidance": frame.tone_guidance,
         }
+        if npc_block:
+            frame_dict["npc_presences"] = npc_block
         if frame.purpose == "scene_opening":
             frame_dict["prior_narrative_context"] = self.retrieve_memory(
                 frame.setting or ""
@@ -180,6 +217,30 @@ class NarratorAgent:
         if not text.strip():
             raise ValueError("empty narration output")  # noqa: TRY003
         return Narration(text=text, audience="player")
+
+    def open_scene(self, frame: NarrationFrame) -> SceneOpeningResponse:
+        """Return the raw SceneOpeningResponse for a scene opening frame.
+
+        Unlike narrate(), returns the structured response directly so callers
+        can inspect introduced_npcs before the encounter loop begins.
+        Raises ValueError if the narration text is blank.
+        """
+        frame_dict: dict[str, object] = {
+            "purpose": frame.purpose,
+            "phase": frame.phase.value,
+            "setting": frame.setting,
+            "public_actor_summaries": list(frame.public_actor_summaries),
+            "recent_public_events": list(frame.recent_public_events),
+            "resolved_outcomes": list(frame.resolved_outcomes),
+            "allowed_disclosures": list(frame.allowed_disclosures),
+            "tone_guidance": frame.tone_guidance,
+            "prior_narrative_context": self.retrieve_memory(frame.setting or ""),
+        }
+        frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
+        result: SceneOpeningResponse = self._scene_agent.run_sync(frame_json).output
+        if not result.text.strip():
+            raise ValueError("empty narration output")  # noqa: TRY003
+        return result
 
     def declare_npc_intent_from_json(self, context_json: str) -> str:
         """Declare this NPC's combat intent in prose for the current turn.

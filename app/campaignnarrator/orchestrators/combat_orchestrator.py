@@ -31,6 +31,7 @@ from campaignnarrator.domain.models import (
     StateEffect,
     TurnResources,
 )
+from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
 from campaignnarrator.tools.state_updates import _require_int, apply_state_effects
 
 _logger = logging.getLogger(__name__)
@@ -309,9 +310,8 @@ class CombatOrchestrator:
             phase=EncounterPhase.COMBAT,
             setting=state.setting,
             public_actor_summaries=tuple(
-                f"{a.name} HP {a.hp_current}/{a.hp_max}" for a in state.actors.values()
+                actor_narrative_summary(a) for a in state.actors.values()
             ),
-            visible_npc_summaries=(),
             recent_public_events=(),
             resolved_outcomes=(summary,),
             allowed_disclosures=("public encounter state",),
@@ -482,9 +482,7 @@ class CombatOrchestrator:
         )
 
     def _format_combat_status(self, state: EncounterState) -> str:
-        summaries = [
-            f"{a.name} HP {a.hp_current}/{a.hp_max}" for a in state.actors.values()
-        ]
+        summaries = [actor_narrative_summary(a) for a in state.actors.values()]
         return " | ".join(summaries)
 
     def _rotate_turns(self, state: EncounterState) -> EncounterState:

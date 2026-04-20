@@ -187,7 +187,7 @@ def test_generate_text_rejects_empty_output(monkeypatch: pytest.MonkeyPatch) -> 
 def test_generate_text_forwards_timeout_in_model_settings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Timeout configured on the adapter must reach run_sync as a model_settings entry."""  # noqa: E501
+    """Timeout configured on the adapter must reach run_sync as a model_settings entry."""
     agents: list[_FakeAgent] = []
 
     def _agent_factory(

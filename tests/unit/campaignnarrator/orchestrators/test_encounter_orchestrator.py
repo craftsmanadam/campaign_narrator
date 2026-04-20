@@ -28,7 +28,11 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
 )
+from campaignnarrator.orchestrators.actor_summaries import (
+    actor_narrative_summary as _actor_narrative_summary,
+)
 from campaignnarrator.orchestrators.encounter_orchestrator import (
+    _DECISION_AGENT_INSTRUCTIONS,
     EncounterOrchestrator,
     EncounterRunResult,
     OrchestratorAgents,
@@ -349,7 +353,7 @@ def test_status_routes_to_status_frame_without_rules_adjudication(
     assert rules_agent.requests == []
     assert narrator_agent.frames[-1].purpose == "status_response"
     assert any(
-        "Talia" in summary and "HP 12/12" in summary
+        "Talia" in summary and "uninjured" in summary
         for summary in narrator_agent.frames[-1].public_actor_summaries
     )
 
@@ -942,8 +946,82 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
     assert state_after.phase is EncounterPhase.COMBAT
 
 
-def test_actor_summary_includes_name_hp_and_ac(tmp_path: Path) -> None:
-    """The orchestrator decision input shows actor name, HP, and AC in summaries."""
+def _make_actor(
+    name: str, hp_current: int, hp_max: int, **kwargs: object
+) -> ActorState:
+    """Helper to build a minimal ActorState for summary tests."""
+    return ActorState(
+        actor_id=f"pc:{name.lower()}",
+        name=name,
+        actor_type=ActorType.PC,
+        hp_max=hp_max,
+        hp_current=hp_current,
+        armor_class=16,
+        strength=16,
+        dexterity=12,
+        constitution=14,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=1,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("chain mail",),
+        **kwargs,
+    )
+
+
+def test_narrative_summary_uninjured() -> None:
+    actor = _make_actor("Talia", hp_current=20, hp_max=20)
+    result = _actor_narrative_summary(actor)
+    assert "20" not in result
+    assert "16" not in result  # no AC
+    assert "uninjured" in result
+    assert "Talia" in result
+
+
+def test_narrative_summary_lightly_wounded() -> None:
+    actor = _make_actor("Talia", hp_current=14, hp_max=20)  # 70% = lightly wounded
+    result = _actor_narrative_summary(actor)
+    assert "lightly wounded" in result
+
+
+def test_narrative_summary_bloodied() -> None:
+    actor = _make_actor("Talia", hp_current=9, hp_max=20)  # 45% = bloodied
+    result = _actor_narrative_summary(actor)
+    assert "bloodied" in result
+    assert "9" not in result
+
+
+def test_narrative_summary_barely_standing() -> None:
+    actor = _make_actor("Goblin", hp_current=1, hp_max=7)  # ~14% = barely standing
+    result = _actor_narrative_summary(actor)
+    assert "barely standing" in result
+
+
+def test_narrative_summary_defeated() -> None:
+    actor = _make_actor("Goblin", hp_current=0, hp_max=7)
+    result = _actor_narrative_summary(actor)
+    assert "defeated" in result
+
+
+def test_narrative_summary_includes_conditions() -> None:
+    actor = _make_actor("Talia", hp_current=15, hp_max=20, conditions=("poisoned",))
+    result = _actor_narrative_summary(actor)
+    assert "poisoned" in result
+
+
+def test_narrative_summary_no_hp_numbers() -> None:
+    actor = _make_actor("Talia", hp_current=15, hp_max=20)
+    result = _actor_narrative_summary(actor)
+    assert "15/20" not in result
+    assert "AC" not in result
+
+
+def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
+    """The orchestrator decision input shows actor name and injury status in summaries."""
     mock_agent = _mock_decision_agent([_decision("npc_dialogue")])
 
     orchestrator = EncounterOrchestrator(
@@ -963,7 +1041,8 @@ def test_actor_summary_includes_name_hp_and_ac(tmp_path: Path) -> None:
     call_args = mock_agent.run_sync.call_args_list[0]
     input_dict = json.loads(call_args[0][0])
     summaries = input_dict.get("public_actor_summaries", [])
-    assert any("Talia" in s and "HP" in s and "AC" in s for s in summaries)
+    assert any("Talia" in s and "uninjured" in s for s in summaries)
+    assert not any("HP" in s or "AC" in s for s in summaries)
 
 
 def test_scene_tone_persisted_on_state_after_scene_opening(tmp_path: Path) -> None:
@@ -1076,3 +1155,21 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_decision_agent_pro
             tools=OrchestratorTools(roll_dice=FakeDice([])),
             io=ScriptedIO([], on_exhaust="exit"),
         )
+
+
+def test_decision_agent_instructions_contain_routing_rules() -> None:
+    assert "enter_combat" in _DECISION_AGENT_INSTRUCTIONS
+    assert "attack" in _DECISION_AGENT_INSTRUCTIONS.lower()
+    assert "adjudicate_action" in _DECISION_AGENT_INSTRUCTIONS
+    assert "npc_dialogue" in _DECISION_AGENT_INSTRUCTIONS
+    assert "complete_encounter" in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_forbid_self_resolution() -> None:
+    assert "Do not resolve rules yourself" in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_contain_few_shot_examples() -> None:
+    assert "I draw my sword" in _DECISION_AGENT_INSTRUCTIONS
+    assert "I ask the innkeeper" in _DECISION_AGENT_INSTRUCTIONS
+    assert "I try to pick the lock" in _DECISION_AGENT_INSTRUCTIONS

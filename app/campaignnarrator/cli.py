@@ -286,6 +286,7 @@ class ApplicationFactory:
                 encounter=repos.encounter,
                 actor=repos.actor,
                 memory=repos.memory,
+                compendium=repos.compendium,
             ),
             agents=ModuleOrchestratorAgents(
                 narrator=agents.narrator,

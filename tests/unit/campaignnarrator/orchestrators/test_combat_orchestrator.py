@@ -560,7 +560,19 @@ def test_look_around_during_combat_does_not_call_rules_agent() -> None:
     )
     orc.run(state)
     assert len(rules.requests_seen) == 0
-    assert any("HP" in msg for msg in io.displayed)
+    assert any(
+        any(
+            label in msg
+            for label in (
+                "uninjured",
+                "bloodied",
+                "defeated",
+                "barely standing",
+                "lightly wounded",
+            )
+        )
+        for msg in io.displayed
+    )
 
 
 def test_exit_during_combat_returns_saved_and_quit_status() -> None:

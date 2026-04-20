@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from campaignnarrator.agents.module_generator_agent import (
@@ -12,12 +13,15 @@ from campaignnarrator.agents.module_generator_agent import (
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.domain.models import (
     ActorState,
+    ActorType,
     CampaignState,
     EncounterPhase,
     EncounterState,
     Milestone,
     ModuleState,
     NextEncounterPlan,
+    NpcPresenceResult,
+    SceneOpeningResponse,
 )
 from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestrator,
@@ -26,10 +30,12 @@ from campaignnarrator.orchestrators.module_orchestrator import (
 )
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.campaign_repository import CampaignRepository
+from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
 
+from tests.conftest import ScriptedIO
 from tests.fixtures.fighter_talia import TALIA
 
 
@@ -111,6 +117,10 @@ def _make_orchestrator(
     mock_encounter_repo = MagicMock(spec=EncounterRepository)
     mock_actor_repo = MagicMock(spec=ActorRepository)
     mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_compendium_repo = MagicMock(spec=CompendiumRepository)
+    mock_compendium_repo.monster_index_path.return_value = MagicMock(
+        exists=lambda: False
+    )
 
     mock_module_repo.load.return_value = module or _make_module(
         next_encounter_seed="The docks at midnight."
@@ -122,6 +132,11 @@ def _make_orchestrator(
     mock_narrator.summarize_encounter.return_value = summarize_returns
     mock_narrator.plan_next_encounter.return_value = plan or NextEncounterPlan(
         seed="The warehouse at midnight.", milestone_achieved=False
+    )
+    mock_narrator.open_scene.return_value = SceneOpeningResponse(
+        text="The docks loom ahead.",
+        scene_tone="tense and foreboding",
+        introduced_npcs=[],
     )
     mock_module_gen = MagicMock(spec=ModuleGeneratorAgent)
     mock_encounter_orch = MagicMock()
@@ -136,6 +151,7 @@ def _make_orchestrator(
         encounter=mock_encounter_repo,
         actor=mock_actor_repo,
         memory=mock_memory_repo,
+        compendium=mock_compendium_repo,
     )
     agents = ModuleOrchestratorAgents(
         narrator=mock_narrator,
@@ -357,3 +373,101 @@ def test_run_displays_end_of_campaign_when_milestones_exhausted() -> None:
     orch._io.display.assert_any_call(
         "\nThe campaign is complete. Your legend will be remembered.\n"
     )
+
+
+def test_create_encounter_seeds_simple_npc(tmp_path: Path) -> None:
+    """NPCs declared by narrator are seeded into EncounterState."""
+    tmp = tmp_path
+    (tmp / "state" / "actors").mkdir(parents=True)
+    (tmp / "state" / "encounters").mkdir(parents=True)
+    (tmp / "compendium" / "monsters").mkdir(parents=True)
+    (tmp / "compendium" / "monsters" / "index.json").write_text("[]")
+
+    actor_repo = ActorRepository(tmp / "state")
+    encounter_repo = EncounterRepository(tmp / "state")
+    campaign_repo = MagicMock(spec=CampaignRepository)
+    module_repo = MagicMock(spec=ModuleRepository)
+    memory_repo = MagicMock(spec=MemoryRepository)
+    memory_repo.store_narrative = MagicMock()
+    memory_repo.retrieve_relevant = MagicMock(return_value=[])
+    compendium_repo = CompendiumRepository(tmp / "compendium")
+
+    mock_narrator = MagicMock()
+    mock_narrator.open_scene.return_value = SceneOpeningResponse(
+        text="The tavern hums with life.",
+        scene_tone="warm and welcoming",
+        introduced_npcs=[
+            NpcPresenceResult(
+                display_name="Mira",
+                description="the innkeeper",
+                name_known=False,
+                stat_source="simple_npc",
+            )
+        ],
+    )
+    mock_module_gen = MagicMock()
+    mock_encounter_orchestrator = MagicMock()
+    mock_encounter_orchestrator.run_encounter.return_value = None
+
+    io = ScriptedIO(["exit"])
+
+    orchestrator = ModuleOrchestrator(
+        io=io,
+        repositories=ModuleOrchestratorRepositories(
+            campaign=campaign_repo,
+            module=module_repo,
+            encounter=encounter_repo,
+            actor=actor_repo,
+            memory=memory_repo,
+            compendium=compendium_repo,
+        ),
+        agents=ModuleOrchestratorAgents(
+            narrator=mock_narrator,
+            module_generator=mock_module_gen,
+        ),
+        encounter_orchestrator=mock_encounter_orchestrator,
+    )
+
+    player = ActorState(
+        actor_id="pc:fighter",
+        name="Fighter",
+        actor_type=ActorType.PC,
+        hp_max=12,
+        hp_current=12,
+        armor_class=16,
+        strength=16,
+        dexterity=12,
+        constitution=14,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=1,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("chain mail",),
+    )
+    module = ModuleState(
+        module_id="module-001",
+        campaign_id="camp-001",
+        title="Test Module",
+        summary="A test module",
+        guiding_milestone_id="m-001",
+        next_encounter_seed="A dimly lit tavern.",
+    )
+
+    orchestrator._create_and_run_encounter(
+        campaign=MagicMock(),
+        player=player,
+        module=module,
+    )
+
+    saved = encounter_repo.load_active()
+    assert saved is not None
+    npc_ids = [aid for aid in saved.actors if aid != "pc:fighter"]
+    assert len(npc_ids) == 1
+    assert "mira" in npc_ids[0]
+    assert len(saved.npc_presences) == 1
+    assert saved.npc_presences[0].description == "the innkeeper"
+    assert saved.phase == EncounterPhase.SOCIAL

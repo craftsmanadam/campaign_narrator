@@ -15,6 +15,7 @@ from campaignnarrator.domain.models import (
     FeatState,
     InitiativeTurn,
     InventoryItem,
+    NpcPresence,
     RecoveryPeriod,
     ResourceState,
     WeaponState,
@@ -60,6 +61,16 @@ def _encounter_state_to_json(state: EncounterState) -> dict[str, object]:
         ],
         "outcome": state.outcome,
         "scene_tone": state.scene_tone,
+        "npc_presences": [
+            {
+                "actor_id": p.actor_id,
+                "display_name": p.display_name,
+                "description": p.description,
+                "name_known": p.name_known,
+                "visible": p.visible,
+            }
+            for p in state.npc_presences
+        ],
         "actors": {
             actor_id: _actor_state_to_json(actor)
             for actor_id, actor in state.actors.items()
@@ -170,7 +181,43 @@ def _encounter_state_from_seed(seed: Mapping[str, object]) -> EncounterState:
         combat_turns=_combat_turns_from_seed(seed),
         outcome=_optional_string_from_seed(seed, "outcome"),
         scene_tone=_optional_string_from_seed(seed, "scene_tone"),
+        npc_presences=_npc_presences_from_seed(seed),
     )
+
+
+def _npc_presences_from_seed(
+    seed: Mapping[str, object],
+) -> tuple[NpcPresence, ...]:
+    value = seed.get("npc_presences", ())
+    if not isinstance(value, list | tuple):
+        return ()
+    presences = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            continue
+        actor_id = item.get("actor_id")
+        display_name = item.get("display_name")
+        description = item.get("description")
+        name_known = item.get("name_known")
+        visible = item.get("visible")
+        if not (
+            isinstance(actor_id, str)
+            and isinstance(display_name, str)
+            and isinstance(description, str)
+            and isinstance(name_known, bool)
+            and isinstance(visible, bool)
+        ):
+            continue
+        presences.append(
+            NpcPresence(
+                actor_id=actor_id,
+                display_name=display_name,
+                description=description,
+                name_known=name_known,
+                visible=visible,
+            )
+        )
+    return tuple(presences)
 
 
 def _encounter_actors_from_seed(seed: Mapping[str, object]) -> dict[str, ActorState]:

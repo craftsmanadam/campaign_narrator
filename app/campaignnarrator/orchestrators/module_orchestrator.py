@@ -2,24 +2,87 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
+from pathlib import Path
 
 from campaignnarrator.agents.module_generator_agent import ModuleGeneratorAgent
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.domain.models import (
     ActorState,
+    ActorType,
     CampaignState,
     EncounterPhase,
     EncounterState,
     ModuleState,
+    NarrationFrame,
+    NpcPresence,
+    NpcPresenceResult,
     PlayerIO,
 )
 from campaignnarrator.orchestrators.encounter_orchestrator import EncounterOrchestrator
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.campaign_repository import CampaignRepository
+from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.tools.monster_loader import load_by_name as _load_monster
+
+_SIMPLE_NPC_HP = 1
+_SIMPLE_NPC_AC = 10
+
+
+def _slugify(name: str) -> str:
+    slug = name.lower().replace(" ", "-")
+    return re.sub(r"[^a-z0-9-]", "", slug)
+
+
+def _make_scene_frame(player: ActorState, seed: str) -> NarrationFrame:
+    return NarrationFrame(
+        purpose="scene_opening",
+        phase=EncounterPhase.SCENE_OPENING,
+        setting=seed,
+        public_actor_summaries=(f"{player.name} (player)",),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+    )
+
+
+def _build_npc_actor(
+    result: NpcPresenceResult,
+    actor_id: str,
+    index_path: Path | None,
+) -> ActorState:
+    if (
+        result.stat_source == "monster_compendium"
+        and result.monster_name
+        and index_path is not None
+        and index_path.exists()
+    ):
+        actor = _load_monster(result.monster_name, index_path=index_path)
+        return replace(actor, actor_id=actor_id, name=result.display_name)
+    return ActorState(
+        actor_id=actor_id,
+        name=result.display_name,
+        actor_type=ActorType.NPC,
+        hp_max=_SIMPLE_NPC_HP,
+        hp_current=_SIMPLE_NPC_HP,
+        armor_class=_SIMPLE_NPC_AC,
+        strength=10,
+        dexterity=10,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=0,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Talk",),
+        ac_breakdown=(),
+    )
 
 
 @dataclass(frozen=True)
@@ -31,6 +94,7 @@ class ModuleOrchestratorRepositories:
     encounter: EncounterRepository
     actor: ActorRepository
     memory: MemoryRepository
+    compendium: CompendiumRepository
 
 
 @dataclass(frozen=True)
@@ -259,18 +323,47 @@ class ModuleOrchestrator:
         player: ActorState,
         module: ModuleState,
     ) -> None:
-        """Create an EncounterState and delegate to EncounterOrchestrator."""
+        """Open the scene, seed NPCs, create EncounterState, then run the encounter."""
+        seed = module.next_encounter_seed or ""
         encounter_id = (
             f"{module.module_id}-enc-{len(module.completed_encounter_ids) + 1:03d}"
         )
+
+        # Step 1: Open the scene and get structured response with introduced NPCs.
+        frame = _make_scene_frame(player, seed)
+        scene_response = self._agents.narrator.open_scene(frame)
+        self._io.display(scene_response.text)
+
+        # Step 2: Seed NPC actors from the scene response.
+        index_path = self._repos.compendium.monster_index_path()
+        actors: dict[str, ActorState] = {player.actor_id: player}
+        npc_presences: list[NpcPresence] = []
+        for i, npc_result in enumerate(scene_response.introduced_npcs):
+            actor_id = f"npc:{_slugify(npc_result.display_name)}-{i:03d}"
+            npc_actor = _build_npc_actor(npc_result, actor_id, index_path)
+            actors[actor_id] = npc_actor
+            npc_presences.append(
+                NpcPresence(
+                    actor_id=actor_id,
+                    display_name=npc_result.display_name,
+                    description=npc_result.description,
+                    name_known=npc_result.name_known,
+                    visible=True,
+                )
+            )
+
+        # Step 3: Create encounter with SOCIAL phase (scene already opened).
         encounter = EncounterState(
             encounter_id=encounter_id,
-            phase=EncounterPhase.SCENE_OPENING,
-            setting=module.next_encounter_seed or "",
-            actors={player.actor_id: player},
+            phase=EncounterPhase.SOCIAL,
+            setting=seed,
+            scene_tone=scene_response.scene_tone,
+            actors=actors,
+            npc_presences=tuple(npc_presences),
         )
         self._repos.encounter.save(encounter)
-        # Output is displayed live during run_encounter(); return value not used here.
+
+        # Step 4: Run the encounter (phase is SOCIAL so _open_scene is skipped).
         self._encounter_orchestrator.run_encounter(encounter_id=encounter_id)
 
         # After return, check phase to detect natural completion.

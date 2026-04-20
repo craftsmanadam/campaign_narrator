@@ -47,6 +47,7 @@ target-version = "py314"
 select = ["E", "W", "F", "PL", "I", "FAST", "ASYNC", "B", "INP", "PT", "Q", "SIM", "C90", "FURB", "RUF", "TRY"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*" = ["S"]
+# E501: SRD attack lines in test fixtures must remain single-line for regex matching.
+"tests/**/*" = ["S", "E501"]
 # StubEmbeddingAdapter uses seeded random for deterministic test doubles, not cryptography.
 "app/campaignnarrator/adapters/embedding_adapter.py" = ["S311"]

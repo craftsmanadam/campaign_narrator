@@ -30,6 +30,8 @@ from campaignnarrator.domain.models import (
     Narration,
     NarrationFrame,
     NextEncounterPlan,
+    NpcPresence,
+    NpcPresenceResult,
     OrchestrationDecision,
     PlayerInput,
     PlayerIO,
@@ -221,7 +223,6 @@ def test_narration_frame_contains_resolved_public_context() -> None:
         phase=EncounterPhase.RULES_RESOLUTION,
         setting="Goblin camp outskirts",
         public_actor_summaries=("Talia stands before the scout.",),
-        visible_npc_summaries=("Goblin Scout is tense but listening.",),
         recent_public_events=("The scout lowers his spear.",),
         resolved_outcomes=("Encounter de-escalated.",),
         allowed_disclosures=("The scout's alarm system remains hidden.",),
@@ -231,7 +232,6 @@ def test_narration_frame_contains_resolved_public_context() -> None:
     assert frame.phase is EncounterPhase.RULES_RESOLUTION
     assert frame.setting == "Goblin camp outskirts"
     assert frame.public_actor_summaries == ("Talia stands before the scout.",)
-    assert frame.visible_npc_summaries == ("Goblin Scout is tense but listening.",)
     assert frame.recent_public_events == ("The scout lowers his spear.",)
     assert frame.resolved_outcomes == ("Encounter de-escalated.",)
     assert frame.allowed_disclosures == ("The scout's alarm system remains hidden.",)
@@ -487,7 +487,6 @@ def test_narration_frame_compendium_context_defaults_to_empty() -> None:
         phase=EncounterPhase.SOCIAL,
         setting="A forest.",
         public_actor_summaries=(),
-        visible_npc_summaries=(),
         recent_public_events=(),
         resolved_outcomes=(),
         allowed_disclosures=("public encounter state",),
@@ -501,13 +500,35 @@ def test_narration_frame_accepts_compendium_context() -> None:
         phase=EncounterPhase.SOCIAL,
         setting="A forest.",
         public_actor_summaries=(),
-        visible_npc_summaries=(),
         recent_public_events=(),
         resolved_outcomes=(),
         allowed_disclosures=("public encounter state",),
         compendium_context=("Rogue class text...",),
     )
     assert frame.compendium_context == ("Rogue class text...",)
+
+
+def test_narration_frame_has_npc_presences_not_visible_summaries() -> None:
+    presence = NpcPresence(
+        actor_id="npc:innkeeper-001",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=False,
+        visible=True,
+    )
+    frame = NarrationFrame(
+        purpose="scene_response",
+        phase=EncounterPhase.SOCIAL,
+        setting="A tavern.",
+        public_actor_summaries=("Fighter (uninjured)",),
+        npc_presences=(presence,),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=("public encounter state",),
+    )
+    assert len(frame.npc_presences) == 1
+    assert frame.npc_presences[0].display_name == "Mira"
+    assert not hasattr(frame, "visible_npc_summaries")
 
 
 def test_actor_type_has_expected_string_values() -> None:
@@ -825,6 +846,55 @@ def test_actor_state_references_defaults_to_empty_tuple() -> None:
         ac_breakdown=(),
     )
     assert actor.references == ()
+
+
+def test_actor_state_compendium_text_defaults_to_none() -> None:
+    actor = ActorState(
+        actor_id="npc:goblin",
+        name="Goblin",
+        actor_type=ActorType.NPC,
+        hp_max=7,
+        hp_current=7,
+        armor_class=15,
+        strength=8,
+        dexterity=14,
+        constitution=10,
+        intelligence=10,
+        wisdom=8,
+        charisma=8,
+        proficiency_bonus=2,
+        initiative_bonus=2,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("leather armor", "shield"),
+    )
+    assert actor.compendium_text is None
+
+
+def test_actor_state_accepts_compendium_text() -> None:
+    actor = ActorState(
+        actor_id="npc:goblin",
+        name="Goblin",
+        actor_type=ActorType.NPC,
+        hp_max=7,
+        hp_current=7,
+        armor_class=15,
+        strength=8,
+        dexterity=14,
+        constitution=10,
+        intelligence=10,
+        wisdom=8,
+        charisma=8,
+        proficiency_bonus=2,
+        initiative_bonus=2,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("leather armor", "shield"),
+        compendium_text="## Goblin\n*Small humanoid*",
+    )
+    assert actor.compendium_text == "## Goblin\n*Small humanoid*"
 
 
 # ---------------------------------------------------------------------------
@@ -1380,3 +1450,140 @@ def test_next_encounter_plan_fields() -> None:
 def test_next_encounter_plan_milestone_achieved() -> None:
     plan = NextEncounterPlan(seed="", milestone_achieved=True)
     assert plan.milestone_achieved is True
+
+
+# ---------------------------------------------------------------------------
+# NpcPresence
+# ---------------------------------------------------------------------------
+
+
+def test_npc_presence_stores_fields() -> None:
+    presence = NpcPresence(
+        actor_id="npc:innkeeper-001",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=False,
+        visible=True,
+    )
+    assert presence.actor_id == "npc:innkeeper-001"
+    assert presence.display_name == "Mira"
+    assert presence.description == "the innkeeper"
+    assert not presence.name_known
+    assert presence.visible
+
+
+def test_encounter_state_npc_presences_defaults_to_empty() -> None:
+    actor = ActorState(
+        actor_id="pc:fighter",
+        name="Fighter",
+        actor_type=ActorType.PC,
+        hp_max=12,
+        hp_current=12,
+        armor_class=16,
+        strength=16,
+        dexterity=12,
+        constitution=14,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=1,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("chain mail",),
+    )
+    enc = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="A dimly lit tavern.",
+        actors={"pc:fighter": actor},
+    )
+    assert enc.npc_presences == ()
+
+
+def test_encounter_state_accepts_npc_presences() -> None:
+    actor = ActorState(
+        actor_id="pc:fighter",
+        name="Fighter",
+        actor_type=ActorType.PC,
+        hp_max=12,
+        hp_current=12,
+        armor_class=16,
+        strength=16,
+        dexterity=12,
+        constitution=14,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=1,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("chain mail",),
+    )
+    enc = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="A dimly lit tavern.",
+        actors={"pc:fighter": actor},
+    )
+    presence = NpcPresence(
+        actor_id="npc:innkeeper-001",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=True,
+        visible=True,
+    )
+    enc_with_npc = replace(enc, npc_presences=(presence,))
+    assert len(enc_with_npc.npc_presences) == 1
+    assert enc_with_npc.npc_presences[0].display_name == "Mira"
+
+
+# ---------------------------------------------------------------------------
+# NpcPresenceResult
+# ---------------------------------------------------------------------------
+
+
+def test_npc_presence_result_stores_fields() -> None:
+    result = NpcPresenceResult(
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=True,
+        stat_source="simple_npc",
+    )
+    assert result.display_name == "Mira"
+    assert result.monster_name is None
+
+
+def test_npc_presence_result_with_monster() -> None:
+    result = NpcPresenceResult(
+        display_name="Grax",
+        description="a snarling goblin",
+        name_known=False,
+        stat_source="monster_compendium",
+        monster_name="Goblin",
+    )
+    assert result.monster_name == "Goblin"
+
+
+def test_scene_opening_response_introduced_npcs_defaults_empty() -> None:
+    response = SceneOpeningResponse(text="The tavern is dimly lit.", scene_tone="tense")
+    assert response.introduced_npcs == []
+
+
+def test_scene_opening_response_accepts_npcs() -> None:
+    npc = NpcPresenceResult(
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=False,
+        stat_source="simple_npc",
+    )
+    response = SceneOpeningResponse(
+        text="The tavern is dimly lit.",
+        scene_tone="tense",
+        introduced_npcs=[npc],
+    )
+    assert len(response.introduced_npcs) == 1
+    assert response.introduced_npcs[0].display_name == "Mira"

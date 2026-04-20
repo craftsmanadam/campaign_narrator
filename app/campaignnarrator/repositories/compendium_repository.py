@@ -50,6 +50,10 @@ class CompendiumRepository:
     def __init__(self, root: Path | str) -> None:
         self._root = Path(root)
 
+    def monster_index_path(self) -> Path:
+        """Return the absolute path to the monster compendium index."""
+        return self._root / "monsters" / "index.json"
+
     def load_magic_item(self, rarity: str) -> dict[str, Any]:
         """Return the first magic item for a rarity bucket."""
 
