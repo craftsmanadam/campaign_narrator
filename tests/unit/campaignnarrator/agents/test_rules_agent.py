@@ -6,7 +6,10 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from campaignnarrator.agents.rules_agent import RulesAgent
+from campaignnarrator.agents.rules_agent import (
+    _RULES_INSTRUCTIONS,
+    RulesAgent,
+)
 from campaignnarrator.domain.models import (
     EncounterPhase,
     RollRequest,
@@ -226,3 +229,26 @@ def test_init_raises_type_error_when_adapter_is_not_pydantic_ai_adapter() -> Non
     """RulesAgent without _agent must reject non-PydanticAIAdapter adapters."""
     with pytest.raises(TypeError, match="adapter must be a PydanticAIAdapter"):
         RulesAgent(adapter=object())
+
+
+def test_rules_instructions_enumerate_valid_effect_types() -> None:
+    """All valid state effect types must be named explicitly in the prompt."""
+    valid_types = [
+        "set_phase",
+        "append_public_event",
+        "set_encounter_outcome",
+        "change_hp",
+        "inventory_spent",
+    ]
+    for effect_type in valid_types:
+        assert effect_type in _RULES_INSTRUCTIONS, f"Missing effect type: {effect_type}"
+
+
+def test_rules_instructions_guide_empty_state_effects_for_knowledge_checks() -> None:
+    """Prompt must instruct LLM to leave state_effects empty for knowledge/skill checks."""
+    assert "state_effects" in _RULES_INSTRUCTIONS
+    assert (
+        "empty" in _RULES_INSTRUCTIONS.lower()
+        or "no state" in _RULES_INSTRUCTIONS.lower()
+        or "leave" in _RULES_INSTRUCTIONS.lower()
+    )

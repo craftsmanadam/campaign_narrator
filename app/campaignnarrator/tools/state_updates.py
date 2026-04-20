@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from dataclasses import replace
 
@@ -11,6 +12,8 @@ from campaignnarrator.domain.models import (
     EncounterState,
     StateEffect,
 )
+
+_log = logging.getLogger(__name__)
 
 
 def apply_state_effects(
@@ -36,9 +39,8 @@ def _apply_state_effect(state: EncounterState, effect: StateEffect) -> Encounter
         return _apply_change_hp(state, effect.target, effect.value)
     if effect.effect_type == "inventory_spent":
         return _apply_inventory_spent(state, effect.target, effect.value)
-    raise ValueError(  # noqa: TRY003
-        f"unsupported state effect: {effect.effect_type}"
-    )
+    _log.warning("Skipping unsupported state effect type: %s", effect.effect_type)
+    return state
 
 
 def _apply_set_phase(

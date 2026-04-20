@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 
 import pytest
@@ -153,22 +154,49 @@ def test_apply_state_effects_rejects_unknown_actor() -> None:
         )
 
 
-def test_apply_state_effects_rejects_unknown_effect_type() -> None:
-    """Unsupported effect types should fail closed."""
-
+def test_apply_state_effects_skips_unknown_effect_type(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Unknown effect types must be skipped with a warning, not crash."""
     state = _default_encounter()
-
-    with pytest.raises(ValueError, match=r"unsupported state effect: teleport"):
-        apply_state_effects(
+    with caplog.at_level(logging.WARNING, logger="campaignnarrator"):
+        result = apply_state_effects(
             state,
             (
                 StateEffect(
-                    effect_type="teleport",
+                    effect_type="state_change",
                     target="encounter:goblin-camp",
-                    value="elsewhere",
+                    value="some_value",
                 ),
             ),
         )
+    assert result == state
+    assert any("state_change" in msg for msg in caplog.messages)
+
+
+def test_apply_state_effects_skips_unknown_and_applies_known(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When a batch has both unknown and known effects, known ones still apply."""
+    state = _default_encounter()
+    with caplog.at_level(logging.WARNING, logger="campaignnarrator"):
+        result = apply_state_effects(
+            state,
+            (
+                StateEffect(
+                    effect_type="state_change",
+                    target="encounter:goblin-camp",
+                    value="ignored",
+                ),
+                StateEffect(
+                    effect_type="append_public_event",
+                    target="encounter:goblin-camp",
+                    value="A wolf howls in the distance.",
+                ),
+            ),
+        )
+    assert "A wolf howls in the distance." in result.public_events
+    assert any("state_change" in msg for msg in caplog.messages)
 
 
 def test_apply_state_effects_rejects_wrong_encounter_target() -> None:
