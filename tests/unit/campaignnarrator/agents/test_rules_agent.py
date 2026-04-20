@@ -6,10 +6,8 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from campaignnarrator.agents.rules_agent import (
-    _RULES_INSTRUCTIONS,
-    RulesAgent,
-)
+from campaignnarrator.agents.prompts import RULES_INSTRUCTIONS
+from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     EncounterPhase,
     RollRequest,
@@ -241,14 +239,14 @@ def test_rules_instructions_enumerate_valid_effect_types() -> None:
         "inventory_spent",
     ]
     for effect_type in valid_types:
-        assert effect_type in _RULES_INSTRUCTIONS, f"Missing effect type: {effect_type}"
+        assert effect_type in RULES_INSTRUCTIONS, f"Missing effect type: {effect_type}"
 
 
 def test_rules_instructions_guide_empty_state_effects_for_knowledge_checks() -> None:
     """Prompt must instruct LLM to leave state_effects empty for knowledge/skill checks."""
-    assert "state_effects" in _RULES_INSTRUCTIONS
+    assert "state_effects" in RULES_INSTRUCTIONS
     assert (
-        "empty" in _RULES_INSTRUCTIONS.lower()
-        or "no state" in _RULES_INSTRUCTIONS.lower()
-        or "leave" in _RULES_INSTRUCTIONS.lower()
+        "empty" in RULES_INSTRUCTIONS.lower()
+        or "no state" in RULES_INSTRUCTIONS.lower()
+        or "leave" in RULES_INSTRUCTIONS.lower()
     )

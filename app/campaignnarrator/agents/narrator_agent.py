@@ -7,6 +7,10 @@ import json
 from pydantic_ai import Agent
 
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
+from campaignnarrator.agents.prompts import (
+    BASE_NARRATE_INSTRUCTIONS,
+    SCENE_OPENING_INSTRUCTIONS,
+)
 from campaignnarrator.domain.models import (
     ActorState,
     CampaignState,
@@ -23,41 +27,8 @@ from campaignnarrator.domain.models import (
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 
-_BASE_NARRATE_INSTRUCTIONS = (
-    "Write player-facing tabletop RPG narration. "
-    "Use only provided public and allowed context. "
-    "Do not invent mechanics, rolls, HP changes, inventory changes, "
-    "or hidden facts. "
-    "For status_response and recap_response, concise status-like output "
-    "is allowed.\n\n"
-    "HARD RULES — violating any of these is an error:\n"
-    "1. Never expose mechanical stats to the player. No HP numbers, no AC, "
-    "no modifiers. Use injury states: uninjured, lightly wounded, bloodied, "
-    "barely standing, defeated.\n"
-    "2. Do not reset or re-describe the opening scene. The scene has already "
-    "been established. Advance the story; do not replay the introduction.\n"
-    "3. Do not introduce new named characters. Only use names from the "
-    "ESTABLISHED NPCs list. Unnamed characters may interact but must not be "
-    "given names.\n"
-    "4. If name_known is false for an NPC, refer to them only by their "
-    "description label. Never use their display_name until the player has "
-    "learned it."
-)
-
-_SCENE_OPENING_INSTRUCTIONS = (
-    "You are opening a new encounter scene. "
-    "Write immersive player-facing narration that sets the scene. "
-    "Also choose a short scene tone phrase (8 words or fewer) that captures the "
-    "emotional register (e.g. 'tense and foreboding', 'warm and welcoming', "
-    "'chaotic and urgent'). "
-    "Declare all NPCs present in the scene using introduced_npcs. "
-    "For each NPC, choose stat_source='monster_compendium' if it is a "
-    "recognizable creature (e.g. Goblin, Zombie) and set monster_name to the "
-    "SRD creature name. Use stat_source='simple_npc' for human innkeepers, "
-    "merchants, quest-givers, and other social characters not expected to fight.\n\n"
-    "HARD RULE: The player character appears in public_actor_summaries with a "
-    "'(player)' label. Do not assign their name to any NPC or background character."
-)
+_BASE_NARRATE_INSTRUCTIONS = BASE_NARRATE_INSTRUCTIONS
+_SCENE_OPENING_INSTRUCTIONS = SCENE_OPENING_INSTRUCTIONS
 
 _ASSESS_COMBAT_INSTRUCTIONS = (
     "You are the Narrator for a D&D 5e encounter. "
@@ -129,7 +100,7 @@ class NarratorAgent:
         _scene_agent: object | None = None,
         _assess_agent: object | None = None,
         _crit_agent: object | None = None,
-        _plan_agent: object | None = None,
+        plan_agent: object | None = None,
     ) -> None:
         self._adapter = adapter
         self._personality = personality
@@ -163,8 +134,8 @@ class NarratorAgent:
             )
         )
         self._plan_agent = (
-            _plan_agent
-            if _plan_agent is not None
+            plan_agent
+            if plan_agent is not None
             else Agent(
                 adapter.model,
                 output_type=NextEncounterPlan,

@@ -8,10 +8,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
-from campaignnarrator.agents.narrator_agent import (
-    _BASE_NARRATE_INSTRUCTIONS,
-    _SCENE_OPENING_INSTRUCTIONS,
-    NarratorAgent,
+from campaignnarrator.agents.narrator_agent import NarratorAgent
+from campaignnarrator.agents.prompts import (
+    BASE_NARRATE_INSTRUCTIONS,
+    SCENE_OPENING_INSTRUCTIONS,
 )
 from campaignnarrator.domain.models import (
     ActorState,
@@ -83,7 +83,7 @@ def _make_narrator(
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     return narrator, mock_adapter, mock_scene_agent
 
@@ -170,7 +170,7 @@ def test_narrate_scene_opening_prepends_personality_to_scene_instructions() -> N
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     assert "Gothic style." in narrator._scene_instructions
     assert "opening a new encounter scene" in narrator._scene_instructions
@@ -192,7 +192,7 @@ def test_declare_npc_intent_from_json_returns_prose_string() -> None:
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     context_json = json.dumps(
         {"actor_id": "npc:goblin-1", "name": "Goblin Scout", "hp_current": 7}
@@ -213,7 +213,7 @@ def test_declare_npc_intent_from_json_raises_value_error_on_blank_response() -> 
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     with pytest.raises(ValueError, match="empty npc intent"):
         narrator.declare_npc_intent_from_json(json.dumps({"actor_id": "npc:goblin-1"}))
@@ -239,7 +239,7 @@ def test_assess_combat_from_json_returns_active_assessment_when_combat_continues
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     assessment = narrator.assess_combat_from_json(
         json.dumps({"actors": [], "recent_events": []})
@@ -272,7 +272,7 @@ def test_assess_combat_from_json_returns_inactive_assessment_with_outcome() -> N
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     assessment = narrator.assess_combat_from_json(
         json.dumps({"actors": [], "recent_events": []})
@@ -298,7 +298,7 @@ def test_assess_combat_from_json_raises_value_error_when_inactive_but_no_outcome
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     with pytest.raises(ValueError, match="combat_active=False but no outcome"):
         narrator.assess_combat_from_json(
@@ -324,7 +324,7 @@ def test_review_crit_from_json_returns_approved_review() -> None:
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _crit_agent=crit_agent,
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     review = narrator.review_crit_from_json(
         json.dumps({"attacker": "npc:goblin-1", "target": "pc:talia", "damage": 8})
@@ -352,7 +352,7 @@ def test_review_crit_from_json_returns_downgraded_review_with_reason() -> None:
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _crit_agent=crit_agent,
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     review = narrator.review_crit_from_json(
         json.dumps({"attacker": "npc:goblin-1", "target": "pc:talia", "damage": 8})
@@ -380,7 +380,7 @@ def _make_narrator_with_memory(
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     return narrator, mock_memory_repo
 
@@ -454,7 +454,7 @@ def test_retrieve_memory_no_repo_returns_sentinel() -> None:
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     result = narrator.retrieve_memory("anything")
     assert result == "No prior records found."
@@ -605,7 +605,7 @@ def _make_scene_narrator(
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     return narrator, mock_repo, mock_scene_agent
 
@@ -645,7 +645,7 @@ def test_scene_opening_injects_sentinel_when_no_repository() -> None:
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
 
     narrator.narrate(_make_scene_frame("The docks."))
@@ -694,7 +694,7 @@ def narrator_with_mock_scene_agent() -> tuple[NarratorAgent, MagicMock]:
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
+        plan_agent=MagicMock(),
     )
     return narrator, mock_scene_agent
 
@@ -756,19 +756,19 @@ def test_open_scene_raises_on_empty_text(
 
 
 def test_base_narrate_instructions_contain_hard_rules() -> None:
-    """_BASE_NARRATE_INSTRUCTIONS must include all four hard rules."""
-    assert "Never expose mechanical stats" in _BASE_NARRATE_INSTRUCTIONS
-    assert "Do not reset or re-describe the opening scene" in _BASE_NARRATE_INSTRUCTIONS
-    assert "Do not introduce new named characters" in _BASE_NARRATE_INSTRUCTIONS
-    assert "name_known is false" in _BASE_NARRATE_INSTRUCTIONS
+    """BASE_NARRATE_INSTRUCTIONS must include all four hard rules."""
+    assert "Never expose mechanical stats" in BASE_NARRATE_INSTRUCTIONS
+    assert "Do not reset or re-describe the opening scene" in BASE_NARRATE_INSTRUCTIONS
+    assert "Do not introduce new named characters" in BASE_NARRATE_INSTRUCTIONS
+    assert "name_known is false" in BASE_NARRATE_INSTRUCTIONS
 
 
 def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
-    """_SCENE_OPENING_INSTRUCTIONS must reference NPC declaration fields."""
-    assert "introduced_npcs" in _SCENE_OPENING_INSTRUCTIONS
-    assert "monster_compendium" in _SCENE_OPENING_INSTRUCTIONS
-    assert "simple_npc" in _SCENE_OPENING_INSTRUCTIONS
-    assert "public_actor_summaries" in _SCENE_OPENING_INSTRUCTIONS
+    """SCENE_OPENING_INSTRUCTIONS must reference NPC declaration fields."""
+    assert "introduced_npcs" in SCENE_OPENING_INSTRUCTIONS
+    assert "monster_compendium" in SCENE_OPENING_INSTRUCTIONS
+    assert "simple_npc" in SCENE_OPENING_INSTRUCTIONS
+    assert "public_actor_summaries" in SCENE_OPENING_INSTRUCTIONS
 
 
 def test_narrate_serializes_npc_presences_in_frame() -> None:

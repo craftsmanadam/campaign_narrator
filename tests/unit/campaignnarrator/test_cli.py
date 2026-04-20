@@ -12,16 +12,14 @@ from campaignnarrator.adapters.embedding_adapter import (
     OllamaEmbeddingAdapter,
     StubEmbeddingAdapter,
 )
+from campaignnarrator.agents.prompts import NARRATOR_PERSONALITY
+from campaignnarrator.application_factory import ApplicationFactory, ApplicationGraph
 from campaignnarrator.cli import (
-    _DEFAULT_NARRATOR_PERSONALITY,
-    ApplicationFactory,
-    _ApplicationGraph,
-    _build_application_graph,
     _build_embedding_adapter,
-    _TerminalIO,
     main,
 )
 from campaignnarrator.settings import Settings
+from campaignnarrator.terminal_io import TerminalIO
 
 # ---------------------------------------------------------------------------
 # Shared fakes
@@ -137,17 +135,15 @@ class _FakeEncounterOrchestrator:
 
 
 def test_cli_uses_stdin_stdout_loop(monkeypatch, tmp_path: Path) -> None:
-    """The CLI should wire stdin/stdout through _TerminalIO and call run_encounter."""
+    """The CLI should wire stdin/stdout through TerminalIO and call run_encounter."""
 
     fake_app_orch = _FakeApplicationOrchestrator(encounter_orchestrator=object())
     fake_game_orch = _FakeGameOrchestrator()
     builder_calls: list[Path] = []
 
-    def _fake_build(
-        data_root: Path, stdin: object, stdout: object
-    ) -> _ApplicationGraph:
+    def _fake_build(data_root: Path, stdin: object, stdout: object) -> ApplicationGraph:
         builder_calls.append(data_root)
-        return _ApplicationGraph(
+        return ApplicationGraph(
             game_orchestrator=fake_game_orch,
             application_orchestrator=fake_app_orch,
         )
@@ -186,7 +182,7 @@ def test_cli_routes_to_game_orchestrator_when_no_encounter_id(
 
     monkeypatch.setattr(
         "campaignnarrator.cli._build_application_graph",
-        lambda _data_root, stdin, stdout: _ApplicationGraph(
+        lambda _data_root, stdin, stdout: ApplicationGraph(
             game_orchestrator=fake_game_orch,
             application_orchestrator=fake_app_orch,
         ),
@@ -217,11 +213,9 @@ def test_main_uses_settings_data_root_as_default(
     monkeypatch.setenv("DATA_ROOT", "tmp/test_store")
     captured: list[Path] = []
 
-    def _fake_build(
-        data_root: Path, stdin: object, stdout: object
-    ) -> _ApplicationGraph:
+    def _fake_build(data_root: Path, stdin: object, stdout: object) -> ApplicationGraph:
         captured.append(data_root)
-        return _ApplicationGraph(
+        return ApplicationGraph(
             game_orchestrator=_FakeGameOrchestrator(),
             application_orchestrator=_FakeApplicationOrchestrator(
                 encounter_orchestrator=object()
@@ -246,11 +240,9 @@ def test_main_uses_settings_default_data_root_when_env_unset(
     monkeypatch.delenv("DATA_ROOT", raising=False)
     captured: list[Path] = []
 
-    def _fake_build(
-        data_root: Path, stdin: object, stdout: object
-    ) -> _ApplicationGraph:
+    def _fake_build(data_root: Path, stdin: object, stdout: object) -> ApplicationGraph:
         captured.append(data_root)
-        return _ApplicationGraph(
+        return ApplicationGraph(
             game_orchestrator=_FakeGameOrchestrator(),
             application_orchestrator=_FakeApplicationOrchestrator(
                 encounter_orchestrator=object()
@@ -286,66 +278,45 @@ def test_build_application_graph_wires_repository_paths(
     _FakeEncounterRepository.captured_paths.clear()
     _FakeStateRepository.instances.clear()
 
-    monkeypatch.setattr("campaignnarrator.cli.PydanticAIAdapter.from_env", object)
-    monkeypatch.setattr("campaignnarrator.cli.ActorRepository", _FakeActorRepository)
+    af_ns = "campaignnarrator.application_factory"
+    monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", object)
+    monkeypatch.setattr(f"{af_ns}.ActorRepository", _FakeActorRepository)
+    monkeypatch.setattr(f"{af_ns}.EncounterRepository", _FakeEncounterRepository)
+    monkeypatch.setattr(f"{af_ns}.StateRepository", _FakeStateRepository)
     monkeypatch.setattr(
-        "campaignnarrator.cli.EncounterRepository", _FakeEncounterRepository
-    )
-    monkeypatch.setattr("campaignnarrator.cli.StateRepository", _FakeStateRepository)
-    monkeypatch.setattr(
-        "campaignnarrator.cli.RulesRepository",
+        f"{af_ns}.RulesRepository",
         lambda path: rules_paths.append(path) or object(),
     )
     monkeypatch.setattr(
-        "campaignnarrator.cli.CompendiumRepository",
+        f"{af_ns}.CompendiumRepository",
         lambda path: compendium_paths.append(path) or object(),
     )
     monkeypatch.setattr(
-        "campaignnarrator.cli.MemoryRepository",
+        f"{af_ns}.MemoryRepository",
         lambda path, **_kw: memory_paths.append(path) or object(),
     )
-    monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
-    monkeypatch.setattr("campaignnarrator.cli.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
+    monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
     monkeypatch.setattr(
-        "campaignnarrator.cli.EncounterOrchestrator", _FakeEncounterOrchestrator
+        f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
+    monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CharacterInterpreterAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CampaignRepository", lambda _path: object())
+    monkeypatch.setattr(f"{af_ns}.ModuleRepository", lambda _path: object())
+    monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", lambda _path: object())
     monkeypatch.setattr(
-        "campaignnarrator.cli.ApplicationOrchestrator", _FakeApplicationOrchestrator
+        f"{af_ns}.CharacterCreationOrchestrator", lambda **_kw: object()
     )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.StartupInterpreterAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CharacterInterpreterAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr("campaignnarrator.cli.BackstoryAgent", lambda **_kw: object())
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignGeneratorAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.ModuleGeneratorAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignRepository", lambda _path: object()
-    )
-    monkeypatch.setattr("campaignnarrator.cli.ModuleRepository", lambda _path: object())
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CharacterTemplateRepository", lambda _path: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CharacterCreationOrchestrator", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.ModuleOrchestrator", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignCreationOrchestrator", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.StartupOrchestrator", lambda **_kw: object()
-    )
+    monkeypatch.setattr(f"{af_ns}.ModuleOrchestrator", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CampaignCreationOrchestrator", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.StartupOrchestrator", lambda **_kw: object())
 
-    _build_application_graph(tmp_path, stdin=StringIO(), stdout=StringIO())
+    ApplicationFactory(tmp_path, stdin=StringIO(), stdout=StringIO()).build()
 
     assert _FakeActorRepository.captured_paths == [tmp_path / "state"]
     assert _FakeEncounterRepository.captured_paths == [tmp_path / "state"]
@@ -365,66 +336,41 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     _FakeEncounterRepository.captured_paths.clear()
     _FakeStateRepository.instances.clear()
 
-    monkeypatch.setattr(
-        "campaignnarrator.cli.PydanticAIAdapter.from_env", lambda: adapter
-    )
-    monkeypatch.setattr("campaignnarrator.cli.ActorRepository", _FakeActorRepository)
-    monkeypatch.setattr(
-        "campaignnarrator.cli.EncounterRepository", _FakeEncounterRepository
-    )
-    monkeypatch.setattr("campaignnarrator.cli.StateRepository", _FakeStateRepository)
-    monkeypatch.setattr("campaignnarrator.cli.RulesRepository", lambda _path: object())
+    af_ns = "campaignnarrator.application_factory"
+    monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", lambda: adapter)
+    monkeypatch.setattr(f"{af_ns}.ActorRepository", _FakeActorRepository)
+    monkeypatch.setattr(f"{af_ns}.EncounterRepository", _FakeEncounterRepository)
+    monkeypatch.setattr(f"{af_ns}.StateRepository", _FakeStateRepository)
+    monkeypatch.setattr(f"{af_ns}.RulesRepository", lambda _path: object())
     compendium_instance = object()
     monkeypatch.setattr(
-        "campaignnarrator.cli.CompendiumRepository", lambda _path: compendium_instance
+        f"{af_ns}.CompendiumRepository", lambda _path: compendium_instance
     )
+    monkeypatch.setattr(f"{af_ns}.MemoryRepository", lambda _path, **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
+    monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
     monkeypatch.setattr(
-        "campaignnarrator.cli.MemoryRepository", lambda _path, **_kw: object()
+        f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
-    monkeypatch.setattr("campaignnarrator.cli.RulesAgent", _FakeRulesAgent)
-    monkeypatch.setattr("campaignnarrator.cli.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CharacterInterpreterAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CampaignRepository", lambda _path: object())
+    monkeypatch.setattr(f"{af_ns}.ModuleRepository", lambda _path: object())
+    monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", lambda _path: object())
     monkeypatch.setattr(
-        "campaignnarrator.cli.EncounterOrchestrator", _FakeEncounterOrchestrator
+        f"{af_ns}.CharacterCreationOrchestrator", lambda **_kw: object()
     )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.ApplicationOrchestrator", _FakeApplicationOrchestrator
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.StartupInterpreterAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CharacterInterpreterAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr("campaignnarrator.cli.BackstoryAgent", lambda **_kw: object())
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignGeneratorAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.ModuleGeneratorAgent", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignRepository", lambda _path: object()
-    )
-    monkeypatch.setattr("campaignnarrator.cli.ModuleRepository", lambda _path: object())
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CharacterTemplateRepository", lambda _path: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CharacterCreationOrchestrator", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.ModuleOrchestrator", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.CampaignCreationOrchestrator", lambda **_kw: object()
-    )
-    monkeypatch.setattr(
-        "campaignnarrator.cli.StartupOrchestrator", lambda **_kw: object()
-    )
+    monkeypatch.setattr(f"{af_ns}.ModuleOrchestrator", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.CampaignCreationOrchestrator", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.StartupOrchestrator", lambda **_kw: object())
 
-    result = _build_application_graph(tmp_path, stdin=StringIO(), stdout=StringIO())
+    result = ApplicationFactory(tmp_path, stdin=StringIO(), stdout=StringIO()).build()
 
-    assert isinstance(result, _ApplicationGraph)
+    assert isinstance(result, ApplicationGraph)
     assert isinstance(result.application_orchestrator, _FakeApplicationOrchestrator)
     enc = result.application_orchestrator.encounter_orchestrator
     assert isinstance(enc, _FakeEncounterOrchestrator)
@@ -432,7 +378,7 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     assert isinstance(enc.agents.narrator, _FakeNarratorAgent)
     assert enc.agents.rules.adapter is adapter
     assert enc.agents.narrator.adapter is adapter
-    assert enc.agents.narrator.personality == _DEFAULT_NARRATOR_PERSONALITY
+    assert enc.agents.narrator.personality == NARRATOR_PERSONALITY
     assert enc.adapter is adapter
     state_repo = _FakeStateRepository.instances[0]
     assert isinstance(state_repo.actor_repo, _FakeActorRepository)
@@ -520,33 +466,33 @@ def _noop_repo_with_kw(_path: object, **_kw: object) -> object:
 def test_application_factory_build_returns_application_graph(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """ApplicationFactory.build() returns a valid _ApplicationGraph."""
-    cli_ns = "campaignnarrator.cli"
-    monkeypatch.setattr(f"{cli_ns}.PydanticAIAdapter.from_env", object)
-    monkeypatch.setattr(f"{cli_ns}.RulesAgent", _FakeRulesAgent)
-    monkeypatch.setattr(f"{cli_ns}.NarratorAgent", _FakeNarratorAgent)
-    monkeypatch.setattr(f"{cli_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
+    """ApplicationFactory.build() returns a valid ApplicationGraph."""
+    af_ns = "campaignnarrator.application_factory"
+    monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", object)
+    monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
+    monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
+    monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
     monkeypatch.setattr(
-        f"{cli_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
+        f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
-    monkeypatch.setattr(f"{cli_ns}.StartupInterpreterAgent", _noop_agent)
-    monkeypatch.setattr(f"{cli_ns}.CharacterInterpreterAgent", _noop_agent)
-    monkeypatch.setattr(f"{cli_ns}.BackstoryAgent", _noop_agent)
-    monkeypatch.setattr(f"{cli_ns}.CampaignGeneratorAgent", _noop_agent)
-    monkeypatch.setattr(f"{cli_ns}.ModuleGeneratorAgent", _noop_agent)
-    monkeypatch.setattr(f"{cli_ns}.ActorRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.EncounterRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.CampaignRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.ModuleRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.RulesRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.CompendiumRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.MemoryRepository", _noop_repo_with_kw)
-    monkeypatch.setattr(f"{cli_ns}.CharacterTemplateRepository", _noop_repo)
-    monkeypatch.setattr(f"{cli_ns}.StateRepository", _noop_repo_kw)
-    monkeypatch.setattr(f"{cli_ns}.CharacterCreationOrchestrator", _noop_repo_kw)
-    monkeypatch.setattr(f"{cli_ns}.ModuleOrchestrator", _noop_repo_kw)
-    monkeypatch.setattr(f"{cli_ns}.CampaignCreationOrchestrator", _noop_repo_kw)
-    monkeypatch.setattr(f"{cli_ns}.StartupOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", _noop_agent)
+    monkeypatch.setattr(f"{af_ns}.CharacterInterpreterAgent", _noop_agent)
+    monkeypatch.setattr(f"{af_ns}.BackstoryAgent", _noop_agent)
+    monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", _noop_agent)
+    monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", _noop_agent)
+    monkeypatch.setattr(f"{af_ns}.ActorRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.EncounterRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.CampaignRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.ModuleRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.RulesRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.CompendiumRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.MemoryRepository", _noop_repo_with_kw)
+    monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.StateRepository", _noop_repo_kw)
+    monkeypatch.setattr(f"{af_ns}.CharacterCreationOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{af_ns}.ModuleOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{af_ns}.CampaignCreationOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{af_ns}.StartupOrchestrator", _noop_repo_kw)
 
     factory = ApplicationFactory(tmp_path, StringIO(), StringIO())
     graph = factory.build()
@@ -561,73 +507,73 @@ def test_application_factory_build_returns_application_graph(
 
 
 # ---------------------------------------------------------------------------
-# _TerminalIO tests
+# TerminalIO tests
 # ---------------------------------------------------------------------------
 
 
 def test_terminal_io_prompt_strips_trailing_newline() -> None:
     """prompt() must strip a trailing LF so callers receive clean input."""
-    io = _TerminalIO(StringIO("hello\n"), StringIO())
+    io = TerminalIO(StringIO("hello\n"), StringIO())
     assert io.prompt("> ") == "hello"
 
 
 def test_terminal_io_prompt_strips_trailing_carriage_return_newline() -> None:
     """prompt() strips CRLF from Windows-style copy-paste so no stray \\r remains."""
-    io = _TerminalIO(StringIO("hello\r\n"), StringIO())
+    io = TerminalIO(StringIO("hello\r\n"), StringIO())
     assert io.prompt("> ") == "hello"
 
 
 def test_terminal_io_prompt_preserves_internal_whitespace() -> None:
     """prompt() must not strip leading/trailing spaces — only the line terminator."""
-    io = _TerminalIO(StringIO("  hello world  \n"), StringIO())
+    io = TerminalIO(StringIO("  hello world  \n"), StringIO())
     assert io.prompt("> ") == "  hello world  "
 
 
 def test_terminal_io_prompt_skips_blank_lines_and_returns_first_non_blank() -> None:
     """prompt() must silently discard blank lines and re-read until non-blank input."""
-    io = _TerminalIO(StringIO("\n\r\n   \nhello\n"), StringIO())
+    io = TerminalIO(StringIO("\n\r\n   \nhello\n"), StringIO())
     assert io.prompt("> ") == "hello"
 
 
 def test_terminal_io_prompt_skips_whitespace_only_lines() -> None:
     """prompt() must treat whitespace-only lines as blank and keep reading."""
-    io = _TerminalIO(StringIO("   \n\thello there\n"), StringIO())
+    io = TerminalIO(StringIO("   \n\thello there\n"), StringIO())
     assert io.prompt("> ") == "\thello there"
 
 
 def test_terminal_io_prompt_optional_returns_blank_immediately() -> None:
     """prompt_optional() must return blank input without looping."""
-    io = _TerminalIO(StringIO("\n"), StringIO())
+    io = TerminalIO(StringIO("\n"), StringIO())
     assert io.prompt_optional("> ") == ""
 
 
 def test_terminal_io_prompt_optional_strips_line_terminators() -> None:
     """prompt_optional() must strip CRLF just like prompt()."""
-    io = _TerminalIO(StringIO("hello\r\n"), StringIO())
+    io = TerminalIO(StringIO("hello\r\n"), StringIO())
     assert io.prompt_optional("> ") == "hello"
 
 
 def test_terminal_io_prompt_optional_returns_whitespace_only_input() -> None:
     """prompt_optional() must return whitespace-only input as-is (caller decides)."""
-    io = _TerminalIO(StringIO("   \n"), StringIO())
+    io = TerminalIO(StringIO("   \n"), StringIO())
     assert io.prompt_optional("> ") == "   "
 
 
 def test_terminal_io_prompt_multiline_collects_lines_until_blank() -> None:
     """prompt_multiline() joins lines until a blank line terminates input."""
-    io = _TerminalIO(StringIO("line one\nline two\n\n"), StringIO())
+    io = TerminalIO(StringIO("line one\nline two\n\n"), StringIO())
     assert io.prompt_multiline("> ") == "line one\nline two"
 
 
 def test_terminal_io_prompt_multiline_single_line() -> None:
     """prompt_multiline() works with a single line followed by blank."""
-    io = _TerminalIO(StringIO("just one line\n\n"), StringIO())
+    io = TerminalIO(StringIO("just one line\n\n"), StringIO())
     assert io.prompt_multiline("> ") == "just one line"
 
 
 def test_terminal_io_prompt_multiline_stops_at_eof() -> None:
     """prompt_multiline() terminates cleanly at EOF without a trailing blank."""
-    io = _TerminalIO(StringIO("no trailing blank\n"), StringIO())
+    io = TerminalIO(StringIO("no trailing blank\n"), StringIO())
     assert io.prompt_multiline("> ") == "no trailing blank"
 
 

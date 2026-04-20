@@ -10,6 +10,7 @@ from dataclasses import dataclass, replace
 from pydantic_ai import Agent
 
 from campaignnarrator.agents.narrator_agent import NarratorAgent
+from campaignnarrator.agents.prompts import DECISION_AGENT_INSTRUCTIONS
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     ActorState,
@@ -51,48 +52,7 @@ _ALLOWED_SOCIAL_NEXT_STEPS = {
     "complete_encounter",
 }
 
-_DECISION_AGENT_INSTRUCTIONS = (
-    "Choose the next encounter orchestration step based on the player's latest "
-    "input.\n\n"
-    "Allowed next_step values: npc_dialogue, narrate_scene, adjudicate_action, "
-    "roll_initiative, enter_combat, complete_encounter.\n\n"
-    "ROUTING RULES:\n"
-    "- Route to enter_combat when the player's action is an attack, uses a weapon, "
-    "or is hostile toward a creature (e.g. 'I attack', 'I stab', 'I shoot', "
-    "'I cast Fireball at the guards', 'I try to kill it', 'I charge').\n"
-    "- Route to adjudicate_action for any skill check, saving throw, or action "
-    "requiring a dice roll. This includes all 18 SRD skills: "
-    "Acrobatics, Animal Handling, Arcana, Athletics, Deception, History, "
-    "Insight, Intimidation, Investigation, Medicine, Nature, Perception, "
-    "Performance, Persuasion, Religion, Sleight of Hand, Stealth, Survival. "
-    "Route here whenever the player tries to do something, determine something, "
-    "recall something, examine something, hide, sneak, climb, persuade, "
-    "intimidate, deceive, or perform any other action with an uncertain outcome.\n"
-    "- Route to npc_dialogue when the player addresses or responds to a character "
-    "directly (e.g. 'I ask the innkeeper', 'What do you know about the bandits?').\n"
-    "- Route to complete_encounter when the scene is fully resolved and there is "
-    "nothing more to do here.\n"
-    "- Route to narrate_scene when the player is observing or moving without "
-    "triggering any of the above.\n\n"
-    "EXAMPLES:\n"
-    "'I draw my sword and attack the orc.' → enter_combat\n"
-    "'I fire an arrow at the bandit.' → enter_combat\n"
-    "'I cast Sleep on the guards.' → enter_combat\n"
-    "'I ask the innkeeper about the rumor.' → npc_dialogue\n"
-    "'I try to pick the lock.' → adjudicate_action  [Sleight of Hand]\n"
-    "'I try to determine if they are undead.'"
-    " → adjudicate_action  [Arcana or Religion]\n"
-    "'I examine the runes on the wall.'"
-    " → adjudicate_action  [Investigation or Arcana]\n"
-    "'I try to persuade the guard to let us pass.' → adjudicate_action  [Persuasion]\n"
-    "'I attempt to sneak past the sleeping guard.' → adjudicate_action  [Stealth]\n"
-    "'I try to climb the cliff face.' → adjudicate_action  [Athletics]\n"
-    "'I search the body for clues.' → adjudicate_action  [Investigation]\n"
-    "'I try to track the creature through the forest.'"
-    " → adjudicate_action  [Survival]\n"
-    "'I look around and listen for danger.' → adjudicate_action  [Perception]\n\n"
-    "Do not resolve rules yourself. Do not narrate. Only choose next_step."
-)
+_DECISION_AGENT_INSTRUCTIONS = DECISION_AGENT_INSTRUCTIONS
 
 
 @dataclass(frozen=True, slots=True)
