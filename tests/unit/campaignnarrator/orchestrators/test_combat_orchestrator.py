@@ -1254,3 +1254,24 @@ def test_materialize_effects_raises_on_invalid_dice_expression() -> None:
     )
     with pytest.raises(ValueError, match="Invalid dice expression"):
         orc.run(state)
+
+
+def test_considering_rules_displayed_before_combat_adjudication() -> None:
+    """'Considering the rules...' must appear when a player combat action is adjudicated."""
+    state = _make_combat_state()
+    orc, io, _, _ = _orchestrator(
+        inputs=["I attack", "end turn"],
+        adjudications=[_legal_attack(damage_hp=3)],
+        intents=["combat_action", "end_turn"],
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="Victory",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state)
+    assert any("Considering the rules" in msg for msg in io.displayed)

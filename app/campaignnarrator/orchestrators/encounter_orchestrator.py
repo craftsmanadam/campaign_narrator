@@ -203,6 +203,7 @@ class EncounterOrchestrator:
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
                 break
 
+            self._io.display("\n...\n")
             state = self._apply_action(state, player_input, player, output)
         return state
 
@@ -367,6 +368,7 @@ class EncounterOrchestrator:
             check_hints=_non_empty_tuple((decision.recommended_check,)),
             compendium_context=compendium_context,
         )
+        self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
         updated_state, roll_events = self._apply_adjudication(state, adjudication)
         self._state_repository.save(GameState(player=player, encounter=updated_state))

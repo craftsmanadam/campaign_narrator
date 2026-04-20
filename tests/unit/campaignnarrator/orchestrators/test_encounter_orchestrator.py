@@ -1173,3 +1173,37 @@ def test_decision_agent_instructions_contain_few_shot_examples() -> None:
     assert "I draw my sword" in _DECISION_AGENT_INSTRUCTIONS
     assert "I ask the innkeeper" in _DECISION_AGENT_INSTRUCTIONS
     assert "I try to pick the lock" in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_thinking_indicator_displayed_before_action_processing(
+    tmp_path: Path,
+) -> None:
+    """'...' must appear in output immediately after player submits an action."""
+    io = ScriptedIO(["I look around.", "exit"])
+    orchestrator = _orchestrator(
+        tmp_path,
+        decisions=[_decision("narrate_scene")],
+        io=io,
+    )
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+    assert any("..." in msg for msg in io.displayed)
+
+
+def test_considering_rules_displayed_before_adjudication(
+    tmp_path: Path,
+) -> None:
+    """'Considering the rules...' must appear when action routes to adjudication."""
+    io = ScriptedIO(["I try to pick the lock.", "exit"])
+    orchestrator = _orchestrator(
+        tmp_path,
+        decisions=[
+            _decision(
+                "adjudicate_action",
+                requires_rules_resolution=True,
+                recommended_check="Dexterity",
+            ),
+        ],
+        io=io,
+    )
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+    assert any("Considering the rules" in msg for msg in io.displayed)

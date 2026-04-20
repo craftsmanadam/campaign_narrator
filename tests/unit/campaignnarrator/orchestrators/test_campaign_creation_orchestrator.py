@@ -18,6 +18,7 @@ from campaignnarrator.orchestrators.campaign_creation_orchestrator import (
 from campaignnarrator.orchestrators.module_orchestrator import ModuleOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 
+from tests.conftest import ScriptedIO
 from tests.fixtures.fighter_talia import TALIA
 
 _CAMPAIGN_RESULT = CampaignGenerationResult(
@@ -146,3 +147,37 @@ def test_v2_campaign_has_current_module_id() -> None:
     orch.run()
     saved_campaign = mock_campaign_repo.save.call_args[0][0]
     assert saved_campaign.current_module_id == "module-001"
+
+
+def test_run_displays_building_world_message_before_campaign_generation() -> None:
+    """Player must see a progress message immediately after submitting their brief."""
+    io = ScriptedIO(["I want dark coastal horror with undead."])
+    mock_campaign_repo = MagicMock()
+    mock_module_repo = MagicMock()
+    mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_campaign_agent = MagicMock()
+    mock_module_agent = MagicMock()
+    mock_module_orch = MagicMock(spec=ModuleOrchestrator)
+
+    mock_campaign_agent.generate.return_value = _CAMPAIGN_RESULT
+    mock_module_agent.generate.return_value = _MODULE_RESULT
+
+    player = replace(
+        TALIA, actor_id="pc:player", name="Aldric", race="Human", background="Soldier."
+    )
+    orch = CampaignCreationOrchestrator(
+        io=io,
+        player=player,
+        repositories=CampaignCreationRepositories(
+            campaign=mock_campaign_repo,
+            module=mock_module_repo,
+            memory=mock_memory_repo,
+        ),
+        agents=CampaignCreationAgents(
+            campaign_generator=mock_campaign_agent,
+            module_generator=mock_module_agent,
+        ),
+        module_orchestrator=mock_module_orch,
+    )
+    orch.run()
+    assert any("Building your world" in msg for msg in io.displayed)

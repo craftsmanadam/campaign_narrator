@@ -74,6 +74,7 @@ class CampaignCreationOrchestrator:
         """
         player_brief = self._io.prompt_multiline(_BRIEF_PROMPT).strip()
 
+        self._io.display("\nBuilding your world. This may take a few minutes...\n")
         campaign_result = self._agents.campaign_generator.generate(
             player_brief=player_brief,
             character_name=self._player.name,

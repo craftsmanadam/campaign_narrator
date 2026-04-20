@@ -227,6 +227,7 @@ class CombatOrchestrator:
         resources: TurnResources,
     ) -> tuple[EncounterState, TurnResources, str]:
         request = self._build_rules_request(state, actor, raw_input)
+        self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
 
         if not adjudication.is_legal:
@@ -409,6 +410,7 @@ class CombatOrchestrator:
         intent_json = json.dumps(intent_payload, indent=2, sort_keys=True)
         intent_prose = self._narrator_agent.declare_npc_intent_from_json(intent_json)
 
+        self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(
             self._build_rules_request(
                 state,
