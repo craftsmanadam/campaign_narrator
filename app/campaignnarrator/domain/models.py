@@ -355,6 +355,10 @@ class PlayerIO(Protocol):
         """Display text and return player input; returns blank if the player skips."""
         ...
 
+    def prompt_multiline(self, text: str) -> str:
+        """Display text and collect lines until a blank line; returns joined text."""
+        ...
+
     def display(self, text: str) -> None:
         """Display text with no expected input."""
         ...

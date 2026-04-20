@@ -613,6 +613,24 @@ def test_terminal_io_prompt_optional_returns_whitespace_only_input() -> None:
     assert io.prompt_optional("> ") == "   "
 
 
+def test_terminal_io_prompt_multiline_collects_lines_until_blank() -> None:
+    """prompt_multiline() joins lines until a blank line terminates input."""
+    io = _TerminalIO(StringIO("line one\nline two\n\n"), StringIO())
+    assert io.prompt_multiline("> ") == "line one\nline two"
+
+
+def test_terminal_io_prompt_multiline_single_line() -> None:
+    """prompt_multiline() works with a single line followed by blank."""
+    io = _TerminalIO(StringIO("just one line\n\n"), StringIO())
+    assert io.prompt_multiline("> ") == "just one line"
+
+
+def test_terminal_io_prompt_multiline_stops_at_eof() -> None:
+    """prompt_multiline() terminates cleanly at EOF without a trailing blank."""
+    io = _TerminalIO(StringIO("no trailing blank\n"), StringIO())
+    assert io.prompt_multiline("> ") == "no trailing blank"
+
+
 def test_build_embedding_adapter_returns_stub_when_provider_is_stub() -> None:
     settings = Settings(embedding_provider="stub")
     adapter = _build_embedding_adapter(settings)

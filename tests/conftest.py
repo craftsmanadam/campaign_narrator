@@ -31,6 +31,13 @@ class ScriptedIO:
             return ""
         return self._inputs.pop(0)
 
+    def prompt_multiline(self, text: str) -> str:
+        """Return next input as a single value; multiline content is pre-joined."""
+        self._displayed.append(text)
+        if not self._inputs:
+            return self._on_exhaust
+        return self._inputs.pop(0)
+
     def display(self, text: str) -> None:
         self._displayed.append(text)
 

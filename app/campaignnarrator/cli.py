@@ -142,6 +142,20 @@ class _TerminalIO:
         self._stdout.flush()
         return self._stdin.readline().rstrip("\r\n")
 
+    def prompt_multiline(self, text: str) -> str:
+        self._stdout.write(text)
+        self._stdout.flush()
+        lines: list[str] = []
+        while True:
+            raw = self._stdin.readline()
+            if not raw:  # EOF
+                break
+            line = raw.rstrip("\r\n")
+            if not line and lines:  # blank line after content = done
+                break
+            lines.append(line)
+        return "\n".join(lines)
+
     def display(self, text: str) -> None:
         self._stdout.write(text + "\n")
         self._stdout.flush()

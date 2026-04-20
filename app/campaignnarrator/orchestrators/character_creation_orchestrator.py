@@ -110,9 +110,10 @@ class CharacterCreationOrchestrator:
     ) -> str:
         self._io.display(
             "\nDescribe your past in your own words. "
+            "You can paste multiple lines — press Enter twice when done. "
             "If you would like help crafting a backstory, just say 'help'.\n"
         )
-        raw = self._io.prompt("> ").strip()
+        raw = self._io.prompt_multiline("> ").strip()
         raw_lower = raw.lower()
         if raw_lower in _HELP_TRIGGERS or any(t in raw_lower for t in _HELP_TRIGGERS):
             return self._draft_backstory_with_help(

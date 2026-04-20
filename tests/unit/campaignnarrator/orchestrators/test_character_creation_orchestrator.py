@@ -19,12 +19,13 @@ from tests.fixtures.fighter_talia import TALIA
 def _make_io(inputs: list[str]) -> MagicMock:
     """Build a mock PlayerIO that returns inputs in sequence from a shared iterator.
 
-    Both prompt() and prompt_optional() consume from the same sequence so that
-    tests don't need to know which call is required vs optional.
+    prompt(), prompt_multiline(), and prompt_optional() all consume from the
+    same sequence so that tests don't need to know which call is required vs optional.
     """
     io = MagicMock()
     it = iter(inputs)
     io.prompt.side_effect = lambda _: next(it)
+    io.prompt_multiline.side_effect = lambda _: next(it)
     io.prompt_optional.side_effect = lambda _: next(it)
     return io
 
@@ -189,8 +190,8 @@ def test_description_uses_prompt_optional_so_blank_is_accepted() -> None:
         "fighter",  # class choice
         "Aldric",  # name
         "Human",  # race
-        "A former soldier.",  # backstory
     ]
+    io.prompt_multiline.return_value = "A former soldier."  # backstory
     io.prompt_optional.return_value = ""  # player skips description
 
     mock_actor_repo = MagicMock()
