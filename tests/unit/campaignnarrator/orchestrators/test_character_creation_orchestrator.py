@@ -17,9 +17,15 @@ from tests.fixtures.fighter_talia import TALIA
 
 
 def _make_io(inputs: list[str]) -> MagicMock:
-    """Build a mock PlayerIO that returns inputs in sequence."""
+    """Build a mock PlayerIO that returns inputs in sequence from a shared iterator.
+
+    Both prompt() and prompt_optional() consume from the same sequence so that
+    tests don't need to know which call is required vs optional.
+    """
     io = MagicMock()
-    io.prompt.side_effect = inputs
+    it = iter(inputs)
+    io.prompt.side_effect = lambda _: next(it)
+    io.prompt_optional.side_effect = lambda _: next(it)
     return io
 
 
@@ -174,6 +180,50 @@ def test_run_backstory_revision_loop() -> None:
     )
     actor = orch.run()
     assert actor.background == "You served the king."
+
+
+def test_description_uses_prompt_optional_so_blank_is_accepted() -> None:
+    """_choose_description must call prompt_optional so the player can press Enter to skip."""
+    io = MagicMock()
+    io.prompt.side_effect = [
+        "fighter",           # class choice
+        "Aldric",            # name
+        "Human",             # race
+        "A former soldier.", # backstory
+    ]
+    io.prompt_optional.return_value = ""  # player skips description
+
+    mock_actor_repo = MagicMock()
+    mock_template_repo = MagicMock()
+    mock_memory_repo = MagicMock()
+    mock_class_agent = MagicMock()
+    mock_backstory_agent = MagicMock()
+
+    from dataclasses import replace as dc_replace
+    mock_template_repo.load.return_value = dc_replace(
+        TALIA, name="", race=None, description=None, background=None
+    )
+    mock_class_agent.interpret.return_value = CharacterIntake(class_name="fighter")
+
+    from campaignnarrator.orchestrators.character_creation_orchestrator import (
+        CharacterCreationAgents,
+        CharacterCreationRepositories,
+    )
+
+    repos = CharacterCreationRepositories(
+        actor=mock_actor_repo,
+        template=mock_template_repo,
+        memory=mock_memory_repo,
+    )
+    agents = CharacterCreationAgents(
+        class_interpreter=mock_class_agent,
+        backstory=mock_backstory_agent,
+    )
+    orch = CharacterCreationOrchestrator(io=io, repositories=repos, agents=agents)
+    actor = orch.run()
+
+    io.prompt_optional.assert_called_once()
+    assert actor.description is None
 
 
 def test_grouped_run_saves_actor() -> None:

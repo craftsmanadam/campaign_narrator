@@ -187,7 +187,8 @@ def test_run_with_no_active_encounter_does_not_call_run_encounter_immediately() 
     mock_enc_orch.run_encounter.assert_called_once()
 
 
-def test_run_displays_encounter_output() -> None:
+def test_run_does_not_forward_encounter_output_to_io() -> None:
+    """Encounter output is displayed live inside EncounterOrchestrator, not forwarded here."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
     orch, _, mock_enc_repo, _, mock_enc_orch, _ = _make_orchestrator(
         active_encounter=active
@@ -195,7 +196,10 @@ def test_run_displays_encounter_output() -> None:
     mock_enc_orch.run_encounter.return_value = MagicMock(output_text="Docks at dusk.")
     mock_enc_repo.load_active.side_effect = [active, active]
     orch.run(campaign=_make_campaign(), player=_make_player())
-    orch._io.display.assert_any_call("Docks at dusk.")
+    # Output display is the encounter orchestrator's responsibility; module orchestrator
+    # must not re-display it via io.display.
+    for call in orch._io.display.call_args_list:
+        assert "Docks at dusk." not in str(call)
 
 
 def test_run_with_completed_encounter_calls_summarize() -> None:

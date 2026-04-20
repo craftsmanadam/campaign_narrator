@@ -18,6 +18,7 @@ from campaignnarrator.cli import (
     _ApplicationGraph,
     _build_application_graph,
     _build_embedding_adapter,
+    _TerminalIO,
     main,
 )
 from campaignnarrator.settings import Settings
@@ -557,6 +558,59 @@ def test_application_factory_build_returns_application_graph(
 # ---------------------------------------------------------------------------
 # _build_embedding_adapter tests
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _TerminalIO tests
+# ---------------------------------------------------------------------------
+
+
+def test_terminal_io_prompt_strips_trailing_newline() -> None:
+    """prompt() must strip a trailing LF so callers receive clean input."""
+    io = _TerminalIO(StringIO("hello\n"), StringIO())
+    assert io.prompt("> ") == "hello"
+
+
+def test_terminal_io_prompt_strips_trailing_carriage_return_newline() -> None:
+    """prompt() must strip CRLF from Windows-style copy-paste so no stray \\r remains."""
+    io = _TerminalIO(StringIO("hello\r\n"), StringIO())
+    assert io.prompt("> ") == "hello"
+
+
+def test_terminal_io_prompt_preserves_internal_whitespace() -> None:
+    """prompt() must not strip leading/trailing spaces — only the line terminator."""
+    io = _TerminalIO(StringIO("  hello world  \n"), StringIO())
+    assert io.prompt("> ") == "  hello world  "
+
+
+def test_terminal_io_prompt_skips_blank_lines_and_returns_first_non_blank() -> None:
+    """prompt() must silently discard blank lines and re-read until non-blank input."""
+    io = _TerminalIO(StringIO("\n\r\n   \nhello\n"), StringIO())
+    assert io.prompt("> ") == "hello"
+
+
+def test_terminal_io_prompt_skips_whitespace_only_lines() -> None:
+    """prompt() must treat whitespace-only lines as blank and keep reading."""
+    io = _TerminalIO(StringIO("   \n\thello there\n"), StringIO())
+    assert io.prompt("> ") == "\thello there"
+
+
+def test_terminal_io_prompt_optional_returns_blank_immediately() -> None:
+    """prompt_optional() must return blank input without looping."""
+    io = _TerminalIO(StringIO("\n"), StringIO())
+    assert io.prompt_optional("> ") == ""
+
+
+def test_terminal_io_prompt_optional_strips_line_terminators() -> None:
+    """prompt_optional() must strip CRLF just like prompt()."""
+    io = _TerminalIO(StringIO("hello\r\n"), StringIO())
+    assert io.prompt_optional("> ") == "hello"
+
+
+def test_terminal_io_prompt_optional_returns_whitespace_only_input() -> None:
+    """prompt_optional() must return whitespace-only input as-is (caller decides)."""
+    io = _TerminalIO(StringIO("   \n"), StringIO())
+    assert io.prompt_optional("> ") == "   "
 
 
 def test_build_embedding_adapter_returns_stub_when_provider_is_stub() -> None:

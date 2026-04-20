@@ -24,6 +24,13 @@ class ScriptedIO:
             return self._on_exhaust
         return self._inputs.pop(0)
 
+    def prompt_optional(self, text: str) -> str:
+        """Return next input or empty string; blank is a valid response."""
+        self._displayed.append(text)
+        if not self._inputs:
+            return ""
+        return self._inputs.pop(0)
+
     def display(self, text: str) -> None:
         self._displayed.append(text)
 

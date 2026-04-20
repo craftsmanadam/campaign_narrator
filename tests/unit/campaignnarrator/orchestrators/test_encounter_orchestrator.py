@@ -577,7 +577,9 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
 
     goblin_hp=0 ensures combat ends as soon as Talia passes (all NPCs down).
     """
-    roll_dice = FakeDice([18, 12])
+    # Actors are rolled in sorted(actor_id) order: "npc:goblin-scout" before "pc:talia".
+    # Give goblin a lower roll (12) so Talia (18) wins initiative and goes first.
+    roll_dice = FakeDice([12, 18])
     narrator_agent = FakeNarratorAgent()
     # io provides the social input that triggers combat, then "end turn" for Talia's
     # first (and only) combat turn so the CombatOrchestrator pass-phrase terminates.
@@ -597,7 +599,7 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
     assert state is not None
     assert state.phase is EncounterPhase.COMBAT
     assert state.outcome == "combat"
-    assert roll_dice.expressions == ["1d20+2", "1d20+2"]
+    assert roll_dice.expressions == ["1d20+2", "1d20+5"]
     assert narrator_agent.frames[-1].purpose == "combat_start"
 
 
@@ -613,7 +615,9 @@ def test_enter_combat_emits_encounter_completed_event(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([18, 12])),
+        # Actors rolled in sorted(actor_id) order: goblin first, Talia second.
+        # Goblin gets 12, Talia gets 18 → Talia wins initiative and goes first.
+        tools=OrchestratorTools(roll_dice=FakeDice([12, 18])),
         io=ScriptedIO(["I draw steel and rush the goblin.", "end turn"]),
         _decision_agent=_mock_decision_agent([_decision("roll_initiative")]),
         _combat_intent_agent=_mock_combat_intent_agent(["end_turn"]),

@@ -129,7 +129,18 @@ class _TerminalIO:
     def prompt(self, text: str) -> str:
         self._stdout.write(text)
         self._stdout.flush()
-        return self._stdin.readline().rstrip("\n")
+        while True:
+            raw = self._stdin.readline()
+            if not raw:  # EOF
+                return ""
+            line = raw.rstrip("\r\n")
+            if line.strip():
+                return line
+
+    def prompt_optional(self, text: str) -> str:
+        self._stdout.write(text)
+        self._stdout.flush()
+        return self._stdin.readline().rstrip("\r\n")
 
     def display(self, text: str) -> None:
         self._stdout.write(text + "\n")

@@ -101,15 +101,6 @@ class NarratorAgent:
         self._memory_repository = memory_repository
         self._scene_instructions = self._instructions(_SCENE_OPENING_INSTRUCTIONS)
 
-        def retrieve_memory(query: str) -> str:
-            """Search prior narrative records for named NPCs, locations, or events.
-
-            Call this before describing any named entity, location, or NPC the player
-            may have encountered previously. Returns relevant narrative excerpts
-            separated by '---', or 'No prior records found.' if none match.
-            """
-            return self.retrieve_memory(query)
-
         if _scene_agent is not None:
             self._scene_agent: object = _scene_agent
         else:
@@ -117,7 +108,6 @@ class NarratorAgent:
                 adapter.model,
                 output_type=SceneOpeningResponse,
                 instructions=self._scene_instructions,
-                tools=[retrieve_memory],
             )
         self._assess_agent = (
             _assess_agent
@@ -144,7 +134,6 @@ class NarratorAgent:
                 adapter.model,
                 output_type=NextEncounterPlan,
                 instructions=_PLAN_NEXT_INSTRUCTIONS,
-                tools=[retrieve_memory],
             )
         )
 
@@ -169,9 +158,11 @@ class NarratorAgent:
             "allowed_disclosures": list(frame.allowed_disclosures),
             "tone_guidance": frame.tone_guidance,
         }
-        frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
-
         if frame.purpose == "scene_opening":
+            frame_dict["prior_narrative_context"] = self.retrieve_memory(
+                frame.setting or ""
+            )
+            frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
             result = self._scene_agent.run_sync(frame_json).output
             if not result.text.strip():
                 raise ValueError("empty narration output")  # noqa: TRY003
@@ -181,6 +172,7 @@ class NarratorAgent:
                 scene_tone=result.scene_tone,
             )
 
+        frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
         text = self._adapter.generate_text(
             instructions=self._instructions(_BASE_NARRATE_INSTRUCTIONS),
             input_text=frame_json,
@@ -293,6 +285,9 @@ class NarratorAgent:
             "player_hp_current": player.hp_current,
             "player_hp_max": player.hp_max,
             "last_outcome": last_outcome,
+            "prior_narrative_context": self.retrieve_memory(
+                f"{module.title} {milestone.title}"
+            ),
         }
         result = self._plan_agent.run_sync(  # type: ignore[union-attr]
             json.dumps(context, indent=2, sort_keys=True)

@@ -124,8 +124,21 @@ class EncounterOrchestrator:
         game_state = self._state_repository.load()
         if game_state.encounter is None:
             raise ValueError("no active encounter")  # noqa: TRY003
-        state, output = self._open_scene(game_state.encounter)
         player = game_state.player
+        output: list[str] = []
+
+        try:
+            state, scene_texts = self._open_scene(game_state.encounter)
+        except Exception as exc:
+            msg = f"\n[Scene narration unavailable ({exc}). Continuing...]\n"
+            self._io.display(msg)
+            output.append(msg)
+            state = replace(game_state.encounter, phase=EncounterPhase.SOCIAL)
+            scene_texts = []
+
+        for text in scene_texts:
+            self._io.display(text)
+            output.append(text)
 
         # If loaded from a saved already-complete state, return immediately.
         if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
@@ -157,9 +170,19 @@ class EncounterOrchestrator:
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
                 break
 
-            state, narration = self._handle_non_combat_action(
-                state, player_input, player
-            )
+            try:
+                state, narration = self._handle_non_combat_action(
+                    state, player_input, player
+                )
+            except ValueError:
+                raise
+            except Exception as exc:
+                msg = f"\n[Narrator encountered an error ({exc}). Please try again.]\n"
+                self._io.display(msg)
+                output.append(msg)
+                continue
+
+            self._io.display(narration.text)
             output.append(narration.text)
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
                 continue
@@ -229,16 +252,24 @@ class EncounterOrchestrator:
                         "outcome": state.outcome,
                     }
                 )
-                output.append("Game saved. You can resume this encounter later.")
+                msg = "Game saved. You can resume this encounter later."
+                self._io.display(msg)
+                output.append(msg)
             return "break"
         if normalized == "status":
-            output.append(self._narrate(_status_frame(state)).text)
+            text = self._narrate(_status_frame(state)).text
+            self._io.display(text)
+            output.append(text)
             return "continue"
         if normalized == "what happened":
-            output.append(self._narrate(_recap_frame(state)).text)
+            text = self._narrate(_recap_frame(state)).text
+            self._io.display(text)
+            output.append(text)
             return "continue"
         if normalized == "look around":
-            output.append(self._narrate(_look_frame(state)).text)
+            text = self._narrate(_look_frame(state)).text
+            self._io.display(text)
+            output.append(text)
             return "continue"
         return None
 
@@ -323,21 +354,18 @@ class EncounterOrchestrator:
     def _enter_combat(
         self, state: EncounterState, player: ActorState
     ) -> tuple[EncounterState, Narration]:
-        talia_roll = self._roll_dice("1d20+2")
-        goblin_roll = self._roll_dice("1d20+2")
-        initiative = (
-            ("pc:talia", "Talia", talia_roll),
-            ("npc:goblin-scout", "Goblin Scout", goblin_roll),
-        )
+        rolls = [
+            (actor_id, actor.name, self._roll_dice(f"1d20+{actor.initiative_bonus}"))
+            for actor_id, actor in sorted(state.actors.items())
+        ]
+        sorted_rolls = sorted(rolls, key=lambda entry: entry[2], reverse=True)
         ordered = tuple(
             InitiativeTurn(actor_id=actor_id, initiative_roll=roll)
-            for actor_id, _name, roll in sorted(
-                initiative,
-                key=lambda entry: entry[2],
-                reverse=True,
-            )
+            for actor_id, _name, roll in sorted_rolls
         )
-        event = f"Initiative: Talia {talia_roll}, Goblin Scout {goblin_roll}."
+        event = "Initiative: " + ", ".join(
+            f"{name} {roll}" for _, name, roll in sorted_rolls
+        ) + "."
         updated_state = replace(
             state,
             phase=EncounterPhase.COMBAT,

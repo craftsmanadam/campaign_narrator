@@ -569,154 +569,108 @@ def _make_scene_response_model(
     return FunctionModel(fn)
 
 
-def _make_tool_calling_scene_model(
-    query: str,
-    text: str = "You arrive at the docks.",
-    scene_tone: str = "tense and foreboding",
-) -> FunctionModel:
-    """FunctionModel that first calls retrieve_memory tool, then returns result."""
-    calls: list[bool] = []
-
-    def fn(messages: object, info: AgentInfo) -> ModelResponse:
-        if not calls:
-            calls.append(True)
-            return ModelResponse(
-                parts=[ToolCallPart("retrieve_memory", json.dumps({"query": query}))]
-            )
-        return ModelResponse(
-            parts=[
-                ToolCallPart(
-                    "final_result",
-                    json.dumps({"text": text, "scene_tone": scene_tone}),
-                )
-            ]
-        )
-
-    return FunctionModel(fn)
+def _make_scene_frame(setting: str = "The docks at midnight.") -> NarrationFrame:
+    return NarrationFrame(
+        purpose="scene_opening",
+        phase=EncounterPhase.SCENE_OPENING,
+        setting=setting,
+        public_actor_summaries=(),
+        visible_npc_summaries=(),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=(),
+    )
 
 
-def test_scene_agent_retrieve_memory_tool_queries_repository() -> None:
-    """Scene agent retrieve_memory tool calls MemoryRepository.retrieve_relevant."""
-    mock_repo = MagicMock(spec=MemoryRepository)
-    mock_repo.retrieve_relevant.return_value = ["Malachar had pale hollow eyes."]
+def _make_scene_narrator(
+    memory_returns: list[str] | None = None,
+    mock_repo: MagicMock | None = None,
+) -> tuple[NarratorAgent, MagicMock, MagicMock]:
+    """Build a narrator with a mock scene agent and optional memory repo."""
+    scene_response = SceneOpeningResponse(
+        text="You arrive at the docks.", scene_tone="tense and foreboding"
+    )
+    mock_scene_agent = MagicMock()
+    mock_scene_agent.run_sync.return_value.output = scene_response
 
-    mock_adapter = MagicMock()
-    mock_adapter.model = _make_tool_calling_scene_model("Malachar")
+    if mock_repo is None:
+        mock_repo = MagicMock(spec=MemoryRepository)
+        mock_repo.retrieve_relevant.return_value = memory_returns or []
 
     narrator = NarratorAgent(
-        adapter=mock_adapter,
+        adapter=MagicMock(),
         memory_repository=mock_repo,
+        _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
         _plan_agent=MagicMock(),
     )
+    return narrator, mock_repo, mock_scene_agent
 
-    narrator.narrate(
-        NarrationFrame(
-            purpose="scene_opening",
-            phase=EncounterPhase.SCENE_OPENING,
-            setting="The docks at midnight.",
-            public_actor_summaries=(),
-            visible_npc_summaries=(),
-            recent_public_events=(),
-            resolved_outcomes=(),
-            allowed_disclosures=(),
-        )
+
+def test_scene_opening_retrieves_memory_with_setting_as_query() -> None:
+    """Prior to _scene_agent, retrieve_memory must be called with the frame setting."""
+    narrator, mock_repo, mock_scene_agent = _make_scene_narrator(
+        memory_returns=["Malachar had pale hollow eyes."]
     )
+    narrator.narrate(_make_scene_frame("The docks at midnight."))
 
-    mock_repo.retrieve_relevant.assert_called_once_with("Malachar", limit=5)
+    mock_repo.retrieve_relevant.assert_called_once_with("The docks at midnight.", limit=5)
+    call_args = mock_scene_agent.run_sync.call_args[0][0]
+    assert "Malachar had pale hollow eyes." in call_args
 
 
-def test_scene_agent_retrieve_memory_tool_returns_no_records_sentinel() -> None:
-    """retrieve_memory returns sentinel string when repository has no matches."""
-    mock_repo = MagicMock(spec=MemoryRepository)
-    mock_repo.retrieve_relevant.return_value = []
+def test_scene_opening_injects_sentinel_when_no_memory_matches() -> None:
+    """When no memory matches, sentinel appears in the scene agent input."""
+    narrator, mock_repo, mock_scene_agent = _make_scene_narrator(memory_returns=[])
+    narrator.narrate(_make_scene_frame("Forest"))
 
-    mock_adapter = MagicMock()
-    mock_adapter.model = _make_tool_calling_scene_model("Malachar")
+    call_args = mock_scene_agent.run_sync.call_args[0][0]
+    assert "No prior records found." in call_args
+
+
+def test_scene_opening_injects_sentinel_when_no_repository() -> None:
+    """When memory_repository is None, sentinel appears in the scene agent input."""
+    scene_response = SceneOpeningResponse(text="The forest.", scene_tone="quiet")
+    mock_scene_agent = MagicMock()
+    mock_scene_agent.run_sync.return_value.output = scene_response
 
     narrator = NarratorAgent(
-        adapter=mock_adapter,
-        memory_repository=mock_repo,
-        _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
-    )
-
-    narrator.narrate(
-        NarrationFrame(
-            purpose="scene_opening",
-            phase=EncounterPhase.SCENE_OPENING,
-            setting="The docks.",
-            public_actor_summaries=(),
-            visible_npc_summaries=(),
-            recent_public_events=(),
-            resolved_outcomes=(),
-            allowed_disclosures=(),
-        )
-    )
-    # No exception raised; sentinel "No prior records found." returned to agent
-    mock_repo.retrieve_relevant.assert_called_once()
-
-
-def test_scene_agent_retrieve_memory_tool_absent_when_no_repository() -> None:
-    """retrieve_memory returns sentinel when memory_repository is None."""
-    mock_adapter = MagicMock()
-    mock_adapter.model = _make_tool_calling_scene_model("anything")
-
-    narrator = NarratorAgent(
-        adapter=mock_adapter,
+        adapter=MagicMock(),
         memory_repository=None,
+        _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
         _crit_agent=MagicMock(),
         _plan_agent=MagicMock(),
     )
 
-    # Should not raise even with no repository
-    narrator.narrate(
-        NarrationFrame(
-            purpose="scene_opening",
-            phase=EncounterPhase.SCENE_OPENING,
-            setting="The docks.",
-            public_actor_summaries=(),
-            visible_npc_summaries=(),
-            recent_public_events=(),
-            resolved_outcomes=(),
-            allowed_disclosures=(),
-        )
+    narrator.narrate(_make_scene_frame("The docks."))
+
+    call_args = mock_scene_agent.run_sync.call_args[0][0]
+    assert "No prior records found." in call_args
+
+
+def test_plan_next_encounter_includes_prior_narrative_context() -> None:
+    """plan_next_encounter pre-fetches memory and injects it into the plan agent input."""
+    narrator, mock_memory_repo = _make_narrator_with_memory(
+        memory_returns=["Aldric fought the cultist."]
+    )
+    mock_plan_agent = MagicMock()
+    mock_plan_agent.run_sync.return_value.output = NextEncounterPlan(
+        seed="The warehouse.", milestone_achieved=False
+    )
+    narrator._plan_agent = mock_plan_agent
+
+    _milestone = Milestone(
+        milestone_id="m1", title="First Blood", description="Survive."
+    )
+    narrator.plan_next_encounter(
+        campaign=_make_campaign_for_narrator(),
+        module=_make_module_for_narrator(),
+        milestone=_milestone,
+        player=_make_player_actor(),
+        last_outcome="Cultist subdued.",
     )
 
-
-def test_scene_agent_has_retrieve_memory_tool() -> None:
-    """_scene_agent is constructed with the memory tool registered."""
-    mock_adapter = MagicMock()
-    mock_adapter.model = _make_scene_response_model()
-
-    narrator = NarratorAgent(
-        adapter=mock_adapter,
-        memory_repository=MagicMock(spec=MemoryRepository),
-        _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        _plan_agent=MagicMock(),
-    )
-
-    # Verify the internally constructed _scene_agent has the tool registered
-    assert hasattr(narrator._scene_agent, "_function_toolset")
-    assert "retrieve_memory" in narrator._scene_agent._function_toolset.tools
-
-
-def test_plan_agent_has_retrieve_memory_tool() -> None:
-    """_plan_agent is constructed with the memory tool registered."""
-    mock_adapter = MagicMock()
-    mock_adapter.model = _make_scene_response_model()
-
-    narrator = NarratorAgent(
-        adapter=mock_adapter,
-        memory_repository=MagicMock(spec=MemoryRepository),
-        _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        _scene_agent=MagicMock(),
-    )
-
-    assert hasattr(narrator._plan_agent, "_function_toolset")
-    assert "retrieve_memory" in narrator._plan_agent._function_toolset.tools
+    call_args = mock_plan_agent.run_sync.call_args[0][0]
+    assert "Aldric fought the cultist." in call_args

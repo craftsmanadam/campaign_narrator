@@ -328,7 +328,11 @@ class PlayerIO(Protocol):
     """
 
     def prompt(self, text: str) -> str:
-        """Display text and return player input."""
+        """Display text and return player input; re-prompts silently on blank."""
+        ...
+
+    def prompt_optional(self, text: str) -> str:
+        """Display text and return player input; returns blank if the player skips."""
         ...
 
     def display(self, text: str) -> None:

@@ -91,7 +91,7 @@ class CharacterCreationOrchestrator:
             "\nBefore your story begins, tell me — are you a warrior who meets "
             "challenges head-on, or a shadow who moves unseen?\n"
         )
-        raw = self._io.prompt("> ")
+        raw = self._io.prompt("> ").strip()
         return self._agents.class_interpreter.interpret(raw)
 
     def _choose_name(self) -> str:
@@ -113,7 +113,6 @@ class CharacterCreationOrchestrator:
             "If you would like help crafting a backstory, just say 'help'.\n"
         )
         raw = self._io.prompt("> ").strip()
-
         raw_lower = raw.lower()
         if raw_lower in _HELP_TRIGGERS or any(t in raw_lower for t in _HELP_TRIGGERS):
             return self._draft_backstory_with_help(
@@ -143,4 +142,4 @@ class CharacterCreationOrchestrator:
 
     def _choose_description(self) -> str:
         self._io.display("\nDescribe your appearance (or press Enter to skip).\n")
-        return self._io.prompt("> ").strip()
+        return self._io.prompt_optional("> ").strip()
