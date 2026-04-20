@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
@@ -35,6 +36,8 @@ from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.tools.state_updates import apply_state_effects
 
+_log = logging.getLogger(__name__)
+
 _ALLOWED_SOCIAL_NEXT_STEPS = {
     "npc_dialogue",
     "narrate_scene",
@@ -53,8 +56,14 @@ _DECISION_AGENT_INSTRUCTIONS = (
     "- Route to enter_combat when the player's action is an attack, uses a weapon, "
     "or is hostile toward a creature (e.g. 'I attack', 'I stab', 'I shoot', "
     "'I cast Fireball at the guards', 'I try to kill it', 'I charge').\n"
-    "- Route to adjudicate_action for skill checks, saving throws, and non-combat "
-    "actions (e.g. 'I pick the lock', 'I try to persuade', 'I search the room').\n"
+    "- Route to adjudicate_action for any skill check, saving throw, or action "
+    "requiring a dice roll. This includes all 18 SRD skills: "
+    "Acrobatics, Animal Handling, Arcana, Athletics, Deception, History, "
+    "Insight, Intimidation, Investigation, Medicine, Nature, Perception, "
+    "Performance, Persuasion, Religion, Sleight of Hand, Stealth, Survival. "
+    "Route here whenever the player tries to do something, determine something, "
+    "recall something, examine something, hide, sneak, climb, persuade, "
+    "intimidate, deceive, or perform any other action with an uncertain outcome.\n"
     "- Route to npc_dialogue when the player addresses or responds to a character "
     "directly (e.g. 'I ask the innkeeper', 'What do you know about the bandits?').\n"
     "- Route to complete_encounter when the scene is fully resolved and there is "
@@ -66,7 +75,18 @@ _DECISION_AGENT_INSTRUCTIONS = (
     "'I fire an arrow at the bandit.' → enter_combat\n"
     "'I cast Sleep on the guards.' → enter_combat\n"
     "'I ask the innkeeper about the rumor.' → npc_dialogue\n"
-    "'I try to pick the lock.' → adjudicate_action\n\n"
+    "'I try to pick the lock.' → adjudicate_action  [Sleight of Hand]\n"
+    "'I try to determine if they are undead.'"
+    " → adjudicate_action  [Arcana or Religion]\n"
+    "'I examine the runes on the wall.'"
+    " → adjudicate_action  [Investigation or Arcana]\n"
+    "'I try to persuade the guard to let us pass.' → adjudicate_action  [Persuasion]\n"
+    "'I attempt to sneak past the sleeping guard.' → adjudicate_action  [Stealth]\n"
+    "'I try to climb the cliff face.' → adjudicate_action  [Athletics]\n"
+    "'I search the body for clues.' → adjudicate_action  [Investigation]\n"
+    "'I try to track the creature through the forest.'"
+    " → adjudicate_action  [Survival]\n"
+    "'I look around and listen for danger.' → adjudicate_action  [Perception]\n\n"
     "Do not resolve rules yourself. Do not narrate. Only choose next_step."
 )
 
@@ -222,6 +242,7 @@ class EncounterOrchestrator:
         except ValueError:
             raise
         except Exception as exc:
+            _log.exception("Action processing failed")
             msg = f"\n[Narrator encountered an error ({exc}). Please try again.]\n"
             self._io.display(msg)
             output.append(msg)
@@ -490,7 +511,7 @@ class EncounterOrchestrator:
         state: EncounterState,
         player_input: PlayerInput,
     ) -> OrchestrationDecision:
-        return self._decision_agent.run_sync(
+        result = self._decision_agent.run_sync(
             json.dumps(
                 {
                     "phase": state.phase.value,
@@ -505,6 +526,13 @@ class EncounterOrchestrator:
                 sort_keys=True,
             )
         ).output
+        _log.debug(
+            "Routing decision: next_step=%s requires_rules=%s input=%r",
+            result.next_step,
+            result.requires_rules_resolution,
+            player_input.raw_text,
+        )
+        return result
 
     def _narrate(self, frame: NarrationFrame) -> Narration:
         return self._narrator_agent.narrate(frame)

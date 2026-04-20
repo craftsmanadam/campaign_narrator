@@ -1207,3 +1207,56 @@ def test_considering_rules_displayed_before_adjudication(
     )
     orchestrator.run_encounter(encounter_id="goblin-camp")
     assert any("Considering the rules" in msg for msg in io.displayed)
+
+
+def test_decision_agent_instructions_list_all_18_srd_skills() -> None:
+    """All 18 SRD skills must be named in the routing instructions."""
+    skills = [
+        "Arcana",
+        "History",
+        "Nature",
+        "Religion",
+        "Investigation",
+        "Perception",
+        "Medicine",
+        "Persuasion",
+        "Deception",
+        "Intimidation",
+        "Performance",
+        "Athletics",
+        "Acrobatics",
+        "Sleight of Hand",
+        "Stealth",
+        "Survival",
+        "Animal Handling",
+        "Insight",
+    ]
+    for skill in skills:
+        assert skill in _DECISION_AGENT_INSTRUCTIONS, f"Missing skill: {skill}"
+
+
+def test_decision_agent_instructions_contain_knowledge_example() -> None:
+    assert "I try to determine if they are undead." in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_contain_investigation_example() -> None:
+    assert "I examine the runes on the wall." in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_contain_social_example() -> None:
+    assert "I try to persuade the guard to let us pass." in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_contain_physical_example() -> None:
+    assert "I try to climb the cliff face." in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_contain_stealth_example() -> None:
+    assert "I attempt to sneak past the sleeping guard." in _DECISION_AGENT_INSTRUCTIONS
+
+
+def test_decision_agent_instructions_contain_survival_example() -> None:
+    assert (
+        "I try to track the creature through the forest."
+        in _DECISION_AGENT_INSTRUCTIONS
+    )

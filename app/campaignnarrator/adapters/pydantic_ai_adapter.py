@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import replace
 
@@ -11,6 +12,8 @@ from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
+
+_log = logging.getLogger(__name__)
 
 
 def _ollama_structured_output_profile(model_name: str) -> ModelProfile | None:
@@ -82,6 +85,7 @@ class PydanticAIAdapter:
 
     def generate_text(self, *, instructions: str, input_text: str) -> str:
         """Request plain text output from Pydantic AI."""
+        _log.debug("generate_text input: %r", input_text[:200])
         agent = Agent(
             self._model,
             output_type=str,
@@ -93,7 +97,11 @@ class PydanticAIAdapter:
         )
         output_text = result.output
         if not output_text.strip():
+            _log.error(
+                "generate_text returned empty output for input: %r", input_text[:200]
+            )
             raise ValueError("empty output")  # noqa: TRY003
+        _log.debug("generate_text output: %r", output_text[:200])
         return output_text
 
     def _model_settings(self) -> ModelSettings:

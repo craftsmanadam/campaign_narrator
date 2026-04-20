@@ -25,6 +25,7 @@ from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.agents.startup_interpreter_agent import StartupInterpreterAgent
 from campaignnarrator.domain.models import ActorState
+from campaignnarrator.logging_config import configure_logging
 from campaignnarrator.orchestrators.application_orchestrator import (
     ApplicationOrchestrator,
 )
@@ -393,10 +394,12 @@ def main(
     )
     args = parser.parse_args(argv)
 
+    settings = Settings()
     if args.data_root is not None:
         data_root = args.data_root
     else:
-        data_root = Path(Settings().data_root)
+        data_root = Path(settings.data_root)
+    configure_logging(data_root=data_root, console_logging=settings.console_logging)
     graph = _build_application_graph(data_root, stdin=stdin, stdout=stdout)
 
     if args.encounter_id:
