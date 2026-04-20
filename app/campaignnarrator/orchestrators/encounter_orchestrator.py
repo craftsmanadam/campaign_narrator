@@ -334,11 +334,9 @@ class EncounterOrchestrator:
             "npc_dialogue" if decision.next_step == "npc_dialogue" else "scene_response"
         )
         narration = self._narrate(
-            _frame(
-                state,
-                purpose,
+            replace(
+                _frame(state, purpose, resolved_outcomes=(decision.reason_summary,)),
                 player_action=player_input.raw_text,
-                resolved_outcomes=(decision.reason_summary,),
             )
         )
         return state, narration
@@ -375,12 +373,14 @@ class EncounterOrchestrator:
                 }
             )
         narration = self._narrate(
-            _frame(
-                updated_state,
-                "social_resolution",
+            replace(
+                _frame(
+                    updated_state,
+                    "social_resolution",
+                    resolved_outcomes=(*roll_events, adjudication.summary),
+                    compendium_context=compendium_context,
+                ),
                 player_action=player_input.raw_text,
-                resolved_outcomes=(*roll_events, adjudication.summary),
-                compendium_context=compendium_context,
             )
         )
         return updated_state, narration
@@ -573,7 +573,6 @@ def _frame(
     state: EncounterState,
     purpose: str,
     *,
-    player_action: str | None = None,
     resolved_outcomes: tuple[str, ...] = (),
     allowed_disclosures: tuple[str, ...] = ("public encounter state",),
     compendium_context: tuple[str, ...] = (),
@@ -589,7 +588,6 @@ def _frame(
         allowed_disclosures=allowed_disclosures,
         compendium_context=compendium_context,
         tone_guidance=state.scene_tone,
-        player_action=player_action,
     )
 
 
