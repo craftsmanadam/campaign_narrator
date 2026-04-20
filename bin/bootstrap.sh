@@ -134,7 +134,7 @@ if [ -f "pyproject.toml" ]; then
   if [ "$(uname -m)" == 'arm64' ]; then
     export CRYPTOGRAPHY_DONT_BUILD_RUST=1
   fi
-  poetry install --no-root
+  poetry install
 fi
 
 if [ -n "$pyenv_installed" ]; then
