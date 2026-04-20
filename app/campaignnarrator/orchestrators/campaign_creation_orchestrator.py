@@ -24,6 +24,7 @@ _BRIEF_PROMPT = (
     "Describe the world you want to inhabit, where your journey starts, what drives "
     "your character, and what enemies you hope to face. Speak freely — the more you "
     "tell me, the richer your tale will be.\n\n"
+    "You can write as much as you like — press Enter twice when done.\n\n"
     "> "
 )
 
@@ -71,7 +72,7 @@ class CampaignCreationOrchestrator:
 
         Writes campaign setting to narrative memory before delegating.
         """
-        player_brief = self._io.prompt(_BRIEF_PROMPT).strip()
+        player_brief = self._io.prompt_multiline(_BRIEF_PROMPT).strip()
 
         campaign_result = self._agents.campaign_generator.generate(
             player_brief=player_brief,

@@ -142,5 +142,11 @@ class CharacterCreationOrchestrator:
         return draft
 
     def _choose_description(self) -> str:
-        self._io.display("\nDescribe your appearance (or press Enter to skip).\n")
-        return self._io.prompt_optional("> ").strip()
+        self._io.display(
+            "\nDescribe your appearance. "
+            "You can write as much as you like — press Enter twice when done.\n"
+        )
+        while True:
+            result = self._io.prompt_multiline("> ").strip()
+            if result:
+                return result

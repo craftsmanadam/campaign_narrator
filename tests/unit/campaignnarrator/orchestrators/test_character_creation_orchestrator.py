@@ -73,7 +73,7 @@ def test_run_saves_actor_with_name_race_background() -> None:
             "Aldric",  # name
             "Human",  # race
             "I served the king's guard for six years.",  # backstory (no help request)
-            "",  # description (skip)
+            "Tall with brown hair and a soldier's bearing.",  # description
         ]
     )
     actor = orch.run()
@@ -94,7 +94,7 @@ def test_run_uses_backstory_agent_when_player_requests_help() -> None:
             "Human",  # race
             "help me write a backstory",  # triggers backstory agent
             "accept",  # accept the draft
-            "",  # description (skip)
+            "Tall with brown hair.",  # description
         ],
         backstory_draft="You served the king.",
     )
@@ -109,7 +109,7 @@ def test_run_skips_name_prompt_when_already_extracted() -> None:
             "I am Gareth, a warrior.",  # class choice text
             "Human",  # race still prompted
             "I saved my village.",  # backstory
-            "",  # description
+            "Stocky with a farmer's tan.",  # description
         ],
         intake=CharacterIntake(class_name="fighter", name="Gareth of Halsforth"),
     )
@@ -124,7 +124,7 @@ def test_run_skips_race_prompt_when_already_extracted() -> None:
             "I'm a human fighter.",  # class choice text
             "Aldric",  # name still prompted
             "I served the guard.",  # backstory
-            "",  # description
+            "Average height, clean-shaven.",  # description
         ],
         intake=CharacterIntake(class_name="fighter", race="Human"),
     )
@@ -138,7 +138,7 @@ def test_run_skips_both_name_and_race_when_fully_extracted() -> None:
         inputs=[
             "I am Gareth of Halsforth, a human warrior.",  # class choice text
             "I saved my village from bandits.",  # backstory
-            "",  # description
+            "Broad and weathered.",  # description
         ],
         intake=CharacterIntake(
             class_name="fighter", name="Gareth of Halsforth", race="Human"
@@ -151,7 +151,7 @@ def test_run_skips_both_name_and_race_when_fully_extracted() -> None:
 
 def test_run_assigns_actor_id_pc_player() -> None:
     orch, _, __ = _make_orchestrator(
-        inputs=["fighter", "Aldric", "Human", "A former soldier.", ""]
+        inputs=["fighter", "Aldric", "Human", "A former soldier.", "Tall with a scar."]
     )
     actor = orch.run()
     assert actor.actor_id == "pc:player"
@@ -175,7 +175,7 @@ def test_run_backstory_revision_loop() -> None:
             "help",  # triggers backstory agent
             "make it more tragic",  # reject draft — becomes new fragments
             "accept",  # accept revised draft
-            "",  # description (skip)
+            "Gaunt with haunted eyes.",  # description
         ],
         backstory_draft="You served the king.",
     )
@@ -183,16 +183,18 @@ def test_run_backstory_revision_loop() -> None:
     assert actor.background == "You served the king."
 
 
-def test_description_uses_prompt_optional_so_blank_is_accepted() -> None:
-    """_choose_description must call prompt_optional so the player can press Enter."""
+def test_description_reprompts_on_blank_and_accepts_second_attempt() -> None:
+    """_choose_description must loop until the player provides a non-blank value."""
     io = MagicMock()
     io.prompt.side_effect = [
         "fighter",  # class choice
         "Aldric",  # name
         "Human",  # race
     ]
-    io.prompt_multiline.return_value = "A former soldier."  # backstory
-    io.prompt_optional.return_value = ""  # player skips description
+    io.prompt_multiline.side_effect = [
+        "",  # first attempt — blank, should re-prompt
+        "Tall with a scar.",  # second attempt — accepted
+    ]
 
     mock_actor_repo = MagicMock()
     mock_template_repo = MagicMock()
@@ -217,8 +219,9 @@ def test_description_uses_prompt_optional_so_blank_is_accepted() -> None:
     orch = CharacterCreationOrchestrator(io=io, repositories=repos, agents=agents)
     actor = orch.run()
 
-    io.prompt_optional.assert_called_once()
-    assert actor.description is None
+    expected_calls = 2  # blank attempt then real value
+    assert io.prompt_multiline.call_count == expected_calls
+    assert actor.description == "Tall with a scar."
 
 
 def test_grouped_run_saves_actor() -> None:
