@@ -50,6 +50,17 @@ _RULES_INSTRUCTIONS = (
     "value is the event description string.\n"
     "Do NOT invent other effect types. If no supported effect applies, "
     "leave state_effects as an empty list."
+    "\n\nDICE EXPRESSIONS:\n"
+    "When actor_modifiers is provided in the input, use the numeric values "
+    "directly. For ability checks and saving throws use: "
+    "1d20+{token} where token is one of: "
+    "strength_mod, dexterity_mod, constitution_mod, intelligence_mod, "
+    "wisdom_mod, charisma_mod, proficiency_bonus, level. "
+    "Wrap tokens in braces: {wisdom_mod} not wisdom_mod. "
+    "Example: Wisdom saving throw → '1d20+{wisdom_mod}+{proficiency_bonus}'. "
+    "For situational dice (falling damage, spell damage) use plain numbers: "
+    "'3d6' for a 30-foot fall, '8d6' for Fireball. "
+    "Never write bare variable names without braces."
 )
 
 
@@ -107,7 +118,7 @@ class RulesAgent:
         request: RulesAdjudicationRequest,
         rule_texts: tuple[str, ...],
     ) -> dict[str, object]:
-        return {
+        data: dict[str, object] = {
             "actor_id": request.actor_id,
             "check_hint": list(request.check_hints),
             "compendium_context": list(request.compendium_context),
@@ -116,3 +127,6 @@ class RulesAgent:
             "allowed_outcomes": list(request.allowed_outcomes),
             "rules_context": list(rule_texts),
         }
+        if request.actor_modifiers:
+            data["actor_modifiers"] = dict(request.actor_modifiers)
+        return data

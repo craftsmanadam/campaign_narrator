@@ -274,6 +274,11 @@ class ActorState:
     # --- Visibility ---
     is_visible: bool = True
 
+    # --- Progression ---
+    level: int = 1
+    class_levels: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    xp: int = 0
+
     # --- Character creation fields (persisted) ---
     race: str | None = None
     description: str | None = None  # physical appearance
@@ -457,7 +462,7 @@ class RollRequest(BaseModel):
     @field_validator("expression")
     @classmethod
     def valid_dice(cls, v: str) -> str:
-        if not re.fullmatch(r"\d+d\d+(k[lh]?\d+)?([+-]\d+)?", v):
+        if not re.fullmatch(r"\d+d\d+(k[lh]?\d+)?([+-](\d+|\{[a-z_]+\}))*", v):
             raise ValueError(f"invalid dice expression: {v!r}")  # noqa: TRY003
         return v
 
@@ -482,6 +487,7 @@ class RulesAdjudicationRequest:
     allowed_outcomes: tuple[str, ...]
     check_hints: tuple[str, ...] = field(default_factory=tuple)
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
+    actor_modifiers: Mapping[str, int] = field(default_factory=dict)
 
 
 class RulesAdjudication(BaseModel):

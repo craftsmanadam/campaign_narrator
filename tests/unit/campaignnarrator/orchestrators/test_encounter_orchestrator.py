@@ -6,7 +6,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from campaignnarrator.domain.models import (
@@ -32,7 +32,6 @@ from campaignnarrator.orchestrators.actor_summaries import (
     actor_narrative_summary as _actor_narrative_summary,
 )
 from campaignnarrator.orchestrators.encounter_orchestrator import (
-    _DECISION_AGENT_INSTRUCTIONS,
     EncounterOrchestrator,
     EncounterRunResult,
     OrchestratorAgents,
@@ -188,7 +187,11 @@ def _scene_opening_repository(tmp_path: Path) -> StateRepository:
     return StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
 
 
-def _social_repository(tmp_path: Path, goblin_hp: int = 7) -> StateRepository:
+def _social_repository(
+    tmp_path: Path,
+    goblin_hp: int = 7,
+    public_events: tuple[str, ...] = (),
+) -> StateRepository:
     actor_repo = ActorRepository(tmp_path)
     actor_repo.save(_default_player())
     goblin = replace(_default_npc(), hp_current=goblin_hp)
@@ -199,6 +202,7 @@ def _social_repository(tmp_path: Path, goblin_hp: int = 7) -> StateRepository:
             phase=EncounterPhase.SOCIAL,
             setting="A ruined roadside camp.",
             actors={"pc:talia": _default_player(), "npc:goblin-scout": goblin},
+            public_events=public_events,
         )
     )
     return StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
@@ -1157,22 +1161,75 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_decision_agent_pro
         )
 
 
-def test_decision_agent_instructions_contain_routing_rules() -> None:
-    assert "enter_combat" in _DECISION_AGENT_INSTRUCTIONS
-    assert "attack" in _DECISION_AGENT_INSTRUCTIONS.lower()
-    assert "adjudicate_action" in _DECISION_AGENT_INSTRUCTIONS
-    assert "npc_dialogue" in _DECISION_AGENT_INSTRUCTIONS
-    assert "complete_encounter" in _DECISION_AGENT_INSTRUCTIONS
+def _capture_decision_agent_instructions(tmp_path: Path) -> str:
+    """Build an orchestrator with a real adapter path and capture the routing instructions.
+
+    Patches Agent from pydantic_ai so no live LLM call is made. Returns the
+    instructions string passed to the decision Agent constructor.
+    """
+    fake_adapter = MagicMock()
+    fake_adapter.model = "fake-model"
+
+    captured: list[str] = []
+
+    def _fake_agent_init(model: object, **kwargs: object) -> MagicMock:
+        instructions = kwargs.get("instructions", "")
+        captured.append(str(instructions))
+        mock_agent = MagicMock()
+
+        def _run_sync(input_json: str) -> MagicMock:
+            result = MagicMock()
+            result.output = OrchestrationDecision(
+                next_step="narrate_scene",
+                requires_rules_resolution=False,
+                reason_summary="default",
+            )
+            return result
+
+        mock_agent.run_sync.side_effect = _run_sync
+        return mock_agent
+
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.Agent",
+        side_effect=_fake_agent_init,
+    ):
+        EncounterOrchestrator(
+            repositories=OrchestratorRepositories(
+                state=_scene_opening_repository(tmp_path),
+            ),
+            agents=OrchestratorAgents(
+                rules=FakeRulesAgent(),
+                narrator=FakeNarratorAgent(),
+            ),
+            tools=OrchestratorTools(roll_dice=FakeDice([])),
+            io=ScriptedIO([], on_exhaust="exit"),
+            adapter=fake_adapter,
+        )
+
+    assert captured, "Agent constructor was not called — instructions not captured"
+    # The decision agent is created first; return its instructions
+    return captured[0]
 
 
-def test_decision_agent_instructions_forbid_self_resolution() -> None:
-    assert "Do not resolve rules yourself" in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_contain_routing_rules(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "enter_combat" in instructions
+    assert "attack" in instructions.lower()
+    assert "adjudicate_action" in instructions
+    assert "npc_dialogue" in instructions
+    assert "complete_encounter" in instructions
 
 
-def test_decision_agent_instructions_contain_few_shot_examples() -> None:
-    assert "I draw my sword" in _DECISION_AGENT_INSTRUCTIONS
-    assert "I ask the innkeeper" in _DECISION_AGENT_INSTRUCTIONS
-    assert "I try to pick the lock" in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_forbid_self_resolution(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "Do not resolve rules yourself" in instructions
+
+
+def test_decision_agent_instructions_contain_few_shot_examples(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I draw my sword" in instructions
+    assert "I ask the innkeeper" in instructions
+    assert "I try to pick the lock" in instructions
 
 
 def test_thinking_indicator_displayed_before_action_processing(
@@ -1209,9 +1266,10 @@ def test_considering_rules_displayed_before_adjudication(
     assert any("Considering the rules" in msg for msg in io.displayed)
 
 
-def test_decision_agent_instructions_list_all_18_srd_skills() -> None:
-    """All 18 SRD skills must be named in the routing instructions."""
-    skills = [
+def test_decision_agent_instructions_list_all_18_srd_skills(tmp_path: Path) -> None:
+    """All 18 SRD skills must be named in the routing instructions sent to the adapter."""
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    expected_skills = [
         "Arcana",
         "History",
         "Nature",
@@ -1231,43 +1289,51 @@ def test_decision_agent_instructions_list_all_18_srd_skills() -> None:
         "Animal Handling",
         "Insight",
     ]
-    for skill in skills:
-        assert skill in _DECISION_AGENT_INSTRUCTIONS, f"Missing skill: {skill}"
+    for skill in expected_skills:
+        assert skill in instructions, f"Missing skill: {skill}"
 
 
-def test_decision_agent_instructions_contain_knowledge_example() -> None:
-    assert "I try to determine if they are undead." in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_contain_knowledge_example(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I try to determine if they are undead." in instructions
 
 
-def test_decision_agent_instructions_contain_investigation_example() -> None:
-    assert "I examine the runes on the wall." in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_contain_investigation_example(
+    tmp_path: Path,
+) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I examine the runes on the wall." in instructions
 
 
-def test_decision_agent_instructions_contain_social_example() -> None:
-    assert "I try to persuade the guard to let us pass." in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_contain_social_example(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I try to persuade the guard to let us pass." in instructions
 
 
-def test_decision_agent_instructions_contain_physical_example() -> None:
-    assert "I try to climb the cliff face." in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_contain_physical_example(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I try to climb the cliff face." in instructions
 
 
-def test_decision_agent_instructions_contain_stealth_example() -> None:
-    assert "I attempt to sneak past the sleeping guard." in _DECISION_AGENT_INSTRUCTIONS
+def test_decision_agent_instructions_contain_stealth_example(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I attempt to sneak past the sleeping guard." in instructions
 
 
-def test_decision_agent_instructions_contain_survival_example() -> None:
-    assert (
-        "I try to track the creature through the forest."
-        in _DECISION_AGENT_INSTRUCTIONS
-    )
+def test_decision_agent_instructions_contain_survival_example(tmp_path: Path) -> None:
+    instructions = _capture_decision_agent_instructions(tmp_path)
+    assert "I try to track the creature through the forest." in instructions
 
 
 def test_resume_encounter_displays_recap_before_prompt(tmp_path: Path) -> None:
-    """When resuming a SOCIAL-phase encounter, a recap must appear before the prompt."""
+    """When resuming an encounter with prior events, a recap must appear before the prompt."""
     io = ScriptedIO(["exit"])
     orchestrator = _orchestrator(
         tmp_path,
-        state_repository=_social_repository(tmp_path),
+        state_repository=_social_repository(
+            tmp_path,
+            public_events=("The goblin scout eyed you warily.",),
+        ),
         io=io,
     )
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
@@ -1285,3 +1351,35 @@ def test_fresh_encounter_does_not_show_recap(tmp_path: Path) -> None:
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
     assert "scene_opening" in result.output_text
     assert "recap_response" not in result.output_text
+
+
+def test_open_scene_failure_emits_fallback_message_and_continues(
+    tmp_path: Path,
+) -> None:
+    """When _open_scene raises, run_encounter emits a fallback notice and continues.
+
+    The narrator agent is forced to raise on the first call (scene_opening), which
+    exercises the _open_scene_safe failure path. Execution must not crash; the
+    fallback message must appear in output, and the encounter must continue into
+    the social loop (where 'exit' terminates it cleanly).
+    """
+
+    class RaisingNarratorAgent(FakeNarratorAgent):
+        def narrate(self, frame: NarrationFrame) -> Narration:
+            if frame.purpose == "scene_opening":
+                raise RuntimeError("unavailable")
+            return super().narrate(frame)
+
+    io = ScriptedIO(["exit"])
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_scene_opening_repository(tmp_path),
+        narrator_agent=RaisingNarratorAgent(),
+        io=io,
+    )
+
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert "Scene narration unavailable" in result.output_text
+    assert "Continuing" in result.output_text
+    assert result.completed is False

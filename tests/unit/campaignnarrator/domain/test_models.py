@@ -1587,3 +1587,83 @@ def test_scene_opening_response_accepts_npcs() -> None:
     )
     assert len(response.introduced_npcs) == 1
     assert response.introduced_npcs[0].display_name == "Mira"
+
+
+def test_actor_state_has_level_field() -> None:
+    """ActorState must carry a total character level, defaulting to 1."""
+    actor = ActorState(
+        actor_id="pc:test",
+        name="Test",
+        actor_type=ActorType.PC,
+        hp_max=10,
+        hp_current=10,
+        armor_class=12,
+        strength=10,
+        dexterity=10,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=0,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=(),
+    )
+    assert actor.level == 1
+    assert actor.class_levels == ()
+    assert actor.xp == 0
+
+
+def test_actor_state_class_levels_stores_multiclass() -> None:
+    """class_levels must store per-class breakdown as (name, level) tuples."""
+    expected_level = 18
+    expected_xp = 85000
+    actor = ActorState(
+        actor_id="pc:multi",
+        name="Multi",
+        actor_type=ActorType.PC,
+        hp_max=20,
+        hp_current=20,
+        armor_class=14,
+        strength=10,
+        dexterity=10,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=4,
+        initiative_bonus=0,
+        speed=30,
+        attacks_per_action=2,
+        action_options=("Attack",),
+        ac_breakdown=(),
+        level=expected_level,
+        class_levels=(("Fighter", 9), ("Wizard", 9)),
+        xp=expected_xp,
+    )
+    assert actor.level == expected_level
+    assert ("Fighter", 9) in actor.class_levels
+    assert ("Wizard", 9) in actor.class_levels
+    assert actor.xp == expected_xp
+
+
+def test_roll_request_accepts_token_placeholder_expression() -> None:
+    """RollRequest must accept expressions with {token} placeholders."""
+    req = RollRequest(
+        owner="pc:talia",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+{wisdom_mod}+{proficiency_bonus}",
+    )
+    assert req.expression == "1d20+{wisdom_mod}+{proficiency_bonus}"
+
+
+def test_roll_request_rejects_symbolic_without_braces() -> None:
+    """Bare symbolic names without braces must still be rejected."""
+    with pytest.raises(ValidationError):
+        RollRequest(
+            owner="pc:talia",
+            visibility=RollVisibility.PUBLIC,
+            expression="d20 + wisdom_modifier",
+        )

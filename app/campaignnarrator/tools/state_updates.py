@@ -58,16 +58,10 @@ def _apply_append_public_event(
     value: object,
 ) -> EncounterState:
     _require_encounter_target(state, target)
-    return EncounterState(
-        encounter_id=state.encounter_id,
-        phase=state.phase,
-        setting=state.setting,
-        actors=state.actors,
+    return replace(
+        state,
         public_events=(*state.public_events, _require_string(value, "public event")),
         hidden_facts=_copy_hidden_facts(state),
-        combat_turns=state.combat_turns,
-        outcome=state.outcome,
-        scene_tone=state.scene_tone,
     )
 
 
@@ -77,16 +71,10 @@ def _apply_set_encounter_outcome(
     value: object,
 ) -> EncounterState:
     _require_encounter_target(state, target)
-    return EncounterState(
-        encounter_id=state.encounter_id,
-        phase=state.phase,
-        setting=state.setting,
-        actors=state.actors,
-        public_events=state.public_events,
+    return replace(
+        state,
         hidden_facts=_copy_hidden_facts(state),
-        combat_turns=state.combat_turns,
         outcome=_require_string(value, "encounter outcome"),
-        scene_tone=state.scene_tone,
     )
 
 
@@ -96,7 +84,7 @@ def _apply_change_hp(
     value: object,
 ) -> EncounterState:
     actor = _require_actor(state, target)
-    delta = _require_int(value, "hp delta")
+    delta = require_int(value, "hp delta")
     updated_actor = replace(
         actor,
         hp_current=max(0, min(actor.hp_max, actor.hp_current + delta)),
@@ -157,7 +145,7 @@ def _require_string(value: object, label: str) -> str:
     return value
 
 
-def _require_int(value: object, label: str) -> int:
+def require_int(value: object, label: str) -> int:
     if not isinstance(value, int):
         raise TypeError(f"invalid {label}: {value}")  # noqa: TRY003
     return value
@@ -171,16 +159,6 @@ def _copy_state_with(
     state: EncounterState,
     **changes: object,
 ) -> EncounterState:
-    values = {
-        "encounter_id": state.encounter_id,
-        "phase": state.phase,
-        "setting": state.setting,
-        "actors": state.actors,
-        "public_events": state.public_events,
-        "hidden_facts": _copy_hidden_facts(state),
-        "combat_turns": state.combat_turns,
-        "outcome": state.outcome,
-        "scene_tone": state.scene_tone,
-    }
-    values.update(changes)
-    return EncounterState(**values)
+    if "hidden_facts" not in changes:
+        changes["hidden_facts"] = _copy_hidden_facts(state)
+    return replace(state, **changes)

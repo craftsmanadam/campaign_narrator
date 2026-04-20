@@ -14,7 +14,7 @@ from campaignnarrator.domain.models import (
     InventoryItem,
     StateEffect,
 )
-from campaignnarrator.tools.state_updates import apply_state_effects
+from campaignnarrator.tools.state_updates import apply_state_effects, require_int
 
 
 def _default_encounter(
@@ -293,6 +293,47 @@ def test_scene_tone_preserved_through_set_encounter_outcome() -> None:
     result = apply_state_effects(state, (effect,))
 
     assert result.scene_tone == "warm and inviting"
+
+
+def test_require_int_returns_value_for_valid_integer() -> None:
+    """require_int must return the value unchanged when given an integer."""
+    valid_hp_delta = 5
+    negative_hp_delta = -3
+    assert require_int(valid_hp_delta, "hp delta") == valid_hp_delta
+    assert require_int(negative_hp_delta, "hp delta") == negative_hp_delta
+    assert require_int(0, "movement feet") == 0
+
+
+def test_require_int_raises_type_error_for_non_integer() -> None:
+    """require_int must raise TypeError when given a non-integer value."""
+    with pytest.raises(TypeError, match=r"invalid hp delta: 3\.0"):
+        require_int(3.0, "hp delta")
+    with pytest.raises(TypeError, match=r"invalid movement feet: ten"):
+        require_int("ten", "movement feet")
+
+
+def test_change_hp_via_apply_state_effects_applies_correct_delta() -> None:
+    """apply_state_effects with change_hp must apply the integer delta correctly."""
+    state = _default_encounter()
+    initial_hp = state.actors["pc:talia"].hp_current
+
+    updated = apply_state_effects(
+        state,
+        (StateEffect(effect_type="change_hp", target="pc:talia", value=-3),),
+    )
+
+    assert updated.actors["pc:talia"].hp_current == initial_hp - 3
+
+
+def test_change_hp_via_apply_state_effects_rejects_non_integer_value() -> None:
+    """apply_state_effects with change_hp must raise TypeError for non-integer values."""
+    state = _default_encounter()
+
+    with pytest.raises(TypeError, match=r"invalid hp delta"):
+        apply_state_effects(
+            state,
+            (StateEffect(effect_type="change_hp", target="pc:talia", value="five"),),
+        )
 
 
 def _state_with_inventory(*items: InventoryItem) -> EncounterState:

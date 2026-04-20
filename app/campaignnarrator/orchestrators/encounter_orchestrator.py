@@ -34,6 +34,10 @@ from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summa
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.state_repository import StateRepository
+from campaignnarrator.tools.dice_expression import (
+    actor_modifiers,
+    resolve_dice_expression,
+)
 from campaignnarrator.tools.state_updates import apply_state_effects
 
 _log = logging.getLogger(__name__)
@@ -173,7 +177,7 @@ class EncounterOrchestrator:
             self._io.display(text)
             output.append(text)
 
-        if not scene_texts and state.phase is EncounterPhase.SOCIAL:
+        if not scene_texts and state.public_events:
             recap_text = self._narrate(_recap_frame(state)).text
             self._io.display(recap_text)
             output.append(recap_text)
@@ -393,10 +397,13 @@ class EncounterOrchestrator:
             allowed_outcomes=("success", "failure", "complication", "peaceful"),
             check_hints=_non_empty_tuple((decision.recommended_check,)),
             compendium_context=compendium_context,
+            actor_modifiers=actor_modifiers(player),
         )
         self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
-        updated_state, roll_events = self._apply_adjudication(state, adjudication)
+        updated_state, roll_events = self._apply_adjudication(
+            state, adjudication, player
+        )
         self._state_repository.save(GameState(player=player, encounter=updated_state))
         if updated_state.outcome is not None:
             self._append_event(
@@ -492,9 +499,15 @@ class EncounterOrchestrator:
         self,
         state: EncounterState,
         adjudication: RulesAdjudication,
+        player: ActorState,
     ) -> tuple[EncounterState, tuple[str, ...]]:
         roll_events = tuple(
-            _public_roll_event(roll_request, self._roll_dice(roll_request.expression))
+            _public_roll_event(
+                roll_request,
+                self._roll_dice(
+                    resolve_dice_expression(roll_request.expression, player)
+                ),
+            )
             for roll_request in adjudication.roll_requests
             if roll_request.visibility is RollVisibility.PUBLIC
         )

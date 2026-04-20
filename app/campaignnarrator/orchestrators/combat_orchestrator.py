@@ -32,7 +32,7 @@ from campaignnarrator.domain.models import (
     TurnResources,
 )
 from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
-from campaignnarrator.tools.state_updates import _require_int, apply_state_effects
+from campaignnarrator.tools.state_updates import apply_state_effects, require_int
 
 _logger = logging.getLogger(__name__)
 
@@ -262,7 +262,7 @@ class CombatOrchestrator:
     ) -> tuple[TurnResources, bool]:
         for effect in adjudication.state_effects:
             if effect.effect_type == "movement":
-                feet = _require_int(effect.value, "movement feet")
+                feet = require_int(effect.value, "movement feet")
                 if feet > resources.movement_remaining:
                     self._io.display("You've used all your movement this turn.")
                     return resources, True
@@ -442,7 +442,7 @@ class CombatOrchestrator:
             }
             crit_json = json.dumps(crit_payload, indent=2, sort_keys=True)
             review = self._narrator_agent.review_crit_from_json(crit_json)
-            crit_value = _require_int(crit_effect.value, "critical hit damage")
+            crit_value = require_int(crit_effect.value, "critical hit damage")
             resolved_damage = -crit_value if review.approved else -(crit_value // 2)
             effects[crit_index] = StateEffect(
                 effect_type="change_hp",
