@@ -146,6 +146,8 @@ def compose_environment(
     env.setdefault("OPENAI_MODEL", "gpt-5.4")
     env.setdefault("OPENAI_BASE_URL", "http://wiremock:8080/v1")
     env.setdefault("CAMPAIGNNARRATOR_DICE_SEED", "7")
+    # Acceptance tests always target WireMock (OpenAI-compatible API)
+    env["LLM_PROVIDER"] = "openai"
     monkeypatch.setenv("COMPOSE_PROJECT_NAME", env["COMPOSE_PROJECT_NAME"])
     monkeypatch.setenv("RUNTIME_DATA_ROOT", env["RUNTIME_DATA_ROOT"])
     monkeypatch.setenv("WIREMOCK_PORT", env["WIREMOCK_PORT"])
@@ -153,6 +155,7 @@ def compose_environment(
     monkeypatch.setenv("OPENAI_MODEL", env["OPENAI_MODEL"])
     monkeypatch.setenv("OPENAI_BASE_URL", env["OPENAI_BASE_URL"])
     monkeypatch.setenv("CAMPAIGNNARRATOR_DICE_SEED", env["CAMPAIGNNARRATOR_DICE_SEED"])
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
     env["EMBEDDING_PROVIDER"] = "stub"
     env["LANCEDB_PATH"] = "/runtime/data/memory/lancedb"
     monkeypatch.setenv("EMBEDDING_PROVIDER", "stub")

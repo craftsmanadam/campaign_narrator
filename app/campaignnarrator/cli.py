@@ -131,8 +131,8 @@ class _TerminalIO:
         self._stdout.flush()
         while True:
             raw = self._stdin.readline()
-            if not raw:  # EOF
-                return ""
+            if not raw:  # EOF — treat as "exit" to exit cleanly
+                return "exit"
             line = raw.rstrip("\r\n")
             if line.strip():
                 return line

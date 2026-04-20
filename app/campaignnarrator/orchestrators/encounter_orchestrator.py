@@ -127,20 +127,11 @@ class EncounterOrchestrator:
         player = game_state.player
         output: list[str] = []
 
-        try:
-            state, scene_texts = self._open_scene(game_state.encounter)
-        except Exception as exc:
-            msg = f"\n[Scene narration unavailable ({exc}). Continuing...]\n"
-            self._io.display(msg)
-            output.append(msg)
-            state = replace(game_state.encounter, phase=EncounterPhase.SOCIAL)
-            scene_texts = []
-
+        state, scene_texts = self._open_scene_safe(game_state.encounter, output)
         for text in scene_texts:
             self._io.display(text)
             output.append(text)
 
-        # If loaded from a saved already-complete state, return immediately.
         if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
             return EncounterRunResult(
                 encounter_id=state.encounter_id,
@@ -148,9 +139,31 @@ class EncounterOrchestrator:
                 completed=True,
             )
 
+        state = self._run_loop(state, player, output)
+        return EncounterRunResult(
+            encounter_id=state.encounter_id,
+            output_text="\n".join(output),
+            completed=state.phase is EncounterPhase.ENCOUNTER_COMPLETE,
+        )
+
+    def _open_scene_safe(
+        self, encounter: EncounterState, output: list[str]
+    ) -> tuple[EncounterState, list[str]]:
+        """Call _open_scene; on failure fall back to SOCIAL phase with an error note."""
+        try:
+            return self._open_scene(encounter)
+        except Exception as exc:
+            msg = f"\n[Scene narration unavailable ({exc}). Continuing...]\n"
+            self._io.display(msg)
+            output.append(msg)
+            return replace(encounter, phase=EncounterPhase.SOCIAL), []
+
+    def _run_loop(
+        self, state: EncounterState, player: ActorState, output: list[str]
+    ) -> EncounterState:
+        """Main interaction loop — runs until combat, quit, or encounter complete."""
         while True:
             if state.phase is EncounterPhase.COMBAT:
-                # saves state internally; result not used here
                 self._run_combat(state, player)
                 break
 
@@ -166,32 +179,35 @@ class EncounterOrchestrator:
             if directive == "continue":
                 continue
 
-            # After utility commands, non-utility input is a no-op when complete.
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
                 break
 
-            try:
-                state, narration = self._handle_non_combat_action(
-                    state, player_input, player
-                )
-            except ValueError:
-                raise
-            except Exception as exc:
-                msg = f"\n[Narrator encountered an error ({exc}). Please try again.]\n"
-                self._io.display(msg)
-                output.append(msg)
-                continue
+            state = self._apply_action(state, player_input, player, output)
+        return state
 
-            self._io.display(narration.text)
-            output.append(narration.text)
-            if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
-                continue
+    def _apply_action(
+        self,
+        state: EncounterState,
+        player_input: PlayerInput,
+        player: ActorState,
+        output: list[str],
+    ) -> EncounterState:
+        """Apply a non-combat player action; display narration; return updated state."""
+        try:
+            state, narration = self._handle_non_combat_action(
+                state, player_input, player
+            )
+        except ValueError:
+            raise
+        except Exception as exc:
+            msg = f"\n[Narrator encountered an error ({exc}). Please try again.]\n"
+            self._io.display(msg)
+            output.append(msg)
+            return state
 
-        return EncounterRunResult(
-            encounter_id=state.encounter_id,
-            output_text="\n".join(output),
-            completed=state.phase is EncounterPhase.ENCOUNTER_COMPLETE,
-        )
+        self._io.display(narration.text)
+        output.append(narration.text)
+        return state
 
     def _open_scene(self, state: EncounterState) -> tuple[EncounterState, list[str]]:
         """Narrate scene opening if needed; return updated state and initial output."""
@@ -363,9 +379,11 @@ class EncounterOrchestrator:
             InitiativeTurn(actor_id=actor_id, initiative_roll=roll)
             for actor_id, _name, roll in sorted_rolls
         )
-        event = "Initiative: " + ", ".join(
-            f"{name} {roll}" for _, name, roll in sorted_rolls
-        ) + "."
+        event = (
+            "Initiative: "
+            + ", ".join(f"{name} {roll}" for _, name, roll in sorted_rolls)
+            + "."
+        )
         updated_state = replace(
             state,
             phase=EncounterPhase.COMBAT,

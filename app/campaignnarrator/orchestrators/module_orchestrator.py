@@ -110,9 +110,7 @@ class ModuleOrchestrator:
             return
 
         # Encounter in progress — resume it; output is displayed live during the loop
-        result = self._encounter_orchestrator.run_encounter(
-            encounter_id=active.encounter_id
-        )
+        self._encounter_orchestrator.run_encounter(encounter_id=active.encounter_id)
 
         # Reload to detect natural completion vs player quit
         reloaded = self._repos.encounter.load_active()
@@ -272,8 +270,8 @@ class ModuleOrchestrator:
             actors={player.actor_id: player},
         )
         self._repos.encounter.save(encounter)
-        # output is displayed live during run_encounter(); result used only for phase check
-        result = self._encounter_orchestrator.run_encounter(encounter_id=encounter_id)
+        # Output is displayed live during run_encounter(); return value not used here.
+        self._encounter_orchestrator.run_encounter(encounter_id=encounter_id)
 
         # After return, check phase to detect natural completion.
         # Only archive if the encounter that completed is the one we just created.

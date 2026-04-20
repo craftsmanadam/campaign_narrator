@@ -188,7 +188,7 @@ def test_run_with_no_active_encounter_does_not_call_run_encounter_immediately() 
 
 
 def test_run_does_not_forward_encounter_output_to_io() -> None:
-    """Encounter output is displayed live inside EncounterOrchestrator, not forwarded here."""
+    """Encounter output is displayed live in EncounterOrchestrator; not forwarded."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
     orch, _, mock_enc_repo, _, mock_enc_orch, _ = _make_orchestrator(
         active_encounter=active

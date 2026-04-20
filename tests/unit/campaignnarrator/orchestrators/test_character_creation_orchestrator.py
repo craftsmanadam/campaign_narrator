@@ -183,13 +183,13 @@ def test_run_backstory_revision_loop() -> None:
 
 
 def test_description_uses_prompt_optional_so_blank_is_accepted() -> None:
-    """_choose_description must call prompt_optional so the player can press Enter to skip."""
+    """_choose_description must call prompt_optional so the player can press Enter."""
     io = MagicMock()
     io.prompt.side_effect = [
-        "fighter",           # class choice
-        "Aldric",            # name
-        "Human",             # race
-        "A former soldier.", # backstory
+        "fighter",  # class choice
+        "Aldric",  # name
+        "Human",  # race
+        "A former soldier.",  # backstory
     ]
     io.prompt_optional.return_value = ""  # player skips description
 
@@ -199,16 +199,10 @@ def test_description_uses_prompt_optional_so_blank_is_accepted() -> None:
     mock_class_agent = MagicMock()
     mock_backstory_agent = MagicMock()
 
-    from dataclasses import replace as dc_replace
-    mock_template_repo.load.return_value = dc_replace(
+    mock_template_repo.load.return_value = replace(
         TALIA, name="", race=None, description=None, background=None
     )
     mock_class_agent.interpret.return_value = CharacterIntake(class_name="fighter")
-
-    from campaignnarrator.orchestrators.character_creation_orchestrator import (
-        CharacterCreationAgents,
-        CharacterCreationRepositories,
-    )
 
     repos = CharacterCreationRepositories(
         actor=mock_actor_repo,

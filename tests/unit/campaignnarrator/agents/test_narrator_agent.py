@@ -615,14 +615,16 @@ def test_scene_opening_retrieves_memory_with_setting_as_query() -> None:
     )
     narrator.narrate(_make_scene_frame("The docks at midnight."))
 
-    mock_repo.retrieve_relevant.assert_called_once_with("The docks at midnight.", limit=5)
+    mock_repo.retrieve_relevant.assert_called_once_with(
+        "The docks at midnight.", limit=5
+    )
     call_args = mock_scene_agent.run_sync.call_args[0][0]
     assert "Malachar had pale hollow eyes." in call_args
 
 
 def test_scene_opening_injects_sentinel_when_no_memory_matches() -> None:
     """When no memory matches, sentinel appears in the scene agent input."""
-    narrator, mock_repo, mock_scene_agent = _make_scene_narrator(memory_returns=[])
+    narrator, _, mock_scene_agent = _make_scene_narrator(memory_returns=[])
     narrator.narrate(_make_scene_frame("Forest"))
 
     call_args = mock_scene_agent.run_sync.call_args[0][0]
@@ -651,8 +653,8 @@ def test_scene_opening_injects_sentinel_when_no_repository() -> None:
 
 
 def test_plan_next_encounter_includes_prior_narrative_context() -> None:
-    """plan_next_encounter pre-fetches memory and injects it into the plan agent input."""
-    narrator, mock_memory_repo = _make_narrator_with_memory(
+    """plan_next_encounter pre-fetches memory and injects it into the plan agent."""
+    narrator, _ = _make_narrator_with_memory(
         memory_returns=["Aldric fought the cultist."]
     )
     mock_plan_agent = MagicMock()

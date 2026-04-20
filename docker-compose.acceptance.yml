@@ -10,6 +10,7 @@ services:
       CAMPAIGNNARRATOR_DICE_SEED: ${CAMPAIGNNARRATOR_DICE_SEED:-7}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-stub}
       LANCEDB_PATH: ${LANCEDB_PATH:-/runtime/data/memory/lancedb}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
     volumes:
       - ${RUNTIME_DATA_ROOT:?RUNTIME_DATA_ROOT is required}:/runtime/data:rw
 

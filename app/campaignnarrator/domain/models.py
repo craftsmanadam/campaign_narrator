@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from enum import Enum, StrEnum
+from enum import StrEnum
 from types import MappingProxyType
 from typing import Literal, Protocol
 
@@ -22,14 +22,14 @@ class EncounterPhase(StrEnum):
     ENCOUNTER_COMPLETE = "encounter_complete"
 
 
-class RollVisibility(str, Enum):
+class RollVisibility(StrEnum):
     """Controls who can see a roll request."""
 
     PUBLIC = "public"
     HIDDEN = "hidden"
 
 
-class ActorType(str, Enum):
+class ActorType(StrEnum):
     """Distinguishes player characters, NPCs, and allied NPCs."""
 
     PC = "pc"
@@ -37,7 +37,7 @@ class ActorType(str, Enum):
     ALLY = "ally"
 
 
-class RecoveryPeriod(str, Enum):
+class RecoveryPeriod(StrEnum):
     """When a resource or item charge replenishes."""
 
     TURN = "turn"  # resets at start of actor's turn

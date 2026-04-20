@@ -572,7 +572,7 @@ def test_terminal_io_prompt_strips_trailing_newline() -> None:
 
 
 def test_terminal_io_prompt_strips_trailing_carriage_return_newline() -> None:
-    """prompt() must strip CRLF from Windows-style copy-paste so no stray \\r remains."""
+    """prompt() strips CRLF from Windows-style copy-paste so no stray \\r remains."""
     io = _TerminalIO(StringIO("hello\r\n"), StringIO())
     assert io.prompt("> ") == "hello"
 
