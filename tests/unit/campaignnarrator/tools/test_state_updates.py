@@ -403,3 +403,38 @@ def test_inventory_spent_raises_value_error_for_unknown_item() -> None:
     )
     with pytest.raises(ValueError, match=r"does not have item with item_id: lantern"):
         apply_state_effects(state, (effect,))
+
+
+def test_add_condition_appends_condition_to_actor() -> None:
+    state = _default_encounter()
+    effect = StateEffect(effect_type="add_condition", target="pc:talia", value="hidden")
+    updated = apply_state_effects(state, (effect,))
+    assert "hidden" in updated.actors["pc:talia"].conditions
+
+
+def test_add_condition_is_idempotent_when_already_present() -> None:
+    state = _default_encounter()
+    effect = StateEffect(effect_type="add_condition", target="pc:talia", value="hidden")
+    once = apply_state_effects(state, (effect,))
+    twice = apply_state_effects(once, (effect,))
+    assert twice.actors["pc:talia"].conditions.count("hidden") == 1
+
+
+def test_remove_condition_removes_existing_condition() -> None:
+    state = _default_encounter()
+    add = StateEffect(effect_type="add_condition", target="pc:talia", value="hidden")
+    state_with_condition = apply_state_effects(state, (add,))
+    remove = StateEffect(
+        effect_type="remove_condition", target="pc:talia", value="hidden"
+    )
+    updated = apply_state_effects(state_with_condition, (remove,))
+    assert "hidden" not in updated.actors["pc:talia"].conditions
+
+
+def test_remove_condition_is_safe_when_condition_absent() -> None:
+    state = _default_encounter()
+    effect = StateEffect(
+        effect_type="remove_condition", target="pc:talia", value="hidden"
+    )
+    updated = apply_state_effects(state, (effect,))
+    assert updated.actors["pc:talia"].conditions == state.actors["pc:talia"].conditions

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from pydantic_ai import Agent
 
@@ -13,6 +14,8 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
 )
+
+_log = logging.getLogger(__name__)
 
 _TOPICS_BY_PHASE: dict[EncounterPhase, tuple[str, ...]] = {
     EncounterPhase.SOCIAL: ("core_resolution", "social_interaction"),
@@ -60,7 +63,23 @@ class RulesAgent:
         input_json = json.dumps(
             self._build_input(request, rule_texts), indent=2, sort_keys=True
         )
-        return self._agent.run_sync(input_json).output
+        _log.info("Adjudication request: %s", input_json)
+        result = self._agent.run_sync(input_json).output
+        _log.info(
+            "Adjudication result: action_type=%s summary=%r roll_requests=%s "
+            "state_effects=%s",
+            result.action_type,
+            result.summary,
+            [
+                {"expression": r.expression, "visibility": r.visibility.value}
+                for r in result.roll_requests
+            ],
+            [
+                {"effect_type": e.effect_type, "target": e.target, "value": e.value}
+                for e in result.state_effects
+            ],
+        )
+        return result
 
     def _load_rule_texts(
         self,

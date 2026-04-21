@@ -28,21 +28,6 @@ def apply_state_effects(
     return updated_state
 
 
-def _apply_state_effect(state: EncounterState, effect: StateEffect) -> EncounterState:
-    if effect.effect_type == "set_phase":
-        return _apply_set_phase(state, effect.target, effect.value)
-    if effect.effect_type == "append_public_event":
-        return _apply_append_public_event(state, effect.target, effect.value)
-    if effect.effect_type == "set_encounter_outcome":
-        return _apply_set_encounter_outcome(state, effect.target, effect.value)
-    if effect.effect_type == "change_hp":
-        return _apply_change_hp(state, effect.target, effect.value)
-    if effect.effect_type == "inventory_spent":
-        return _apply_inventory_spent(state, effect.target, effect.value)
-    _log.warning("Skipping unsupported state effect type: %s", effect.effect_type)
-    return state
-
-
 def _apply_set_phase(
     state: EncounterState,
     target: str,
@@ -111,6 +96,51 @@ def _apply_inventory_spent(
     raise ValueError(  # noqa: TRY003
         f"actor {actor.actor_id} does not have item with item_id: {item_id}"
     )
+
+
+def _apply_add_condition(
+    state: EncounterState,
+    target: str,
+    value: object,
+) -> EncounterState:
+    actor = _require_actor(state, target)
+    condition = _require_string(value, "condition")
+    if condition in actor.conditions:
+        return state
+    updated = replace(actor, conditions=(*actor.conditions, condition))
+    return _replace_actor(state, updated)
+
+
+def _apply_remove_condition(
+    state: EncounterState,
+    target: str,
+    value: object,
+) -> EncounterState:
+    actor = _require_actor(state, target)
+    condition = _require_string(value, "condition")
+    updated = tuple(c for c in actor.conditions if c != condition)
+    if updated == actor.conditions:
+        return state
+    return _replace_actor(state, replace(actor, conditions=updated))
+
+
+_EFFECT_HANDLERS = {
+    "set_phase": _apply_set_phase,
+    "append_public_event": _apply_append_public_event,
+    "set_encounter_outcome": _apply_set_encounter_outcome,
+    "change_hp": _apply_change_hp,
+    "inventory_spent": _apply_inventory_spent,
+    "add_condition": _apply_add_condition,
+    "remove_condition": _apply_remove_condition,
+}
+
+
+def _apply_state_effect(state: EncounterState, effect: StateEffect) -> EncounterState:
+    handler = _EFFECT_HANDLERS.get(effect.effect_type)
+    if handler is None:
+        _log.warning("Skipping unsupported state effect type: %s", effect.effect_type)
+        return state
+    return handler(state, effect.target, effect.value)
 
 
 def _replace_actor(state: EncounterState, actor: ActorState) -> EncounterState:

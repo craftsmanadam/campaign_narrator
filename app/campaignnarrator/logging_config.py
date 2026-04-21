@@ -11,11 +11,13 @@ _MAX_BYTES = 5 * 1024 * 1024  # 5 MB per file
 _BACKUP_COUNT = 3
 
 
-def configure_logging(*, data_root: Path, console_logging: bool) -> None:
+def configure_logging(
+    *, data_root: Path, console_logging: bool, log_level: str = "WARNING"
+) -> None:
     """Configure the campaignnarrator logger.
 
     Always writes DEBUG+ to <data_root>/logs/campaignnarrator.log with rotation.
-    Adds a WARNING+ StreamHandler to stderr when console_logging is True.
+    Adds a StreamHandler to stderr at log_level when console_logging is True.
     Safe to call multiple times — clears existing handlers first.
     """
     log_dir = data_root / "logs"
@@ -40,6 +42,6 @@ def configure_logging(*, data_root: Path, console_logging: bool) -> None:
 
     if console_logging:
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.WARNING)
+        console_handler.setLevel(getattr(logging, log_level.upper(), logging.WARNING))
         console_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
         logger.addHandler(console_handler)

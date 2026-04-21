@@ -60,7 +60,11 @@ def main(
         data_root = args.data_root
     else:
         data_root = Path(settings.data_root)
-    configure_logging(data_root=data_root, console_logging=settings.console_logging)
+    configure_logging(
+        data_root=data_root,
+        console_logging=settings.console_logging,
+        log_level=settings.log_level,
+    )
     graph = _build_application_graph(data_root, stdin=stdin, stdout=stdout)
 
     if args.encounter_id:

@@ -58,3 +58,17 @@ def test_configure_logging_console_handler_when_enabled(tmp_path: Path) -> None:
     ]
     assert len(stream_handlers) >= 1
     assert stream_handlers[0].level == logging.WARNING
+
+
+def test_configure_logging_console_handler_respects_log_level(tmp_path: Path) -> None:
+    """log_level parameter controls the console handler's minimum level."""
+    configure_logging(data_root=tmp_path, console_logging=True, log_level="INFO")
+    root_logger = logging.getLogger("campaignnarrator")
+    stream_handlers = [
+        h
+        for h in root_logger.handlers
+        if isinstance(h, logging.StreamHandler)
+        and not isinstance(h, logging.FileHandler)
+    ]
+    assert len(stream_handlers) >= 1
+    assert stream_handlers[0].level == logging.INFO

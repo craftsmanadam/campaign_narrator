@@ -26,8 +26,11 @@ class Settings(BaseSettings):
         lancedb_path: Absolute or relative path to the LanceDB data directory.
             Empty string (default) causes ApplicationFactory to derive the path
             from data_root: {data_root}/memory/lancedb/.
-        console_logging: When True, attach a WARNING-level StreamHandler to stderr
-            in addition to the rotating file log. Default False.
+        console_logging: When True, attach a StreamHandler to stderr in addition
+            to the rotating file log. Default False.
+        log_level: Minimum level for the console StreamHandler when console_logging
+            is True. Accepted values: DEBUG, INFO, WARNING, ERROR, CRITICAL.
+            Default WARNING. Does not affect the file handler (always DEBUG).
     """
 
     data_root: str = "tmp/data_store"
@@ -36,5 +39,6 @@ class Settings(BaseSettings):
     embedding_base_url: str = "http://localhost:11434"
     lancedb_path: str = ""
     console_logging: bool = False
+    log_level: str = "WARNING"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
