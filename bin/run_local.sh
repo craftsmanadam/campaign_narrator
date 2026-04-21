@@ -2,8 +2,10 @@
 # bin/run_local.sh: Start Ollama locally and run the CLI in interactive mode.
 #
 # Usage:
-#   bin/run_local.sh              # loads .env
-#   bin/run_local.sh --env openai # loads .env.openai
+#   bin/run_local.sh              # loads .env (Ollama)
+#   bin/run_local.sh --env openai # loads .env.openai (OpenAI)
+#
+# Secrets are loaded from .env.secrets if it exists (always, before the profile).
 
 set -e
 cd "$(dirname "$0")/.."
@@ -18,6 +20,12 @@ while [[ $# -gt 0 ]]; do
     *) puts "${RED}Unknown argument: $1${RESET}"; exit 1 ;;
   esac
 done
+
+# Load secrets first so that profile values can override non-sensitive defaults.
+if [ -f ".env.secrets" ]; then
+  puts "${BLUE}Loading secrets: .env.secrets${RESET}"
+  set -a && source ".env.secrets" && set +a
+fi
 
 ENV_FILE=".env${ENV_SUFFIX:+.$ENV_SUFFIX}"
 
@@ -36,10 +44,11 @@ puts "${BLUE}Loading env profile: ${ENV_FILE}${RESET}"
 set -a && source "$ENV_FILE" && set +a
 
 DATA_ROOT="${DATA_ROOT:-tmp/data_store}"
-OPENAI_MODEL="${OPENAI_MODEL:-orieg/gemma3-tools:12b-ft-v2}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-${OPENAI_MODEL:-orieg/gemma3-tools:12b-ft-v2}}"
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-nomic-embed-text}"
+LLM_PROVIDER="${LLM_PROVIDER:-ollama}"
 
-# Start Ollama
+# Start Ollama (always needed for embeddings)
 puts "${BLUE}Starting Ollama...${RESET}"
 docker compose -f docker-compose.local.yml up -d
 
@@ -58,18 +67,25 @@ until curl -sf http://localhost:11434/api/version > /dev/null; do
 done
 puts "${GREEN}Ollama ready.${RESET}"
 
-# Pull models (no-op if already cached in ~/.ollama)
-puts "${BLUE}Pulling models (no-op if already cached)...${RESET}"
+# Pull embedding model (always needed)
+puts "${BLUE}Pulling embedding model (no-op if already cached)...${RESET}"
 docker compose -f docker-compose.local.yml exec ollama ollama pull "$EMBEDDING_MODEL"
-docker compose -f docker-compose.local.yml exec ollama ollama pull "$OPENAI_MODEL"
 
-# Warm up: force model into memory before first player request.
-# Cold start takes ~12s; doing it here prevents the first game response from hanging.
-puts "${BLUE}Warming up model (may take ~12s)...${RESET}"
-curl -sf http://localhost:11434/api/chat \
-  -d "{\"model\":\"$OPENAI_MODEL\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}" \
-  > /dev/null
-puts "${GREEN}Model warm.${RESET}"
+if [ "$LLM_PROVIDER" != "openai" ]; then
+  # Pull and warm up the local LLM model
+  puts "${BLUE}Pulling LLM model (no-op if already cached)...${RESET}"
+  docker compose -f docker-compose.local.yml exec ollama ollama pull "$OLLAMA_MODEL"
+
+  # Warm up: force model into memory before first player request.
+  # Cold start takes ~12s; doing it here prevents the first game response from hanging.
+  puts "${BLUE}Warming up model (may take ~12s)...${RESET}"
+  curl -sf http://localhost:11434/api/chat \
+    -d "{\"model\":\"$OLLAMA_MODEL\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}" \
+    > /dev/null
+  puts "${GREEN}Model warm.${RESET}"
+else
+  puts "${BLUE}LLM provider: openai — skipping local model pull and warmup.${RESET}"
+fi
 
 # Create data root and seed static game data (no-clobber: preserves live state)
 mkdir -p "$DATA_ROOT"
