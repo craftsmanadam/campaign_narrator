@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -28,6 +29,8 @@ from campaignnarrator.repositories.encounter_repository import EncounterReposito
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
 from campaignnarrator.tools.monster_loader import load_by_name as _load_monster
+
+_log = logging.getLogger(__name__)
 
 _SIMPLE_NPC_HP = 1
 _SIMPLE_NPC_AC = 10
@@ -61,8 +64,14 @@ def _build_npc_actor(
         and index_path is not None
         and index_path.exists()
     ):
-        actor = _load_monster(result.monster_name, index_path=index_path)
-        return replace(actor, actor_id=actor_id, name=result.display_name)
+        try:
+            actor = _load_monster(result.monster_name, index_path=index_path)
+            return replace(actor, actor_id=actor_id, name=result.display_name)
+        except KeyError, FileNotFoundError:
+            _log.warning(
+                "Monster %r not found in compendium; using simple NPC stats",
+                result.monster_name,
+            )
     return ActorState(
         actor_id=actor_id,
         name=result.display_name,

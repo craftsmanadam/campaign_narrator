@@ -44,12 +44,35 @@ def parse_monster_file(path: Path) -> dict[str, str] | None:
     return {"name": name, "cr": cr, "type": creature_type, "file": str(path)}
 
 
-def build_index(monsters_dir: Path = _MONSTERS_DIR) -> list[dict[str, str]]:
-    """Return index entries for every parseable monster in *monsters_dir*."""
+def _relative_to_dir(path: Path, output_dir: Path) -> str:
+    """Return *path* as a POSIX string relative to *output_dir*.
+
+    Uses ``Path.relative_to(walk_up=True)`` (Python 3.12+) so that paths
+    outside the output directory are expressed with leading ``..`` segments
+    rather than raising ``ValueError``.
+    """
+    return path.relative_to(output_dir, walk_up=True).as_posix()
+
+
+def build_index(
+    monsters_dir: Path = _MONSTERS_DIR,
+    *,
+    output_dir: Path | None = None,
+) -> list[dict[str, str]]:
+    """Return index entries for every parseable monster in *monsters_dir*.
+
+    When *output_dir* is provided, the ``file`` field in each entry is stored
+    as a path relative to *output_dir* rather than relative to the current
+    working directory.  This makes the index portable: after the data directory
+    is copied elsewhere the loader can resolve paths correctly by joining the
+    stored relative path with the index file's parent directory.
+    """
     entries = []
     for path in sorted(monsters_dir.glob("*.md")):
         entry = parse_monster_file(path)
         if entry is not None:
+            if output_dir is not None:
+                entry = {**entry, "file": _relative_to_dir(path, output_dir)}
             entries.append(entry)
     return entries
 
@@ -60,6 +83,6 @@ def write_index(
 ) -> int:
     """Write the monster index JSON to *output_file*. Returns entry count."""
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    index = build_index(monsters_dir)
+    index = build_index(monsters_dir, output_dir=output_file.parent)
     output_file.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     return len(index)

@@ -3,1896 +3,1896 @@
     "name": "Aboleth",
     "cr": "10",
     "type": "aberration",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Aboleth.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Aboleth.md"
   },
   {
     "name": "Acolyte",
     "cr": "1/4",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Acolyte (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Acolyte (NPC).md"
   },
   {
     "name": "Adult Black Dragon (Chromatic)",
     "cr": "14",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Black Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Black Dragon (Chromatic).md"
   },
   {
     "name": "Adult Blue Dragon (Chromatic)",
     "cr": "16",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Blue Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Blue Dragon (Chromatic).md"
   },
   {
     "name": "Adult Brass Dragon (Metallic)",
     "cr": "13",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Brass Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Brass Dragon (Metallic).md"
   },
   {
     "name": "Adult Bronze Dragon (Metallic)",
     "cr": "15",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Bronze Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Bronze Dragon (Metallic).md"
   },
   {
     "name": "Adult Copper Dragon (Metallic)",
     "cr": "14",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Copper Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Copper Dragon (Metallic).md"
   },
   {
     "name": "Adult Gold Dragon (Metallic)",
     "cr": "17",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Gold Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Gold Dragon (Metallic).md"
   },
   {
     "name": "Adult Green Dragon (Chromatic)",
     "cr": "15",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Green Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Green Dragon (Chromatic).md"
   },
   {
     "name": "Adult Red Dragon (Chromatic)",
     "cr": "17",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Red Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Red Dragon (Chromatic).md"
   },
   {
     "name": "Adult Silver Dragon (Metallic)",
     "cr": "16",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult Silver Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult Silver Dragon (Metallic).md"
   },
   {
     "name": "Adult White Dragon (Chromatic)",
     "cr": "13",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Adult White Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Adult White Dragon (Chromatic).md"
   },
   {
     "name": "Air Elemental",
     "cr": "5",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Air Elemental.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Air Elemental.md"
   },
   {
     "name": "Ancient Black Dragon (Chromatic)",
     "cr": "21",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Black Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Black Dragon (Chromatic).md"
   },
   {
     "name": "Ancient Blue Dragon (Chromatic)",
     "cr": "23",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Blue Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Blue Dragon (Chromatic).md"
   },
   {
     "name": "Ancient Brass Dragon (Metallic)",
     "cr": "20",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Brass Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Brass Dragon (Metallic).md"
   },
   {
     "name": "Ancient Bronze Dragon (Metallic)",
     "cr": "22",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Bronze Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Bronze Dragon (Metallic).md"
   },
   {
     "name": "Ancient Copper Dragon (Metallic)",
     "cr": "21",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Copper Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Copper Dragon (Metallic).md"
   },
   {
     "name": "Ancient Gold Dragon (Metallic)",
     "cr": "24",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Gold Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Gold Dragon (Metallic).md"
   },
   {
     "name": "Ancient Green Dragon (Chromatic)",
     "cr": "22",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Green Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Green Dragon (Chromatic).md"
   },
   {
     "name": "Ancient Red Dragon (Chromatic)",
     "cr": "24",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Red Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Red Dragon (Chromatic).md"
   },
   {
     "name": "Ancient Silver Dragon (Metallic)",
     "cr": "23",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient Silver Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient Silver Dragon (Metallic).md"
   },
   {
     "name": "Ancient White Dragon (Chromatic)",
     "cr": "20",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ancient White Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ancient White Dragon (Chromatic).md"
   },
   {
     "name": "Androsphinx (Sphinx)",
     "cr": "17",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Androsphinx (Sphinx).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Androsphinx (Sphinx).md"
   },
   {
     "name": "Animated Armor (Animated Object)",
     "cr": "1",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Animated Armor (Animated Object).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Animated Armor (Animated Object).md"
   },
   {
     "name": "Ankheg",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ankheg.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ankheg.md"
   },
   {
     "name": "Ape",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ape (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ape (Creature).md"
   },
   {
     "name": "Archmage",
     "cr": "12",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Archmage (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Archmage (NPC).md"
   },
   {
     "name": "Assassin",
     "cr": "8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Assassin (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Assassin (NPC).md"
   },
   {
     "name": "Awakened Shrub",
     "cr": "0",
     "type": "plant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Awakened Shrub (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Awakened Shrub (Creature).md"
   },
   {
     "name": "Awakened Tree",
     "cr": "2",
     "type": "plant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Awakened Tree (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Awakened Tree (Creature).md"
   },
   {
     "name": "Axe Beak",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Axe Beak (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Axe Beak (Creature).md"
   },
   {
     "name": "Azer",
     "cr": "2",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Azer.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Azer.md"
   },
   {
     "name": "Baboon",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Baboon (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Baboon (Creature).md"
   },
   {
     "name": "Badger",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Badger (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Badger (Creature).md"
   },
   {
     "name": "Balor (Demon)",
     "cr": "19",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Balor (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Balor (Demon).md"
   },
   {
     "name": "Bandit",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bandit (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bandit (NPC).md"
   },
   {
     "name": "Bandit Captain",
     "cr": "2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bandit Captain (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bandit Captain (NPC).md"
   },
   {
     "name": "Barbed Devil",
     "cr": "5",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Barbed Devil (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Barbed Devil (Devil).md"
   },
   {
     "name": "Basilisk",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Basilisk.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Basilisk.md"
   },
   {
     "name": "Bat",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bat (Creature).md"
   },
   {
     "name": "Bearded Devil",
     "cr": "3",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bearded Devil (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bearded Devil (Devil).md"
   },
   {
     "name": "Behir",
     "cr": "11",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Behir.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Behir.md"
   },
   {
     "name": "Berserker",
     "cr": "2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Berserker (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Berserker (NPC).md"
   },
   {
     "name": "Black Bear",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Black Bear (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Black Bear (Creature).md"
   },
   {
     "name": "Black Pudding (Ooze)",
     "cr": "4",
     "type": "ooze",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Black Pudding (Ooze).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Black Pudding (Ooze).md"
   },
   {
     "name": "Blink Dog",
     "cr": "1/4",
     "type": "fey",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Blink Dog (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Blink Dog (Creature).md"
   },
   {
     "name": "Blood Hawk",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Blood Hawk (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Blood Hawk (Creature).md"
   },
   {
     "name": "Boar",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Boar (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Boar (Creature).md"
   },
   {
     "name": "Bone Devil",
     "cr": "9",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bone Devil (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bone Devil (Devil).md"
   },
   {
     "name": "Brown Bear",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Brown Bear (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Brown Bear (Creature).md"
   },
   {
     "name": "Bugbear",
     "cr": "1",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bugbear.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bugbear.md"
   },
   {
     "name": "Bulette",
     "cr": "5",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Bulette.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Bulette.md"
   },
   {
     "name": "Camel",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Camel (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Camel (Creature).md"
   },
   {
     "name": "Cat",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Cat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Cat (Creature).md"
   },
   {
     "name": "Centaur",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Centaur.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Centaur.md"
   },
   {
     "name": "Chain Devil",
     "cr": "8",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Chain Devil (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Chain Devil (Devil).md"
   },
   {
     "name": "Chimera",
     "cr": "6",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Chimera.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Chimera.md"
   },
   {
     "name": "Chuul",
     "cr": "4",
     "type": "aberration",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Chuul.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Chuul.md"
   },
   {
     "name": "Clay Golem",
     "cr": "9",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Clay Golem.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Clay Golem.md"
   },
   {
     "name": "Cloaker",
     "cr": "8",
     "type": "aberration",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Cloaker.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Cloaker.md"
   },
   {
     "name": "Cloud Giant",
     "cr": "9",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Cloud Giant (Giant).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Cloud Giant (Giant).md"
   },
   {
     "name": "Cockatrice",
     "cr": "1/2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Cockatrice.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Cockatrice.md"
   },
   {
     "name": "Commoner",
     "cr": "0",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Commoner (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Commoner (NPC).md"
   },
   {
     "name": "Constrictor Snake",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Constrictor Snake (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Constrictor Snake (Creature).md"
   },
   {
     "name": "Couatl",
     "cr": "4",
     "type": "celestial",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Couatl.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Couatl.md"
   },
   {
     "name": "Crab",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Crab (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Crab (Creature).md"
   },
   {
     "name": "Crocodile",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Crocodile (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Crocodile (Creature).md"
   },
   {
     "name": "Cult Fanatic",
     "cr": "2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Cult Fanatic (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Cult Fanatic (NPC).md"
   },
   {
     "name": "Cultist",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Cultist (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Cultist (NPC).md"
   },
   {
     "name": "Darkmantle",
     "cr": "1/2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Darkmantle.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Darkmantle.md"
   },
   {
     "name": "Death Dog",
     "cr": "1",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Death Dog (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Death Dog (Creature).md"
   },
   {
     "name": "Deer",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Deer (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Deer (Creature).md"
   },
   {
     "name": "Deva (Angel)",
     "cr": "10",
     "type": "celestial",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Deva (Angel).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Deva (Angel).md"
   },
   {
     "name": "Dire Wolf",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Dire Wolf (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Dire Wolf (Creature).md"
   },
   {
     "name": "Djinni (Genie)",
     "cr": "11",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Djinni (Genie).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Djinni (Genie).md"
   },
   {
     "name": "Doppelganger",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Doppelganger.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Doppelganger.md"
   },
   {
     "name": "Draft Horse",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Draft Horse (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Draft Horse (Creature).md"
   },
   {
     "name": "Dragon Turtle",
     "cr": "17",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Dragon Turtle.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Dragon Turtle.md"
   },
   {
     "name": "Dretch (Demon)",
     "cr": "1/4",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Dretch (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Dretch (Demon).md"
   },
   {
     "name": "Drider",
     "cr": "6",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Drider.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Drider.md"
   },
   {
     "name": "Druid",
     "cr": "2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Druid (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Druid (NPC).md"
   },
   {
     "name": "Dryad",
     "cr": "1",
     "type": "fey",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Dryad.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Dryad.md"
   },
   {
     "name": "Duergar",
     "cr": "1",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Duergar.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Duergar.md"
   },
   {
     "name": "Dust Mephit",
     "cr": "1/2",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Dust Mephit.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Dust Mephit.md"
   },
   {
     "name": "Eagle",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Eagle (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Eagle (Creature).md"
   },
   {
     "name": "Earth Elemental",
     "cr": "5",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Earth Elemental.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Earth Elemental.md"
   },
   {
     "name": "Efreeti (Genie)",
     "cr": "11",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Efreeti (Genie).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Efreeti (Genie).md"
   },
   {
     "name": "Elephant",
     "cr": "4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Elephant (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Elephant (Creature).md"
   },
   {
     "name": "Elf, Drow",
     "cr": "1/4",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Elf, Drow.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Elf, Drow.md"
   },
   {
     "name": "Elk",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Elk (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Elk (Creature).md"
   },
   {
     "name": "Erinyes (Devil)",
     "cr": "12",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Erinyes (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Erinyes (Devil).md"
   },
   {
     "name": "Ettercap",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ettercap.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ettercap.md"
   },
   {
     "name": "Ettin",
     "cr": "4",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ettin.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ettin.md"
   },
   {
     "name": "Fire Elemental",
     "cr": "5",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Fire Elemental.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Fire Elemental.md"
   },
   {
     "name": "Fire Giant",
     "cr": "9",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Fire Giant (Giant).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Fire Giant (Giant).md"
   },
   {
     "name": "Flesh Golem",
     "cr": "5",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Flesh Golem.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Flesh Golem.md"
   },
   {
     "name": "Flying Snake",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Flying Snake (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Flying Snake (Creature).md"
   },
   {
     "name": "Flying Sword (Animated Object)",
     "cr": "1/4",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Flying Sword (Animated Object).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Flying Sword (Animated Object).md"
   },
   {
     "name": "Frog",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Frog (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Frog (Creature).md"
   },
   {
     "name": "Frost Giant",
     "cr": "8",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Frost Giant (Giant).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Frost Giant (Giant).md"
   },
   {
     "name": "Gargoyle",
     "cr": "2",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gargoyle.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gargoyle.md"
   },
   {
     "name": "Gelatinous Cube (Ooze)",
     "cr": "2",
     "type": "ooze",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gelatinous Cube (Ooze).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gelatinous Cube (Ooze).md"
   },
   {
     "name": "Ghast (Ghoul)",
     "cr": "2",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ghast (Ghoul).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ghast (Ghoul).md"
   },
   {
     "name": "Ghost",
     "cr": "4",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ghost.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ghost.md"
   },
   {
     "name": "Ghoul",
     "cr": "1",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ghoul.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ghoul.md"
   },
   {
     "name": "Giant Ape",
     "cr": "7",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Ape (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Ape (Creature).md"
   },
   {
     "name": "Giant Badger",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Badger (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Badger (Creature).md"
   },
   {
     "name": "Giant Bat",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Bat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Bat (Creature).md"
   },
   {
     "name": "Giant Boar",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Boar (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Boar (Creature).md"
   },
   {
     "name": "Giant Centipede",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Centipede (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Centipede (Creature).md"
   },
   {
     "name": "Giant Constrictor Snake",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Constrictor Snake (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Constrictor Snake (Creature).md"
   },
   {
     "name": "Giant Crab",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Crab (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Crab (Creature).md"
   },
   {
     "name": "Giant Crocodile",
     "cr": "5",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Crocodile (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Crocodile (Creature).md"
   },
   {
     "name": "Giant Eagle",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Eagle (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Eagle (Creature).md"
   },
   {
     "name": "Giant Elk",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Elk (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Elk (Creature).md"
   },
   {
     "name": "Giant Fire Beetle",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Fire Beetle (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Fire Beetle (Creature).md"
   },
   {
     "name": "Giant Frog",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Frog (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Frog (Creature).md"
   },
   {
     "name": "Giant Goat",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Goat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Goat (Creature).md"
   },
   {
     "name": "Giant Hyena",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Hyena (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Hyena (Creature).md"
   },
   {
     "name": "Giant Lizard",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Lizard (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Lizard (Creature).md"
   },
   {
     "name": "Giant Octopus",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Octopus (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Octopus (Creature).md"
   },
   {
     "name": "Giant Owl",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Owl (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Owl (Creature).md"
   },
   {
     "name": "Giant Poisonous Snake",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Poisonous Snake (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Poisonous Snake (Creature).md"
   },
   {
     "name": "Giant Rat",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Rat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Rat (Creature).md"
   },
   {
     "name": "Giant Scorpion",
     "cr": "3",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Scorpion (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Scorpion (Creature).md"
   },
   {
     "name": "Giant Sea Horse",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Sea Horse (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Sea Horse (Creature).md"
   },
   {
     "name": "Giant Shark",
     "cr": "5",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Shark (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Shark (Creature).md"
   },
   {
     "name": "Giant Spider",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Spider (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Spider (Creature).md"
   },
   {
     "name": "Giant Toad",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Toad (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Toad (Creature).md"
   },
   {
     "name": "Giant Vulture",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Vulture (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Vulture (Creature).md"
   },
   {
     "name": "Giant Wasp",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Wasp (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Wasp (Creature).md"
   },
   {
     "name": "Giant Weasel",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Weasel (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Weasel (Creature).md"
   },
   {
     "name": "Giant Wolf Spider",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Giant Wolf Spider (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Giant Wolf Spider (Creature).md"
   },
   {
     "name": "Gibbering Mouther",
     "cr": "2",
     "type": "aberration",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gibbering Mouther.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gibbering Mouther.md"
   },
   {
     "name": "Glabrezu (Demon)",
     "cr": "9",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Glabrezu (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Glabrezu (Demon).md"
   },
   {
     "name": "Gladiator",
     "cr": "5",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gladiator (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gladiator (NPC).md"
   },
   {
     "name": "Gnoll",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gnoll.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gnoll.md"
   },
   {
     "name": "Gnome, Deep (Svirfneblin)",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gnome, Deep (Svirfneblin).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gnome, Deep (Svirfneblin).md"
   },
   {
     "name": "Goat",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Goat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Goat (Creature).md"
   },
   {
     "name": "Goblin",
     "cr": "1/4",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Goblin.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Goblin.md"
   },
   {
     "name": "Gorgon",
     "cr": "5",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gorgon.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gorgon.md"
   },
   {
     "name": "Gray Ooze",
     "cr": "1/2",
     "type": "ooze",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gray Ooze.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gray Ooze.md"
   },
   {
     "name": "Green Hag",
     "cr": "3",
     "type": "fey",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Green Hag.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Green Hag.md"
   },
   {
     "name": "Grick",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Grick.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Grick.md"
   },
   {
     "name": "Griffon",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Griffon.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Griffon.md"
   },
   {
     "name": "Grimlock",
     "cr": "1/4",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Grimlock.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Grimlock.md"
   },
   {
     "name": "Guard",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Guard (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Guard (NPC).md"
   },
   {
     "name": "Guardian Naga",
     "cr": "10",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Guardian Naga.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Guardian Naga.md"
   },
   {
     "name": "Gynosphinx (Sphinx)",
     "cr": "11",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Gynosphinx (Sphinx).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Gynosphinx (Sphinx).md"
   },
   {
     "name": "Half-Dragon Template",
     "cr": "5",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Half-Dragon Template.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Half-Dragon Template.md"
   },
   {
     "name": "Harpy",
     "cr": "1",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Harpy.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Harpy.md"
   },
   {
     "name": "Hawk",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hawk (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hawk (Creature).md"
   },
   {
     "name": "Hell Hound",
     "cr": "3",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hell Hound.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hell Hound.md"
   },
   {
     "name": "Hezrou (Demon)",
     "cr": "8",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hezrou (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hezrou (Demon).md"
   },
   {
     "name": "Hill Giant",
     "cr": "5",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hill Giant (Giant).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hill Giant (Giant).md"
   },
   {
     "name": "Hippogriff",
     "cr": "1",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hippogriff.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hippogriff.md"
   },
   {
     "name": "Hobgoblin",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hobgoblin.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hobgoblin.md"
   },
   {
     "name": "Homunculus",
     "cr": "0",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Homunculus.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Homunculus.md"
   },
   {
     "name": "Horned Devil",
     "cr": "11",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Horned Devil.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Horned Devil.md"
   },
   {
     "name": "Hunter Shark",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hunter Shark (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hunter Shark (Creature).md"
   },
   {
     "name": "Hydra",
     "cr": "8",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hydra.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hydra.md"
   },
   {
     "name": "Hyena",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Hyena (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Hyena (Creature).md"
   },
   {
     "name": "Ice Devil",
     "cr": "14",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ice Devil (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ice Devil (Devil).md"
   },
   {
     "name": "Ice Mephit",
     "cr": "1/2",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ice Mephit.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ice Mephit.md"
   },
   {
     "name": "Imp (Devil)",
     "cr": "1",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Imp (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Imp (Devil).md"
   },
   {
     "name": "Invisible Stalker",
     "cr": "6",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Invisible Stalker.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Invisible Stalker.md"
   },
   {
     "name": "Iron Golem",
     "cr": "16",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Iron Golem.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Iron Golem.md"
   },
   {
     "name": "Jackal",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Jackal (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Jackal (Creature).md"
   },
   {
     "name": "Killer Whale",
     "cr": "3",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Killer Whale (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Killer Whale (Creature).md"
   },
   {
     "name": "Knight",
     "cr": "3",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Knight (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Knight (NPC).md"
   },
   {
     "name": "Kobold",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Kobold.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Kobold.md"
   },
   {
     "name": "Kraken",
     "cr": "23",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Kraken.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Kraken.md"
   },
   {
     "name": "Lamia",
     "cr": "4",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Lamia.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Lamia.md"
   },
   {
     "name": "Lemure (Devil)",
     "cr": "0",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Lemure (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Lemure (Devil).md"
   },
   {
     "name": "Lich",
     "cr": "21",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Lich.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Lich.md"
   },
   {
     "name": "Lion",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Lion (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Lion (Creature).md"
   },
   {
     "name": "Lizard",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Lizard (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Lizard (Creature).md"
   },
   {
     "name": "Lizardfolk",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Lizardfolk.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Lizardfolk.md"
   },
   {
     "name": "Mage",
     "cr": "6",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mage (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mage (NPC).md"
   },
   {
     "name": "Magma Mephit",
     "cr": "1/2",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Magma Mephit.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Magma Mephit.md"
   },
   {
     "name": "Magmin",
     "cr": "1/2",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Magmin.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Magmin.md"
   },
   {
     "name": "Mammoth",
     "cr": "6",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mammoth (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mammoth (Creature).md"
   },
   {
     "name": "Manticore",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Manticore.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Manticore.md"
   },
   {
     "name": "Marilith (Demon)",
     "cr": "16",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Marilith (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Marilith (Demon).md"
   },
   {
     "name": "Mastiff",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mastiff (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mastiff (Creature).md"
   },
   {
     "name": "Medusa",
     "cr": "6",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Medusa.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Medusa.md"
   },
   {
     "name": "Merfolk",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Merfolk.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Merfolk.md"
   },
   {
     "name": "Merrow",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Merrow.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Merrow.md"
   },
   {
     "name": "Mimic",
     "cr": "2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mimic.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mimic.md"
   },
   {
     "name": "Minotaur Skeleton",
     "cr": "2",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Minotaur Skeleton.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Minotaur Skeleton.md"
   },
   {
     "name": "Minotaur",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Minotaur.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Minotaur.md"
   },
   {
     "name": "Mule",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mule (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mule (Creature).md"
   },
   {
     "name": "Mummy Lord",
     "cr": "15",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mummy Lord.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mummy Lord.md"
   },
   {
     "name": "Mummy",
     "cr": "3",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Mummy.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Mummy.md"
   },
   {
     "name": "Nalfeshnee (Demon)",
     "cr": "13",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Nalfeshnee (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Nalfeshnee (Demon).md"
   },
   {
     "name": "Night Hag",
     "cr": "5",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Night Hag.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Night Hag.md"
   },
   {
     "name": "Nightmare",
     "cr": "3",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Nightmare.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Nightmare.md"
   },
   {
     "name": "Noble",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Noble (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Noble (NPC).md"
   },
   {
     "name": "Ochre Jelly (Ooze)",
     "cr": "2",
     "type": "ooze",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ochre Jelly (Ooze).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ochre Jelly (Ooze).md"
   },
   {
     "name": "Octopus",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Octopus (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Octopus (Creature).md"
   },
   {
     "name": "Ogre Zombie",
     "cr": "2",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ogre Zombie.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ogre Zombie.md"
   },
   {
     "name": "Ogre",
     "cr": "2",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Ogre.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Ogre.md"
   },
   {
     "name": "Oni",
     "cr": "7",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Oni.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Oni.md"
   },
   {
     "name": "Orc",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Orc.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Orc.md"
   },
   {
     "name": "Otyugh",
     "cr": "5",
     "type": "aberration",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Otyugh.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Otyugh.md"
   },
   {
     "name": "Owl",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Owl (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Owl (Creature).md"
   },
   {
     "name": "Owlbear",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Owlbear.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Owlbear.md"
   },
   {
     "name": "Panther",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Panther (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Panther (Creature).md"
   },
   {
     "name": "Pegasus",
     "cr": "2",
     "type": "celestial",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Pegasus.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Pegasus.md"
   },
   {
     "name": "Phase Spider",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Phase Spider (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Phase Spider (Creature).md"
   },
   {
     "name": "Pit Fiend (Devil)",
     "cr": "20",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Pit Fiend (Devil).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Pit Fiend (Devil).md"
   },
   {
     "name": "Planetar (Angel)",
     "cr": "16",
     "type": "celestial",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Planetar (Angel).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Planetar (Angel).md"
   },
   {
     "name": "Plesiosaurus (Dinosaur)",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Plesiosaurus (Dinosaur).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Plesiosaurus (Dinosaur).md"
   },
   {
     "name": "Poisonous Snake",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Poisonous Snake (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Poisonous Snake (Creature).md"
   },
   {
     "name": "Polar Bear",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Polar Bear (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Polar Bear (Creature).md"
   },
   {
     "name": "Pony",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Pony (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Pony (Creature).md"
   },
   {
     "name": "Priest",
     "cr": "2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Priest (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Priest (NPC).md"
   },
   {
     "name": "Pseudodragon",
     "cr": "1/4",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Pseudodragon.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Pseudodragon.md"
   },
   {
     "name": "Purple Worm",
     "cr": "15",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Purple Worm.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Purple Worm.md"
   },
   {
     "name": "Quasit (Demon)",
     "cr": "1",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Quasit (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Quasit (Demon).md"
   },
   {
     "name": "Quipper",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Quipper (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Quipper (Creature).md"
   },
   {
     "name": "Rakshasa",
     "cr": "13",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Rakshasa.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Rakshasa.md"
   },
   {
     "name": "Rat",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Rat (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Rat (Creature).md"
   },
   {
     "name": "Raven",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Raven (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Raven (Creature).md"
   },
   {
     "name": "Reef Shark",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Reef Shark (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Reef Shark (Creature).md"
   },
   {
     "name": "Remorhaz",
     "cr": "11",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Remorhaz.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Remorhaz.md"
   },
   {
     "name": "Rhinoceros",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Rhinoceros (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Rhinoceros (Creature).md"
   },
   {
     "name": "Riding Horse",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Riding Horse (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Riding Horse (Creature).md"
   },
   {
     "name": "Roc",
     "cr": "11",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Roc.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Roc.md"
   },
   {
     "name": "Roper",
     "cr": "5",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Roper.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Roper.md"
   },
   {
     "name": "Rug of Smothering (Animated Object)",
     "cr": "2",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Rug of Smothering (Animated Object).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Rug of Smothering (Animated Object).md"
   },
   {
     "name": "Rust Monster",
     "cr": "1/2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Rust Monster.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Rust Monster.md"
   },
   {
     "name": "Saber-Toothed Tiger",
     "cr": "2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Saber-Toothed Tiger (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Saber-Toothed Tiger (Creature).md"
   },
   {
     "name": "Sahuagin",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Sahuagin.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Sahuagin.md"
   },
   {
     "name": "Salamander",
     "cr": "5",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Salamander.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Salamander.md"
   },
   {
     "name": "Satyr",
     "cr": "1/2",
     "type": "fey",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Satyr.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Satyr.md"
   },
   {
     "name": "Scorpion",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Scorpion (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Scorpion (Creature).md"
   },
   {
     "name": "Scout",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Scout (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Scout (NPC).md"
   },
   {
     "name": "Sea Hag",
     "cr": "2",
     "type": "fey",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Sea Hag.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Sea Hag.md"
   },
   {
     "name": "Sea Horse",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Sea Horse (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Sea Horse (Creature).md"
   },
   {
     "name": "Shadow",
     "cr": "1/2",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Shadow.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Shadow.md"
   },
   {
     "name": "Shambling Mound",
     "cr": "5",
     "type": "plant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Shambling Mound.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Shambling Mound.md"
   },
   {
     "name": "Shield Guardian",
     "cr": "7",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Shield Guardian.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Shield Guardian.md"
   },
   {
     "name": "Shrieker (Fungi)",
     "cr": "0",
     "type": "plant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Shrieker (Fungi).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Shrieker (Fungi).md"
   },
   {
     "name": "Skeleton",
     "cr": "1/4",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Skeleton.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Skeleton.md"
   },
   {
     "name": "Solar (Angel)",
     "cr": "21",
     "type": "celestial",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Solar (Angel).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Solar (Angel).md"
   },
   {
     "name": "Specter",
     "cr": "1",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Specter.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Specter.md"
   },
   {
     "name": "Spider",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Spider (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Spider (Creature).md"
   },
   {
     "name": "Spirit Naga",
     "cr": "8",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Spirit Naga.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Spirit Naga.md"
   },
   {
     "name": "Sprite",
     "cr": "1/4",
     "type": "fey",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Sprite.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Sprite.md"
   },
   {
     "name": "Spy",
     "cr": "1",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Spy (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Spy (NPC).md"
   },
   {
     "name": "Steam Mephit",
     "cr": "1/4",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Steam Mephit.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Steam Mephit.md"
   },
   {
     "name": "Stirge",
     "cr": "1/8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Stirge.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Stirge.md"
   },
   {
     "name": "Stone Giant",
     "cr": "7",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Stone Giant (Giant).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Stone Giant (Giant).md"
   },
   {
     "name": "Stone Golem",
     "cr": "10",
     "type": "construct",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Stone Golem.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Stone Golem.md"
   },
   {
     "name": "Storm Giant",
     "cr": "13",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Storm Giant (Giant).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Storm Giant (Giant).md"
   },
   {
     "name": "Succubus/Incubus",
     "cr": "4",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Succubus-Incubus.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Succubus-Incubus.md"
   },
   {
     "name": "Swarm of Bats",
     "cr": "1/4",
     "type": "swarm",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Swarm of Bats (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Swarm of Bats (Creature).md"
   },
   {
     "name": "Swarm of Insects",
     "cr": "1/2",
     "type": "swarm",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Swarm of Insects (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Swarm of Insects (Creature).md"
   },
   {
     "name": "Swarm of Poisonous Snakes",
     "cr": "2",
     "type": "swarm",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Swarm of Poisonous Snakes (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Swarm of Poisonous Snakes (Creature).md"
   },
   {
     "name": "Swarm of Quippers",
     "cr": "1",
     "type": "swarm",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Swarm of Quippers (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Swarm of Quippers (Creature).md"
   },
   {
     "name": "Swarm of Rats",
     "cr": "1/4",
     "type": "swarm",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Swarm of Rats (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Swarm of Rats (Creature).md"
   },
   {
     "name": "Swarm of Ravens",
     "cr": "1/4",
     "type": "swarm",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Swarm of Ravens (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Swarm of Ravens (Creature).md"
   },
   {
     "name": "Tarrasque",
     "cr": "30",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Tarrasque.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Tarrasque.md"
   },
   {
     "name": "Thug",
     "cr": "1/2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Thug (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Thug (NPC).md"
   },
   {
     "name": "Tiger",
     "cr": "1",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Tiger (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Tiger (Creature).md"
   },
   {
     "name": "Treant",
     "cr": "9",
     "type": "plant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Treant.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Treant.md"
   },
   {
     "name": "Tribal Warrior",
     "cr": "1/8",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Tribal Warrior (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Tribal Warrior (NPC).md"
   },
   {
     "name": "Triceratops (Dinosaur)",
     "cr": "5",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Triceratops (Dinosaur).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Triceratops (Dinosaur).md"
   },
   {
     "name": "Troll",
     "cr": "5",
     "type": "giant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Troll.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Troll.md"
   },
   {
     "name": "Tyrannosaurus Rex (Dinosaur)",
     "cr": "8",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Tyrannosaurus Rex (Dinosaur).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Tyrannosaurus Rex (Dinosaur).md"
   },
   {
     "name": "Unicorn",
     "cr": "5",
     "type": "celestial",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Unicorn.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Unicorn.md"
   },
   {
     "name": "Vampire Spawn",
     "cr": "5",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Vampire Spawn.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Vampire Spawn.md"
   },
   {
     "name": "Vampire",
     "cr": "13",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Vampire.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Vampire.md"
   },
   {
     "name": "Veteran",
     "cr": "3",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Veteran (NPC).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Veteran (NPC).md"
   },
   {
     "name": "Violet Fungus (Fungi)",
     "cr": "1/4",
     "type": "plant",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Violet Fungus (Fungi).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Violet Fungus (Fungi).md"
   },
   {
     "name": "Vrock (Demon)",
     "cr": "6",
     "type": "fiend",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Vrock (Demon).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Vrock (Demon).md"
   },
   {
     "name": "Vulture",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Vulture (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Vulture (Creature).md"
   },
   {
     "name": "Warhorse",
     "cr": "1/2",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Warhorse (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Warhorse (Creature).md"
   },
   {
     "name": "Warhorse Skeleton",
     "cr": "1/2",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Warhorse Skeleton.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Warhorse Skeleton.md"
   },
   {
     "name": "Water Elemental",
     "cr": "5",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Water Elemental.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Water Elemental.md"
   },
   {
     "name": "Weasel",
     "cr": "0",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Weasel (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Weasel (Creature).md"
   },
   {
     "name": "Werebear (Lycanthrope)",
     "cr": "5",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Werebear (Lycanthrope).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Werebear (Lycanthrope).md"
   },
   {
     "name": "Wereboar (Lycanthrope)",
     "cr": "4",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wereboar (Lycanthrope).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wereboar (Lycanthrope).md"
   },
   {
     "name": "Wererat (Lycanthrope)",
     "cr": "2",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wererat (Lycanthrope).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wererat (Lycanthrope).md"
   },
   {
     "name": "Weretiger (Lycanthrope)",
     "cr": "4",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Weretiger (Lycanthrope).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Weretiger (Lycanthrope).md"
   },
   {
     "name": "Werewolf (Lycanthrope)",
     "cr": "3",
     "type": "humanoid",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Werewolf (Lycanthrope).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Werewolf (Lycanthrope).md"
   },
   {
     "name": "Wight",
     "cr": "3",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wight.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wight.md"
   },
   {
     "name": "Will-o'-Wisp",
     "cr": "2",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Will-o'-Wisp.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Will-o'-Wisp.md"
   },
   {
     "name": "Winter Wolf",
     "cr": "3",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Winter Wolf (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Winter Wolf (Creature).md"
   },
   {
     "name": "Wolf",
     "cr": "1/4",
     "type": "beast",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wolf (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wolf (Creature).md"
   },
   {
     "name": "Worg",
     "cr": "1/2",
     "type": "monstrosity",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Worg (Creature).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Worg (Creature).md"
   },
   {
     "name": "Wraith",
     "cr": "5",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wraith.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wraith.md"
   },
   {
     "name": "Black Dragon Wyrmling (Chromatic)",
     "cr": "2",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Black Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Black Dragon (Chromatic).md"
   },
   {
     "name": "Blue Dragon Wyrmling (Chromatic)",
     "cr": "3",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Blue Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Blue Dragon (Chromatic).md"
   },
   {
     "name": "Brass Dragon Wyrmling (Metallic)",
     "cr": "1",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Brass Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Brass Dragon (Metallic).md"
   },
   {
     "name": "Bronze Dragon Wyrmling (Metallic)",
     "cr": "2",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Bronze Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Bronze Dragon (Metallic).md"
   },
   {
     "name": "Copper Dragon Wyrmling (Metallic)",
     "cr": "1",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Copper Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Copper Dragon (Metallic).md"
   },
   {
     "name": "Gold Dragon Wyrmling (Metallic)",
     "cr": "3",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Gold Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Gold Dragon (Metallic).md"
   },
   {
     "name": "Green Dragon Wyrmling (Chromatic)",
     "cr": "2",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Green Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Green Dragon (Chromatic).md"
   },
   {
     "name": "Red Dragon Wyrmling (Chromatic)",
     "cr": "4",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Red Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Red Dragon (Chromatic).md"
   },
   {
     "name": "Silver Dragon Wyrmling (Metallic)",
     "cr": "2",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Silver Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling Silver Dragon (Metallic).md"
   },
   {
     "name": "White Dragon Wyrmling (Chromatic)",
     "cr": "2",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyrmling White Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyrmling White Dragon (Chromatic).md"
   },
   {
     "name": "Wyvern",
     "cr": "6",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Wyvern.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Wyvern.md"
   },
   {
     "name": "Xorn",
     "cr": "5",
     "type": "elemental",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Xorn.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Xorn.md"
   },
   {
     "name": "Young Black Dragon (Chromatic)",
     "cr": "7",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Black Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Black Dragon (Chromatic).md"
   },
   {
     "name": "Young Blue Dragon (Chromatic)",
     "cr": "9",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Blue Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Blue Dragon (Chromatic).md"
   },
   {
     "name": "Young Brass Dragon (Metallic)",
     "cr": "6",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Brass Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Brass Dragon (Metallic).md"
   },
   {
     "name": "Young Bronze Dragon (Metallic)",
     "cr": "8",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Bronze Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Bronze Dragon (Metallic).md"
   },
   {
     "name": "Young Copper Dragon (Metallic)",
     "cr": "7",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Copper Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Copper Dragon (Metallic).md"
   },
   {
     "name": "Young Gold Dragon (Metallic)",
     "cr": "10",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Gold Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Gold Dragon (Metallic).md"
   },
   {
     "name": "Young Green Dragon (Chromatic)",
     "cr": "8",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Green Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Green Dragon (Chromatic).md"
   },
   {
     "name": "Young Silver Dragon (Metallic)",
     "cr": "9",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young Silver Dragon (Metallic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young Silver Dragon (Metallic).md"
   },
   {
     "name": "Young White Dragon (Chromatic)",
     "cr": "6",
     "type": "dragon",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Young White Dragon (Chromatic).md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Young White Dragon (Chromatic).md"
   },
   {
     "name": "Zombie",
     "cr": "1/4",
     "type": "undead",
-    "file": "data/compendium/DND.SRD.Wiki-0.5.2/Monsters/Zombie.md"
+    "file": "../DND.SRD.Wiki-0.5.2/Monsters/Zombie.md"
   }
 ]
