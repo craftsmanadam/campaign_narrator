@@ -56,6 +56,29 @@ def test_generate_returns_module_result() -> None:
     assert "docks" in result.opening_encounter_seed.lower()
 
 
+def test_generate_accepts_module_title_alias() -> None:
+    """Ollama sometimes outputs 'module_title' instead of 'title'; both must work."""
+    aliased_result = {**_SAMPLE_RESULT, "module_title": _SAMPLE_RESULT["title"]}
+    del aliased_result["title"]
+
+    def fn(messages: list, info: AgentInfo) -> ModelResponse:
+        return ModelResponse(
+            parts=[ToolCallPart("final_result", json.dumps(aliased_result))]
+        )
+
+    mock_adapter = MagicMock()
+    mock_adapter.model = FunctionModel(fn)
+    agent = ModuleGeneratorAgent(adapter=mock_adapter)
+    result = agent.generate(
+        campaign_name="Test",
+        setting="Test.",
+        milestones=[_MILESTONE_M1],
+        current_milestone_index=0,
+        completed_module_summaries=[],
+    )
+    assert result.title == "The Dockside Murders"
+
+
 def test_generate_includes_completed_summaries_in_context() -> None:
     """Verify the agent receives completed module summaries in its input."""
     received: list[str] = []

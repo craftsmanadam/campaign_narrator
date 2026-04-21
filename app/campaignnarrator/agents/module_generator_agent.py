@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 from pydantic_ai import Agent
 
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
@@ -24,7 +24,8 @@ _INSTRUCTIONS = (
 
 
 class ModuleGenerationResult(BaseModel):
-    title: str
+    # Ollama sometimes generates "module_title" instead of "title"; accept both.
+    title: str = Field(validation_alias=AliasChoices("title", "module_title"))
     summary: str
     guiding_milestone_id: str
     opening_encounter_seed: str
