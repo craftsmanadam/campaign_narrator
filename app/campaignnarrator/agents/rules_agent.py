@@ -142,7 +142,7 @@ class RulesAgent:
     ) -> dict[str, object]:
         data: dict[str, object] = {
             "actor_id": request.actor_id,
-            "check_hint": list(request.check_hints),
+            "check_hint": request.check_hints[0] if request.check_hints else None,
             "compendium_context": list(request.compendium_context),
             "intent": request.intent,
             "phase": request.phase.value,
