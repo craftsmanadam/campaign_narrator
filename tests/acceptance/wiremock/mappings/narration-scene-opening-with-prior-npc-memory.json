@@ -1,0 +1,12 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"scene_opening\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "scar"}}
+    ]
+  },
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-scene-opening-with-prior-npc-memory-response.json"}
+}

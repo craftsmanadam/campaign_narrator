@@ -129,6 +129,15 @@ RULES_INSTRUCTIONS: str = (
     "  Persuasion   → {charisma_mod}\n"
 )
 
+PARTIAL_SUMMARIZE_INSTRUCTIONS: str = (
+    "You are a dungeon master writing brief session notes after an interrupted "
+    "encounter. The player saved and quit before the encounter concluded. "
+    "Write two to four sentences capturing: the location, any NPCs present or "
+    "encountered, notable actions the player took, and the state of play when "
+    "the session ended. Be specific enough that you could recall this scene "
+    "next session."
+)
+
 PLAYER_INTENT_INSTRUCTIONS: str = (
     "Classify the player's input into exactly one IntentCategory and return a "
     "PlayerIntent.\n\n"

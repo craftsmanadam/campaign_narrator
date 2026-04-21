@@ -1,0 +1,11 @@
+{
+  "priority": 50,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "saved and quit before the encounter concluded"}}
+    ]
+  },
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-partial-summary-response.json"}
+}

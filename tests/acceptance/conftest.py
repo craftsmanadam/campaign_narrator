@@ -222,13 +222,12 @@ def configure_openai_api_for_scenario_with_encounter(
         active_path = runtime_data_root / "state" / "encounters" / "active.json"
         active_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(named_encounter, active_path)
-    active_wiremock_scenario = _ENCOUNTER_TO_WIREMOCK_SCENARIO.get(scenario_name)
-    if active_wiremock_scenario is not None:
-        env: dict[str, str] = request.getfixturevalue("compose_environment")
-        _deactivate_wiremock_scenarios(
-            int(env["WIREMOCK_PORT"]),
-            active_wiremock_scenario,
-        )
+    active_wiremock_scenario = _ENCOUNTER_TO_WIREMOCK_SCENARIO.get(scenario_name, "")
+    env: dict[str, str] = request.getfixturevalue("compose_environment")
+    _deactivate_wiremock_scenarios(
+        int(env["WIREMOCK_PORT"]),
+        active_wiremock_scenario,
+    )
     return {"scenario_name": scenario_name, "encounter_id": encounter_id}
 
 

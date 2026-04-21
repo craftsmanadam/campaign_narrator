@@ -1,0 +1,12 @@
+{
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "The player reached the ruined roadside camp and encountered a goblin scout. A tense standoff began before the session was interrupted. The goblins had not yet acted."},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 80, "completion_tokens": 35, "total_tokens": 115}
+}

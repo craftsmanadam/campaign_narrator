@@ -9,6 +9,7 @@ from pydantic_ai import Agent
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.prompts import (
     BASE_NARRATE_INSTRUCTIONS,
+    PARTIAL_SUMMARIZE_INSTRUCTIONS,
     SCENE_OPENING_INSTRUCTIONS,
 )
 from campaignnarrator.domain.models import (
@@ -264,6 +265,24 @@ class NarratorAgent:
             return "No prior records found."
         results = self._memory_repository.retrieve_relevant(query, limit=5)
         return "\n---\n".join(results) if results else "No prior records found."
+
+    def summarize_encounter_partial(self, encounter: EncounterState) -> str:
+        """Write brief session notes for an interrupted encounter.
+
+        Uses only EncounterState so the EncounterOrchestrator can call it
+        without access to module or campaign context.
+        """
+        context = {
+            "encounter_id": encounter.encounter_id,
+            "setting": encounter.setting,
+            "public_events": list(encounter.public_events),
+            "outcome": encounter.outcome or "in_progress",
+            "note": "Encounter was interrupted before completion.",
+        }
+        return self._adapter.generate_text(
+            instructions=self._instructions(PARTIAL_SUMMARIZE_INSTRUCTIONS),
+            input_text=json.dumps(context, indent=2, sort_keys=True),
+        )
 
     def summarize_encounter(
         self,

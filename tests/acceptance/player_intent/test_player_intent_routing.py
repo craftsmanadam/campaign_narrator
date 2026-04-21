@@ -116,6 +116,9 @@ class FakeNarratorAgent:
     def review_crit_from_json(self, context_json: str) -> CritReview:
         return CritReview(approved=False, reason="Downgraded for fairness.")
 
+    def summarize_encounter_partial(self, encounter: object) -> str:
+        return "Partial summary of the interrupted encounter."
+
 
 class FakeMemoryRepository:
     """Minimal memory repository that satisfies the EncounterOrchestrator contract."""

@@ -1,0 +1,23 @@
+{
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_xxx",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"text\": \"The scarred goblin scout watches you from behind a broken wagon wheel, his blade hand twitching.\", \"scene_tone\": \"tense and foreboding\", \"introduced_npcs\": []}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 120, "completion_tokens": 50, "total_tokens": 170}
+}

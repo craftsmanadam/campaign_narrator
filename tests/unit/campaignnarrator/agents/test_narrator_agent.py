@@ -499,6 +499,46 @@ def test_summarize_encounter_includes_outcome_in_prompt() -> None:
     assert "Drowned Lady" in call_kwargs["input_text"]
 
 
+# --- summarize_encounter_partial tests ---
+
+
+def _make_in_progress_encounter() -> EncounterState:
+    return EncounterState(
+        encounter_id="goblin-camp",
+        phase=EncounterPhase.SOCIAL,
+        setting="A ruined roadside camp.",
+        actors={},
+        public_events=("The goblin scout eyed you warily.",),
+        outcome=None,
+    )
+
+
+def test_summarize_encounter_partial_returns_adapter_text() -> None:
+    narrator, _ = _make_narrator_with_memory()
+    narrator._adapter.generate_text.return_value = (
+        "The player arrived at the camp and spoke cautiously."
+    )
+    result = narrator.summarize_encounter_partial(_make_in_progress_encounter())
+    assert result == "The player arrived at the camp and spoke cautiously."
+    narrator._adapter.generate_text.assert_called_once()
+
+
+def test_summarize_encounter_partial_includes_setting_in_prompt() -> None:
+    narrator, _ = _make_narrator_with_memory()
+    narrator._adapter.generate_text.return_value = "Notes."
+    narrator.summarize_encounter_partial(_make_in_progress_encounter())
+    call_kwargs = narrator._adapter.generate_text.call_args[1]
+    assert "ruined roadside camp" in call_kwargs["input_text"]
+
+
+def test_summarize_encounter_partial_marks_outcome_as_in_progress() -> None:
+    narrator, _ = _make_narrator_with_memory()
+    narrator._adapter.generate_text.return_value = "Notes."
+    narrator.summarize_encounter_partial(_make_in_progress_encounter())
+    call_kwargs = narrator._adapter.generate_text.call_args[1]
+    assert "in_progress" in call_kwargs["input_text"]
+
+
 # --- plan_next_encounter tests ---
 
 

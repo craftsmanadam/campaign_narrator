@@ -49,9 +49,13 @@ _DAMAGED_GOBLIN_HP = 2
 class FakeMemoryRepository:
     def __init__(self) -> None:
         self.events: list[dict[str, object]] = []
+        self.narratives: list[tuple[str, dict[str, str]]] = []
 
     def append_event(self, event: Mapping[str, object]) -> None:
         self.events.append(dict(event))
+
+    def store_narrative(self, text: str, metadata: dict[str, str]) -> None:
+        self.narratives.append((text, metadata))
 
 
 class FakeRulesAgent:
@@ -82,6 +86,9 @@ class FakeNarratorAgent:
             audience="player",
             scene_tone=tone,
         )
+
+    def summarize_encounter_partial(self, encounter: object) -> str:
+        return "Partial summary of the interrupted encounter."
 
     def declare_npc_intent_from_json(self, context_json: str) -> str:
         return "The enemy advances."
@@ -1235,3 +1242,61 @@ def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
     saved = [e for e in memory.events if e.get("type") == "encounter_saved"]
     assert len(saved) == 1
     assert saved[0]["encounter_id"] == "goblin-camp"
+
+
+def test_narration_stored_to_memory_during_encounter(tmp_path: Path) -> None:
+    """Every narrate() call must store a record in the memory repository."""
+    memory = FakeMemoryRepository()
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            state=_scene_opening_repository(tmp_path),
+            memory=memory,
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(),
+            narrator=FakeNarratorAgent(),
+        ),
+        tools=OrchestratorTools(roll_dice=FakeDice([])),
+        io=ScriptedIO(["Hello there.", "exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            [_intent(IntentCategory.NPC_DIALOGUE)]
+        ),
+    )
+
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    narration_entries = [
+        m for _, m in memory.narratives if m.get("event_type") == "narration"
+    ]
+    # At minimum: scene_opening + npc_dialogue
+    min_expected = 2
+    assert len(narration_entries) >= min_expected
+    assert all(m["encounter_id"] == "goblin-camp" for m in narration_entries)
+
+
+def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
+    """save-and-quit must generate and store a partial encounter summary."""
+    memory = FakeMemoryRepository()
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            state=_scene_opening_repository(tmp_path),
+            memory=memory,
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(),
+            narrator=FakeNarratorAgent(),
+        ),
+        tools=OrchestratorTools(roll_dice=FakeDice([])),
+        io=ScriptedIO(["save and quit"]),
+        _player_intent_agent=FakePlayerIntentAgent([_intent(IntentCategory.SAVE_EXIT)]),
+    )
+
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    partial = [
+        m
+        for _, m in memory.narratives
+        if m.get("event_type") == "encounter_partial_summary"
+    ]
+    assert len(partial) == 1
+    assert partial[0]["encounter_id"] == "goblin-camp"
