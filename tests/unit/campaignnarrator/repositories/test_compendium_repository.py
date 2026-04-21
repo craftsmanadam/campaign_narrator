@@ -247,7 +247,7 @@ def test_load_feat_returns_none_for_unknown_feat(tmp_path: Path) -> None:
 
 _FEATS_PATH = _COMPENDIUM_ROOT / "character_options" / "feats.json"
 _LEVEL_0_SPELLS_PATH = _COMPENDIUM_ROOT / "spells" / "level_0.json"
-_HUMANOIDS_PATH = _COMPENDIUM_ROOT / "monsters" / "humanoids.json"
+_MONSTER_INDEX_PATH = _COMPENDIUM_ROOT / "monsters" / "index.json"
 
 
 def test_all_feats_have_reference_field_after_enrichment() -> None:
@@ -290,12 +290,13 @@ def test_acid_splash_reference_resolves_to_real_wiki_file() -> None:
     assert "Acid Splash" in text
 
 
-def test_monster_entries_have_reference_field() -> None:
-    """All humanoid monster entries must have a reference key after enrichment."""
-    payload = json.loads(_HUMANOIDS_PATH.read_text())
-    for entry in payload["monsters"]:
-        monster_id = entry.get("monster_id")
-        assert "reference" in entry, f"monster {monster_id} missing reference"
+def test_monster_entries_have_file_field() -> None:
+    """All monster index entries must have a file key pointing to the source markdown."""
+    entries = json.loads(_MONSTER_INDEX_PATH.read_text())
+    assert entries, "monster index must not be empty"
+    for entry in entries:
+        name = entry.get("name")
+        assert "file" in entry, f"monster {name!r} missing file key"
 
 
 def test_load_reference_text_returns_section_when_anchor_matches(

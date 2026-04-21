@@ -70,20 +70,7 @@ def test_data_contract_files_exist() -> None:
     required_paths = [
         Path("data/metadata/enums.json"),
         Path("data/schema/campaign.schema.json"),
-        Path("data/compendium/monsters/aberrations.json"),
-        Path("data/compendium/monsters/beasts.json"),
-        Path("data/compendium/monsters/celestials.json"),
-        Path("data/compendium/monsters/constructs.json"),
-        Path("data/compendium/monsters/dragons.json"),
-        Path("data/compendium/monsters/elementals.json"),
-        Path("data/compendium/monsters/fey.json"),
-        Path("data/compendium/monsters/fiends.json"),
-        Path("data/compendium/monsters/giants.json"),
-        Path("data/compendium/monsters/humanoids.json"),
-        Path("data/compendium/monsters/monstrosities.json"),
-        Path("data/compendium/monsters/oozes.json"),
-        Path("data/compendium/monsters/plants.json"),
-        Path("data/compendium/monsters/undead.json"),
+        Path("data/compendium/monsters/index.json"),
         Path("data/compendium/magic_items/common.json"),
         Path("data/compendium/magic_items/uncommon.json"),
         Path("data/compendium/magic_items/rare.json"),
@@ -202,20 +189,6 @@ def test_json_contract_files_are_parseable_and_have_expected_top_level_keys() ->
             "discovered_secrets",
         },
         Path("data/scenarios/test_scenarios.json"): {"scenarios"},
-        Path("data/compendium/monsters/aberrations.json"): {"monsters"},
-        Path("data/compendium/monsters/beasts.json"): {"monsters"},
-        Path("data/compendium/monsters/celestials.json"): {"monsters"},
-        Path("data/compendium/monsters/constructs.json"): {"monsters"},
-        Path("data/compendium/monsters/dragons.json"): {"monsters"},
-        Path("data/compendium/monsters/elementals.json"): {"monsters"},
-        Path("data/compendium/monsters/fey.json"): {"monsters"},
-        Path("data/compendium/monsters/fiends.json"): {"monsters"},
-        Path("data/compendium/monsters/giants.json"): {"monsters"},
-        Path("data/compendium/monsters/humanoids.json"): {"monsters"},
-        Path("data/compendium/monsters/monstrosities.json"): {"monsters"},
-        Path("data/compendium/monsters/oozes.json"): {"monsters"},
-        Path("data/compendium/monsters/plants.json"): {"monsters"},
-        Path("data/compendium/monsters/undead.json"): {"monsters"},
         Path("data/compendium/magic_items/common.json"): {"magic_items"},
         Path("data/compendium/magic_items/uncommon.json"): {"magic_items"},
         Path("data/compendium/magic_items/rare.json"): {"magic_items"},
@@ -289,22 +262,6 @@ def test_data_files_are_neutral_and_example_content_lives_in_fixtures() -> None:
 def test_live_compendium_files_match_their_wrappers() -> None:
     """Live compendium files should keep stable wrapper objects after ingestion."""
 
-    monster_paths = [
-        Path("data/compendium/monsters/aberrations.json"),
-        Path("data/compendium/monsters/beasts.json"),
-        Path("data/compendium/monsters/celestials.json"),
-        Path("data/compendium/monsters/constructs.json"),
-        Path("data/compendium/monsters/dragons.json"),
-        Path("data/compendium/monsters/elementals.json"),
-        Path("data/compendium/monsters/fey.json"),
-        Path("data/compendium/monsters/fiends.json"),
-        Path("data/compendium/monsters/giants.json"),
-        Path("data/compendium/monsters/humanoids.json"),
-        Path("data/compendium/monsters/monstrosities.json"),
-        Path("data/compendium/monsters/oozes.json"),
-        Path("data/compendium/monsters/plants.json"),
-        Path("data/compendium/monsters/undead.json"),
-    ]
     item_paths = [
         Path("data/compendium/magic_items/common.json"),
         Path("data/compendium/magic_items/uncommon.json"),
@@ -336,10 +293,6 @@ def test_live_compendium_files_match_their_wrappers() -> None:
         Path("data/compendium/spells/level_2.json"),
         Path("data/compendium/spells/level_3.json"),
     ]
-
-    for path in monster_paths:
-        parsed = json.loads(path.read_text())
-        assert isinstance(parsed["monsters"], list)
 
     for path in item_paths:
         parsed = json.loads(path.read_text())
@@ -588,23 +541,8 @@ def test_origins_species_and_feats_are_structured_for_build_resolution() -> None
 def test_first_ingested_corpus_content_exists() -> None:
     """The first SRD ingestion pass should load representative live corpus content."""
 
-    aberrations = json.loads(
-        Path("data/compendium/monsters/aberrations.json").read_text()
-    )
-    beasts = json.loads(Path("data/compendium/monsters/beasts.json").read_text())
-    celestials = json.loads(
-        Path("data/compendium/monsters/celestials.json").read_text()
-    )
-    constructs = json.loads(
-        Path("data/compendium/monsters/constructs.json").read_text()
-    )
-    dragons = json.loads(Path("data/compendium/monsters/dragons.json").read_text())
-    fey = json.loads(Path("data/compendium/monsters/fey.json").read_text())
-    fiends = json.loads(Path("data/compendium/monsters/fiends.json").read_text())
-    humanoids = json.loads(Path("data/compendium/monsters/humanoids.json").read_text())
-    oozes = json.loads(Path("data/compendium/monsters/oozes.json").read_text())
-    plants = json.loads(Path("data/compendium/monsters/plants.json").read_text())
-    undead = json.loads(Path("data/compendium/monsters/undead.json").read_text())
+    monster_index = json.loads(Path("data/compendium/monsters/index.json").read_text())
+    monster_names = {entry["name"] for entry in monster_index}
     common_items = json.loads(
         Path("data/compendium/magic_items/common.json").read_text()
     )
@@ -623,26 +561,17 @@ def test_first_ingested_corpus_content_exists() -> None:
         Path("data/compendium/spells/level_3.json").read_text()
     )
 
-    assert any(
-        monster["monster_id"] == "aboleth" for monster in aberrations["monsters"]
-    )
-    assert any(monster["monster_id"] == "wolf" for monster in beasts["monsters"])
-    assert any(monster["monster_id"] == "couatl" for monster in celestials["monsters"])
-    assert any(
-        monster["monster_id"] == "animated-armor" for monster in constructs["monsters"]
-    )
-    assert any(
-        monster["monster_id"] == "copper-dragon-wyrmling"
-        for monster in dragons["monsters"]
-    )
-    assert any(monster["monster_id"] == "dryad" for monster in fey["monsters"])
-    assert any(monster["monster_id"] == "imp" for monster in fiends["monsters"])
-    assert any(monster["monster_id"] == "bandit" for monster in humanoids["monsters"])
-    assert any(
-        monster["monster_id"] == "gelatinous-cube" for monster in oozes["monsters"]
-    )
-    assert any(monster["monster_id"] == "shrieker" for monster in plants["monsters"])
-    assert any(monster["monster_id"] == "skeleton" for monster in undead["monsters"])
+    assert "Aboleth" in monster_names
+    assert "Wolf" in monster_names
+    assert "Couatl" in monster_names
+    assert "Animated Armor (Animated Object)" in monster_names
+    assert "Copper Dragon Wyrmling (Metallic)" in monster_names
+    assert "Dryad" in monster_names
+    assert "Imp (Devil)" in monster_names
+    assert "Bandit" in monster_names
+    assert "Gelatinous Cube (Ooze)" in monster_names
+    assert "Shrieker (Fungi)" in monster_names
+    assert "Skeleton" in monster_names
     assert any(
         item["item_id"] == "potion-of-healing" for item in common_items["magic_items"]
     )

@@ -854,13 +854,17 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
 
 
 def _make_actor(
-    name: str, hp_current: int, hp_max: int, **kwargs: object
+    name: str,
+    hp_current: int,
+    hp_max: int,
+    actor_type: ActorType = ActorType.PC,
+    **kwargs: object,
 ) -> ActorState:
     """Helper to build a minimal ActorState for summary tests."""
     return ActorState(
         actor_id=f"pc:{name.lower()}",
         name=name,
-        actor_type=ActorType.PC,
+        actor_type=actor_type,
         hp_max=hp_max,
         hp_current=hp_current,
         armor_class=16,
@@ -925,6 +929,21 @@ def test_narrative_summary_no_hp_numbers() -> None:
     result = _actor_narrative_summary(actor)
     assert "15/20" not in result
     assert "AC" not in result
+
+
+def test_narrative_summary_pc_includes_player_tag() -> None:
+    actor = _make_actor("Gareth", hp_current=20, hp_max=20, actor_type=ActorType.PC)
+    result = _actor_narrative_summary(actor)
+    assert "player" in result
+    assert "Gareth" in result
+    assert "uninjured" in result
+
+
+def test_narrative_summary_npc_excludes_player_tag() -> None:
+    actor = _make_actor("Goblin", hp_current=7, hp_max=7, actor_type=ActorType.NPC)
+    result = _actor_narrative_summary(actor)
+    assert "player" not in result
+    assert "uninjured" in result
 
 
 def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
