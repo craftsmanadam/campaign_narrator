@@ -154,5 +154,12 @@ PLAYER_INTENT_INSTRUCTIONS: str = (
     "category is skill_check. It must be null for all other categories. "
     "Example skill names: Stealth, Athletics, Persuasion, Investigation, Arcana.\n\n"
     "reason: One sentence used for logging only — never shown to the player.\n\n"
-    "Return only the structured PlayerIntent output. Do not narrate or resolve rules."
+    "OUTPUT FORMAT:\n"
+    "Return exactly three fields: category, check_hint, reason.\n"
+    "Do NOT include any other fields. Do NOT echo back phase, actor_summaries, "
+    "recent_events, setting, player_input, or any other input fields.\n"
+    "Do NOT use 'phase' as a field name — the output field is 'category'.\n"
+    "Do NOT nest the skill name inside a sub-object — set check_hint directly "
+    'to the skill name string (e.g. check_hint: "Intimidation"), or null.\n'
+    "Do not narrate or resolve rules."
 )

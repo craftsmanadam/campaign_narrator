@@ -9,7 +9,7 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class EncounterPhase(StrEnum):
@@ -618,6 +618,27 @@ class PlayerIntent(BaseModel):
     category: IntentCategory
     check_hint: str | None = None
     reason: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalise_ollama_drift(cls, data: object) -> object:
+        """Remap field names that local LLMs use instead of the schema fields.
+
+        Ollama models sometimes return the input context echoed back with
+        ``phase`` instead of ``category``, and embed the skill name inside
+        ``skill_check_parameters.skill`` instead of ``check_hint``.
+        """
+        if not isinstance(data, dict):
+            return data
+        # Map 'phase' → 'category' when 'category' is absent.
+        if "category" not in data and "phase" in data:
+            data = {**data, "category": data["phase"]}
+        # Extract nested skill name → check_hint when check_hint is absent.
+        if "check_hint" not in data:
+            params = data.get("skill_check_parameters")
+            if isinstance(params, dict) and "skill" in params:
+                data = {**data, "check_hint": params["skill"]}
+        return data
 
 
 __all__ = [
