@@ -34,6 +34,21 @@
     "source/adjudication/advantage_disadvantage.md",
     "source/adjudication/proficiency.md"
   ],
+  "skill_check": [
+    "source/adjudication/d20_tests.md",
+    "source/adjudication/ability_checks.md",
+    "source/adjudication/proficiency.md"
+  ],
+  "attack_resolution": [
+    "source/adjudication/d20_tests.md",
+    "source/adjudication/attack_rolls.md",
+    "source/adjudication/proficiency.md"
+  ],
+  "saving_throw": [
+    "source/adjudication/d20_tests.md",
+    "source/adjudication/saving_throws.md",
+    "source/adjudication/proficiency.md"
+  ],
   "combat": [
     "source/adjudication/combat_flow.md",
     "source/adjudication/actions.md",

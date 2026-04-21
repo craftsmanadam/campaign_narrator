@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"next_step\":\"adjudicate_action\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Deception\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia calls out a merchant cover story.\"}"
+          "arguments": "{\"category\": \"skill_check\", \"check_hint\": \"Deception\", \"reason\": \"Talia calls out a merchant cover story.\"}"
         }
       }]
     },

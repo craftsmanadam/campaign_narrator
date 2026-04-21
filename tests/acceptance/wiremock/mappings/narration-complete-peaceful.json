@@ -4,8 +4,8 @@
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"complete_encounter\""}},
-      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "peaceful"}}
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"npc_dialogue\""}},
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "Hello there"}}
     ]
   },
   "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-complete-peaceful-response.json"}

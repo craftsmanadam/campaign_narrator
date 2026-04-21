@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"next_step\":\"adjudicate_action\",\"next_actor\":null,\"requires_rules_resolution\":true,\"recommended_check\":\"Persuasion check\",\"phase_transition\":null,\"player_prompt\":null,\"reason_summary\":\"Talia offers a calm way for both sides to walk away.\"}"
+          "arguments": "{\"category\": \"skill_check\", \"check_hint\": \"Persuasion\", \"reason\": \"Talia offers a calm way for both sides to walk away.\"}"
         }
       }]
     },

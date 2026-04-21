@@ -5,10 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
-from campaignnarrator.agents.character_interpreter_agent import (
-    CharacterIntake,
-    CharacterInterpreterAgent,
-)
 from campaignnarrator.domain.models import ActorState, PlayerIO
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.character_template_repository import (
@@ -33,7 +29,6 @@ class CharacterCreationRepositories:
 class CharacterCreationAgents:
     """All agents required by CharacterCreationOrchestrator."""
 
-    class_interpreter: CharacterInterpreterAgent
     backstory: BackstoryAgent
 
 
@@ -53,11 +48,10 @@ class CharacterCreationOrchestrator:
 
     def run(self) -> ActorState:
         """Walk through all creation steps and return the saved ActorState."""
-        intake = self._choose_class()
-        class_name = intake.class_name
+        class_name = self._choose_class()
         template = self._repos.template.load(class_name)
-        name = intake.name or self._choose_name()
-        race = intake.race or self._choose_race()
+        name = self._choose_name()
+        race = self._choose_race()
         background = self._choose_background(
             character_name=name, race=race, class_name=class_name
         )
@@ -86,13 +80,19 @@ class CharacterCreationOrchestrator:
 
         return actor
 
-    def _choose_class(self) -> CharacterIntake:
-        self._io.display(
-            "\nBefore your story begins, tell me — are you a warrior who meets "
-            "challenges head-on, or a shadow who moves unseen?\n"
-        )
-        raw = self._io.prompt("> ").strip()
-        return self._agents.class_interpreter.interpret(raw)
+    def _choose_class(self) -> str:
+        classes = list(self._repos.template.available_classes())
+        menu = "\n".join(f"  {i + 1}. {name}" for i, name in enumerate(classes))
+        self._io.display(f"\nPlease choose a class:\n{menu}\n")
+        while True:
+            raw = self._io.prompt("> ").strip().lower()
+            if raw.isdigit():
+                idx = int(raw) - 1
+                if 0 <= idx < len(classes):
+                    return classes[idx]
+            elif raw in classes:
+                return raw
+            self._io.display("Invalid choice, please try again.\n")
 
     def _choose_name(self) -> str:
         self._io.display("\nWhat are you called?\n")

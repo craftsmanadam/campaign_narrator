@@ -435,20 +435,6 @@ class NextEncounterPlan(BaseModel):
     milestone_achieved: bool
 
 
-class OrchestrationDecision(BaseModel):
-    """Structured output from the orchestrator."""
-
-    model_config = ConfigDict(frozen=True)
-
-    next_step: str
-    next_actor: str | None = None
-    requires_rules_resolution: bool
-    recommended_check: str | None = None
-    phase_transition: str | None = None
-    player_prompt: str | None = None
-    reason_summary: str
-
-
 class RollRequest(BaseModel):
     """An explicit request for a dice roll."""
 
@@ -611,6 +597,29 @@ class CombatIntent(BaseModel):
     intent: Literal["end_turn", "query_status", "exit_session", "combat_action"]
 
 
+class IntentCategory(StrEnum):
+    """Player intent categories used by PlayerIntentAgent."""
+
+    HOSTILE_ACTION = "hostile_action"
+    SKILL_CHECK = "skill_check"
+    NPC_DIALOGUE = "npc_dialogue"
+    SCENE_OBSERVATION = "scene_observation"
+    SAVE_EXIT = "save_exit"
+    STATUS = "status"
+    RECAP = "recap"
+    LOOK_AROUND = "look_around"
+
+
+class PlayerIntent(BaseModel):
+    """Structured output from PlayerIntentAgent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    category: IntentCategory
+    check_hint: str | None = None
+    reason: str = ""
+
+
 __all__ = [
     "Action",
     "ActorState",
@@ -629,6 +638,7 @@ __all__ = [
     "FeatState",
     "GameState",
     "InitiativeTurn",
+    "IntentCategory",
     "InventoryItem",
     "Milestone",
     "ModuleState",
@@ -637,9 +647,9 @@ __all__ = [
     "NextEncounterPlan",
     "NpcPresence",
     "NpcPresenceResult",
-    "OrchestrationDecision",
     "PlayerIO",
     "PlayerInput",
+    "PlayerIntent",
     "RecoveryPeriod",
     "ResourceState",
     "RollRequest",

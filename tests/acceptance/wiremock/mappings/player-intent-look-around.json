@@ -1,12 +1,12 @@
 {
-  "priority": 5,
+  "priority": 50,
   "request": {
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
       {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "Classify the player's input into exactly one IntentCategory"}},
-      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "merchant"}}
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "look around"}}
     ]
   },
-  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "decision-rogue-deception-response.json"}
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "player-intent-look-around-response.json"}
 }

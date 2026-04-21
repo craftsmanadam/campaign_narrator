@@ -55,7 +55,8 @@ def _compendium_context(input_text: str) -> list[str]:
     return json.loads(input_text)["compendium_context"]
 
 
-def test_social_phase_adjudication_includes_social_interaction_rules() -> None:
+def test_unrecognized_hint_falls_back_to_social_interaction() -> None:
+    """An unrecognized hint (not a D&D 5e skill name) loads social_interaction rules."""
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
@@ -79,7 +80,8 @@ def test_social_phase_adjudication_includes_social_interaction_rules() -> None:
     assert any(social_rules in entry for entry in rules_context)
 
 
-def test_social_phase_adjudication_includes_core_resolution_rules() -> None:
+def test_recognized_skill_hint_loads_skill_check_topic_files() -> None:
+    """An exact D&D 5e skill name loads ability_checks.md via the skill_check topic."""
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
@@ -88,21 +90,23 @@ def test_social_phase_adjudication_includes_core_resolution_rules() -> None:
     )
     request = RulesAdjudicationRequest(
         actor_id="pc:talia",
-        intent="I raise my hand and ask them to stand down.",
+        intent="I appeal to the goblin's better nature.",
         phase=EncounterPhase.SOCIAL,
         allowed_outcomes=("de-escalated", "combat"),
+        check_hints=("Persuasion",),
     )
 
     agent.adjudicate(request)
 
     rules_context = _rules_context(capturing.captured_inputs[0])
-    core_rules = (
-        _DATA_RULES_ROOT / "source" / "adjudication" / "core_resolution.md"
+    ability_checks_rules = (
+        _DATA_RULES_ROOT / "source" / "adjudication" / "ability_checks.md"
     ).read_text()
-    assert any(core_rules in entry for entry in rules_context)
+    assert any(ability_checks_rules in entry for entry in rules_context)
 
 
-def test_combat_phase_adjudication_includes_combat_rules() -> None:
+def test_combat_phase_adjudication_includes_attack_resolution_rules() -> None:
+    """phase=COMBAT with no check_hint loads attack_rolls.md via attack_resolution topic."""
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
@@ -119,33 +123,10 @@ def test_combat_phase_adjudication_includes_combat_rules() -> None:
     agent.adjudicate(request)
 
     rules_context = _rules_context(capturing.captured_inputs[0])
-    combat_rules = (
-        _DATA_RULES_ROOT / "source" / "adjudication" / "combat_flow.md"
+    attack_rules = (
+        _DATA_RULES_ROOT / "source" / "adjudication" / "attack_rolls.md"
     ).read_text()
-    assert any(combat_rules in entry for entry in rules_context)
-
-
-def test_combat_phase_adjudication_includes_core_resolution_rules() -> None:
-    capturing = _make_capturing_agent()
-    agent = RulesAgent(
-        adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
-        _agent=capturing,
-    )
-    request = RulesAdjudicationRequest(
-        actor_id="pc:talia",
-        intent="I attack the goblin with my longsword.",
-        phase=EncounterPhase.COMBAT,
-        allowed_outcomes=("hit", "miss", "damage"),
-    )
-
-    agent.adjudicate(request)
-
-    rules_context = _rules_context(capturing.captured_inputs[0])
-    core_rules = (
-        _DATA_RULES_ROOT / "source" / "adjudication" / "core_resolution.md"
-    ).read_text()
-    assert any(core_rules in entry for entry in rules_context)
+    assert any(attack_rules in entry for entry in rules_context)
 
 
 def test_check_hint_preserves_orchestrator_recommended_check() -> None:
@@ -230,6 +211,10 @@ def test_stealth_hint_includes_hiding_rules_in_prompt() -> None:
         _DATA_RULES_ROOT / "source" / "adjudication" / "hiding.md"
     ).read_text()
     assert any(hiding_rules in entry for entry in rules_context)
+    ability_checks_rules = (
+        _DATA_RULES_ROOT / "source" / "adjudication" / "ability_checks.md"
+    ).read_text()
+    assert any(ability_checks_rules in entry for entry in rules_context)
     compendium_ctx = _compendium_context(input_text)
     assert any(rogue_text[:100] in entry for entry in compendium_ctx)
 

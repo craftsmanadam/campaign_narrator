@@ -1,6 +1,6 @@
 {
   "scenarioName": "startup-s1",
-  "requiredScenarioState": "S1-02",
+  "requiredScenarioState": "Started",
   "newScenarioState": "S1-03",
   "priority": 10,
   "request": {

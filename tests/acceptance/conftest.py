@@ -232,6 +232,35 @@ def configure_openai_api_for_scenario_with_encounter(
     return {"scenario_name": scenario_name, "encounter_id": encounter_id}
 
 
+@given(
+    # The negative lookahead (?!.*\bon encounter\b) prevents this step from
+    # matching any step text that contains "on encounter", which would otherwise
+    # create an ambiguous match with configure_openai_api_for_scenario_with_encounter
+    # above. If you add new scenario names containing "on encounter", use the
+    # encounter-specific step instead.
+    parsers.re(
+        r"the OpenAI API is configured for (?P<scenario_name>(?!.*\bon encounter\b).+)"
+    ),
+    target_fixture="encounter_config",
+)
+def configure_openai_api_for_scenario(
+    scenario_name: str,
+    request: pytest.FixtureRequest,
+    wiremock_stack: None,
+) -> dict[str, str]:
+    """Start the acceptance stack and deactivate all scenario-based WireMock stubs.
+
+    Encounter-loop tests that do not exercise a named combat scenario must advance
+    all scenario stubs to their terminal states.  Otherwise the combat-s* stubs
+    (which match on the PLAYER_INTENT_INSTRUCTIONS system prompt) will shadow the
+    decision-* stubs during the first player-intent classification call.
+    """
+    request.node._encounter_scenario_name = scenario_name
+    env: dict[str, str] = request.getfixturevalue("compose_environment")
+    _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), "")
+    return {"scenario_name": scenario_name, "encounter_id": "goblin-camp"}
+
+
 @when(
     "the player runs the encounter with scripted input:",
     target_fixture="cli_result",

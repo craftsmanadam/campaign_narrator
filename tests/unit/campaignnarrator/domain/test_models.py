@@ -24,6 +24,7 @@ from campaignnarrator.domain.models import (
     FeatState,
     GameState,
     InitiativeTurn,
+    IntentCategory,
     InventoryItem,
     Milestone,
     ModuleState,
@@ -32,8 +33,8 @@ from campaignnarrator.domain.models import (
     NextEncounterPlan,
     NpcPresence,
     NpcPresenceResult,
-    OrchestrationDecision,
     PlayerInput,
+    PlayerIntent,
     PlayerIO,
     RecoveryPeriod,
     ResourceState,
@@ -136,28 +137,6 @@ def test_encounter_state_tracks_public_and_hidden_state() -> None:
     assert state.hidden_facts["alarm_level"] == "high"
     assert state.public_events == ("Talia approaches the camp.",)
     assert state.visible_actor_names() == ("Talia", "Goblin Scout")
-
-
-def test_orchestration_decision_is_structured() -> None:
-    """Orchestration decisions should expose the generic control fields."""
-
-    decision = OrchestrationDecision(
-        next_step="request_check",
-        next_actor="npc:goblin-scout",
-        requires_rules_resolution=True,
-        recommended_check="persuasion",
-        phase_transition="rules_resolution",
-        player_prompt="What do you say to the scout?",
-        reason_summary="The scout is open to negotiation.",
-    )
-
-    assert decision.next_step == "request_check"
-    assert decision.next_actor == "npc:goblin-scout"
-    assert decision.requires_rules_resolution is True
-    assert decision.recommended_check == "persuasion"
-    assert decision.phase_transition == "rules_resolution"
-    assert decision.player_prompt == "What do you say to the scout?"
-    assert decision.reason_summary == "The scout is open to negotiation."
 
 
 def test_roll_visibility_values_are_public_and_hidden() -> None:
@@ -1110,20 +1089,6 @@ def test_scene_opening_response_stores_text_and_tone() -> None:
     assert r.scene_tone == "eerie and quiet"
 
 
-def test_orchestration_decision_stores_fields() -> None:
-    d = OrchestrationDecision(
-        next_step="adjudicate_action",
-        next_actor=None,
-        requires_rules_resolution=True,
-        recommended_check="Persuasion",
-        phase_transition=None,
-        player_prompt=None,
-        reason_summary="Player attempts to reason with the goblins.",
-    )
-    assert d.next_step == "adjudicate_action"
-    assert d.requires_rules_resolution is True
-
-
 # ---------------------------------------------------------------------------
 # CombatOutcome, CombatAssessment, CritReview
 # ---------------------------------------------------------------------------
@@ -1697,3 +1662,42 @@ def test_roll_request_normalizes_spaces_and_bare_tokens_together() -> None:
         expression="1d20 + wisdom_mod",
     )
     assert req.expression == "1d20+{wisdom_mod}"
+
+
+# ---------------------------------------------------------------------------
+# IntentCategory and PlayerIntent
+# ---------------------------------------------------------------------------
+
+
+def test_intent_category_has_all_required_values() -> None:
+    assert IntentCategory.HOSTILE_ACTION == "hostile_action"
+    assert IntentCategory.SKILL_CHECK == "skill_check"
+    assert IntentCategory.NPC_DIALOGUE == "npc_dialogue"
+    assert IntentCategory.SCENE_OBSERVATION == "scene_observation"
+    assert IntentCategory.SAVE_EXIT == "save_exit"
+    assert IntentCategory.STATUS == "status"
+    assert IntentCategory.RECAP == "recap"
+    assert IntentCategory.LOOK_AROUND == "look_around"
+
+
+def test_player_intent_requires_category() -> None:
+    intent = PlayerIntent(category=IntentCategory.SCENE_OBSERVATION)
+    assert intent.category is IntentCategory.SCENE_OBSERVATION
+    assert intent.check_hint is None
+    assert intent.reason == ""
+
+
+def test_player_intent_check_hint_is_optional() -> None:
+    intent = PlayerIntent(
+        category=IntentCategory.SKILL_CHECK,
+        check_hint="Stealth",
+        reason="Player wants to sneak",
+    )
+    assert intent.check_hint == "Stealth"
+    assert intent.reason == "Player wants to sneak"
+
+
+def test_player_intent_is_immutable() -> None:
+    intent = PlayerIntent(category=IntentCategory.HOSTILE_ACTION)
+    with pytest.raises(ValidationError):
+        intent.category = IntentCategory.SCENE_OBSERVATION  # type: ignore[misc]

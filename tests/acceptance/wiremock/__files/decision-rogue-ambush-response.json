@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"next_step\":\"enter_combat\",\"next_actor\":null,\"requires_rules_resolution\":false,\"recommended_check\":null,\"phase_transition\":\"combat\",\"player_prompt\":null,\"reason_summary\":\"Talia circles into position for an ambush.\"}"
+          "arguments": "{\"category\": \"hostile_action\", \"check_hint\": null, \"reason\": \"Talia circles into position for an ambush.\"}"
         }
       }]
     },

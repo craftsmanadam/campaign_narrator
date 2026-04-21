@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import replace
 from unittest.mock import MagicMock
 
-from campaignnarrator.agents.character_interpreter_agent import CharacterIntake
 from campaignnarrator.orchestrators.character_creation_orchestrator import (
     CharacterCreationAgents,
     CharacterCreationOrchestrator,
@@ -33,22 +32,20 @@ def _make_io(inputs: list[str]) -> MagicMock:
 def _make_orchestrator(
     inputs: list[str],
     *,
-    intake: CharacterIntake | None = None,
     backstory_draft: str = "You served the king.",
+    available_classes: list[str] | None = None,
 ) -> tuple[CharacterCreationOrchestrator, MagicMock, MagicMock]:
     io = _make_io(inputs)
     mock_actor_repo = MagicMock()
     mock_template_repo = MagicMock()
     mock_memory_repo = MagicMock(spec=MemoryRepository)
-    mock_class_agent = MagicMock()
     mock_backstory_agent = MagicMock()
 
-    # Fighter template stub: name="" and no race/description/background
     mock_template_repo.load.return_value = replace(
         TALIA, name="", race=None, description=None, background=None
     )
-    mock_class_agent.interpret.return_value = (
-        intake if intake is not None else CharacterIntake(class_name="fighter")
+    mock_template_repo.available_classes.return_value = (
+        available_classes if available_classes is not None else ["fighter", "rogue"]
     )
     mock_backstory_agent.draft.return_value = backstory_draft
 
@@ -57,22 +54,19 @@ def _make_orchestrator(
         template=mock_template_repo,
         memory=mock_memory_repo,
     )
-    agents = CharacterCreationAgents(
-        class_interpreter=mock_class_agent,
-        backstory=mock_backstory_agent,
-    )
+    agents = CharacterCreationAgents(backstory=mock_backstory_agent)
     orch = CharacterCreationOrchestrator(io=io, repositories=repos, agents=agents)
     return orch, mock_actor_repo, mock_memory_repo
 
 
 def test_run_saves_actor_with_name_race_background() -> None:
-    """Happy path: player provides all inputs without requesting backstory help."""
+    """Happy path: player selects class by number, provides all inputs."""
     orch, mock_repo, _ = _make_orchestrator(
         inputs=[
-            "I want to be a warrior",  # class choice
+            "1",  # selects fighter (first in menu)
             "Aldric",  # name
             "Human",  # race
-            "I served the king's guard for six years.",  # backstory (no help request)
+            "I served the king's guard for six years.",  # backstory
             "Tall with brown hair and a soldier's bearing.",  # description
         ]
     )
@@ -89,7 +83,7 @@ def test_run_uses_backstory_agent_when_player_requests_help() -> None:
     """When player says 'help', BackstoryAgent drafts the backstory."""
     orch, _, __ = _make_orchestrator(
         inputs=[
-            "fighter",  # class choice
+            "1",  # selects fighter
             "Aldric",  # name
             "Human",  # race
             "help me write a backstory",  # triggers backstory agent
@@ -102,56 +96,9 @@ def test_run_uses_backstory_agent_when_player_requests_help() -> None:
     assert actor.background == "You served the king."
 
 
-def test_run_skips_name_prompt_when_already_extracted() -> None:
-    """When the intake includes a name, the name prompt is not shown."""
-    orch, _, __ = _make_orchestrator(
-        inputs=[
-            "I am Gareth, a warrior.",  # class choice text
-            "Human",  # race still prompted
-            "I saved my village.",  # backstory
-            "Stocky with a farmer's tan.",  # description
-        ],
-        intake=CharacterIntake(class_name="fighter", name="Gareth of Halsforth"),
-    )
-    actor = orch.run()
-    assert actor.name == "Gareth of Halsforth"
-
-
-def test_run_skips_race_prompt_when_already_extracted() -> None:
-    """When the intake includes a race, the race prompt is not shown."""
-    orch, _, __ = _make_orchestrator(
-        inputs=[
-            "I'm a human fighter.",  # class choice text
-            "Aldric",  # name still prompted
-            "I served the guard.",  # backstory
-            "Average height, clean-shaven.",  # description
-        ],
-        intake=CharacterIntake(class_name="fighter", race="Human"),
-    )
-    actor = orch.run()
-    assert actor.race == "Human"
-
-
-def test_run_skips_both_name_and_race_when_fully_extracted() -> None:
-    """When intake has name and race, only backstory and description are prompted."""
-    orch, _, __ = _make_orchestrator(
-        inputs=[
-            "I am Gareth of Halsforth, a human warrior.",  # class choice text
-            "I saved my village from bandits.",  # backstory
-            "Broad and weathered.",  # description
-        ],
-        intake=CharacterIntake(
-            class_name="fighter", name="Gareth of Halsforth", race="Human"
-        ),
-    )
-    actor = orch.run()
-    assert actor.name == "Gareth of Halsforth"
-    assert actor.race == "Human"
-
-
 def test_run_assigns_actor_id_pc_player() -> None:
     orch, _, __ = _make_orchestrator(
-        inputs=["fighter", "Aldric", "Human", "A former soldier.", "Tall with a scar."]
+        inputs=["1", "Aldric", "Human", "A former soldier.", "Tall with a scar."]
     )
     actor = orch.run()
     assert actor.actor_id == "pc:player"
@@ -159,7 +106,7 @@ def test_run_assigns_actor_id_pc_player() -> None:
 
 def test_run_sets_description_when_provided() -> None:
     orch, _, __ = _make_orchestrator(
-        inputs=["fighter", "Aldric", "Human", "A former soldier.", "Tall with a scar."]
+        inputs=["1", "Aldric", "Human", "A former soldier.", "Tall with a scar."]
     )
     actor = orch.run()
     assert actor.description == "Tall with a scar."
@@ -169,7 +116,7 @@ def test_run_backstory_revision_loop() -> None:
     """Rejected backstory draft becomes new fragments for the next revision."""
     orch, _mock_repo, _ = _make_orchestrator(
         inputs=[
-            "fighter",  # class choice
+            "1",  # selects fighter
             "Aldric",  # name
             "Human",  # race
             "help",  # triggers backstory agent
@@ -187,46 +134,71 @@ def test_description_reprompts_on_blank_and_accepts_second_attempt() -> None:
     """_choose_description must loop until the player provides a non-blank value."""
     io = MagicMock()
     io.prompt.side_effect = [
-        "fighter",  # class choice
+        "1",  # class menu selection
         "Aldric",  # name
         "Human",  # race
     ]
     io.prompt_multiline.side_effect = [
-        "",  # first attempt — blank, should re-prompt
-        "Tall with a scar.",  # second attempt — accepted
+        "I served the guard.",  # backstory
+        "",  # first description attempt — blank
+        "Tall with a scar.",  # second description attempt — accepted
     ]
 
     mock_actor_repo = MagicMock()
     mock_template_repo = MagicMock()
     mock_memory_repo = MagicMock()
-    mock_class_agent = MagicMock()
     mock_backstory_agent = MagicMock()
 
     mock_template_repo.load.return_value = replace(
         TALIA, name="", race=None, description=None, background=None
     )
-    mock_class_agent.interpret.return_value = CharacterIntake(class_name="fighter")
+    mock_template_repo.available_classes.return_value = ["fighter", "rogue"]
 
     repos = CharacterCreationRepositories(
         actor=mock_actor_repo,
         template=mock_template_repo,
         memory=mock_memory_repo,
     )
-    agents = CharacterCreationAgents(
-        class_interpreter=mock_class_agent,
-        backstory=mock_backstory_agent,
-    )
+    agents = CharacterCreationAgents(backstory=mock_backstory_agent)
     orch = CharacterCreationOrchestrator(io=io, repositories=repos, agents=agents)
     actor = orch.run()
 
-    expected_calls = 2  # blank attempt then real value
-    assert io.prompt_multiline.call_count == expected_calls
+    expected_multiline_calls = 3  # backstory + blank attempt + accepted value
+    assert io.prompt_multiline.call_count == expected_multiline_calls
     assert actor.description == "Tall with a scar."
+
+
+def test_choose_class_by_name_selects_correct_class() -> None:
+    """Player can type the class name directly instead of a number."""
+    orch, _, __ = _make_orchestrator(
+        inputs=["rogue", "Aldric", "Human", "A thief.", "Wiry and quick."],
+        available_classes=["fighter", "rogue"],
+    )
+    actor = orch.run()
+    assert actor.actor_id == "pc:player"
+
+
+def test_choose_class_reprompts_on_invalid_input() -> None:
+    """Invalid class input causes reprompt; valid number on retry proceeds."""
+    orch, _, __ = _make_orchestrator(
+        inputs=[
+            "9",  # out of range — reprompt
+            "wizard",  # not in available classes — reprompt
+            "1",  # valid: selects fighter
+            "Aldric",
+            "Human",
+            "A soldier.",
+            "Tall.",
+        ],
+        available_classes=["fighter", "rogue"],
+    )
+    actor = orch.run()
+    assert actor.actor_id == "pc:player"
 
 
 def test_grouped_run_saves_actor() -> None:
     orch, mock_actor_repo, _ = _make_orchestrator(
-        ["fighter", "Aldric", "Human", "Soldier background.", "Tall and scarred."]
+        ["1", "Aldric", "Human", "Soldier background.", "Tall and scarred."]
     )
     orch.run()
     mock_actor_repo.save.assert_called_once()
@@ -234,7 +206,7 @@ def test_grouped_run_saves_actor() -> None:
 
 def test_grouped_run_stores_player_background_in_memory() -> None:
     orch, _, mock_memory_repo = _make_orchestrator(
-        ["fighter", "Aldric", "Human", "Soldier background.", "Tall and scarred."]
+        ["1", "Aldric", "Human", "Soldier background.", "Tall and scarred."]
     )
     orch.run()
     mock_memory_repo.store_narrative.assert_called_once()

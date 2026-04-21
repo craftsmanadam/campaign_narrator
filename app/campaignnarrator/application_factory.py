@@ -15,9 +15,6 @@ from campaignnarrator.adapters.embedding_adapter import (
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
 from campaignnarrator.agents.campaign_generator_agent import CampaignGeneratorAgent
-from campaignnarrator.agents.character_interpreter_agent import (
-    CharacterInterpreterAgent,
-)
 from campaignnarrator.agents.module_generator_agent import ModuleGeneratorAgent
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.prompts import NARRATOR_PERSONALITY
@@ -95,7 +92,6 @@ class _Agents:
     rules: RulesAgent
     narrator: NarratorAgent
     startup_interpreter: StartupInterpreterAgent
-    class_interpreter: CharacterInterpreterAgent
     backstory: BackstoryAgent
     campaign_generator: CampaignGeneratorAgent
     module_generator: ModuleGeneratorAgent
@@ -219,7 +215,6 @@ class ApplicationFactory:
                 memory_repository=repos.memory,
             ),
             startup_interpreter=StartupInterpreterAgent(adapter=adapter),
-            class_interpreter=CharacterInterpreterAgent(adapter=adapter),
             backstory=BackstoryAgent(adapter=adapter),
             campaign_generator=CampaignGeneratorAgent(adapter=adapter),
             module_generator=ModuleGeneratorAgent(adapter=adapter),
@@ -293,7 +288,6 @@ class ApplicationFactory:
                 memory=repos.memory,
             ),
             agents=CharacterCreationAgents(
-                class_interpreter=agents.class_interpreter,
                 backstory=agents.backstory,
             ),
         )

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from campaignnarrator.domain.models import (
@@ -19,9 +18,10 @@ from campaignnarrator.domain.models import (
     EncounterPhase,
     EncounterState,
     InitiativeTurn,
+    IntentCategory,
     Narration,
     NarrationFrame,
-    OrchestrationDecision,
+    PlayerIntent,
     RollRequest,
     RollVisibility,
     RulesAdjudication,
@@ -33,7 +33,6 @@ from campaignnarrator.orchestrators.actor_summaries import (
 )
 from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
-    EncounterRunResult,
     OrchestratorAgents,
     OrchestratorRepositories,
     OrchestratorTools,
@@ -110,18 +109,32 @@ class FakeDice:
         return self.totals.pop(0)
 
 
-def _decision(next_step: str, **overrides: object) -> OrchestrationDecision:
-    fields: dict[str, object] = {
-        "next_step": next_step,
-        "next_actor": None,
-        "requires_rules_resolution": False,
-        "recommended_check": None,
-        "phase_transition": None,
-        "player_prompt": None,
-        "reason_summary": "test decision",
-    }
-    fields.update(overrides)
-    return OrchestrationDecision(**fields)
+class FakePlayerIntentAgent:
+    """PlayerIntentAgent stub that returns scripted intents in sequence."""
+
+    def __init__(self, intents: list[PlayerIntent] | None = None) -> None:
+        self._intents = list(intents or [])
+        self.calls: list[str] = []
+
+    def classify(
+        self,
+        raw_text: str,
+        *,
+        phase: EncounterPhase,
+        setting: str,
+        recent_events: tuple[str, ...],
+        actor_summaries: tuple[str, ...],
+    ) -> PlayerIntent:
+        self.calls.append(raw_text)
+        if self._intents:
+            return self._intents.pop(0)
+        return PlayerIntent(category=IntentCategory.SAVE_EXIT, reason="exhausted")
+
+
+def _intent(category: IntentCategory, **kwargs: object) -> PlayerIntent:
+    fields: dict[str, object] = {"category": category}
+    fields.update(kwargs)
+    return PlayerIntent(**fields)
 
 
 def _default_player() -> ActorState:
@@ -234,28 +247,6 @@ def _combat_repository(tmp_path: Path, goblin_hp: int = 0) -> StateRepository:
     return StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
 
 
-def _mock_decision_agent(
-    decisions: list[OrchestrationDecision] | None = None,
-) -> MagicMock:
-    mock_agent = MagicMock()
-    decision_queue = list(decisions or [])
-
-    def _run_sync(input_json: str) -> MagicMock:
-        result = MagicMock()
-        if decision_queue:
-            result.output = decision_queue.pop(0)
-        else:
-            result.output = OrchestrationDecision(
-                next_step="narrate_scene",
-                requires_rules_resolution=False,
-                reason_summary="default",
-            )
-        return result
-
-    mock_agent.run_sync.side_effect = _run_sync
-    return mock_agent
-
-
 def _mock_combat_intent_agent(
     intents: list[str] | None = None,
 ) -> MagicMock:
@@ -277,7 +268,7 @@ def _orchestrator(  # noqa: PLR0913
     tmp_path: Path,
     *,
     state_repository: StateRepository | None = None,
-    decisions: list[OrchestrationDecision] | None = None,
+    intents: list[PlayerIntent] | None = None,
     rules_agent: FakeRulesAgent | None = None,
     narrator_agent: FakeNarratorAgent | None = None,
     roll_dice: FakeDice | None = None,
@@ -294,7 +285,7 @@ def _orchestrator(  # noqa: PLR0913
         ),
         tools=OrchestratorTools(roll_dice=roll_dice or FakeDice([])),
         io=io or ScriptedIO([], on_exhaust="exit"),
-        _decision_agent=_mock_decision_agent(decisions),
+        _player_intent_agent=FakePlayerIntentAgent(intents),
         _combat_intent_agent=_mock_combat_intent_agent(combat_intents),
     )
 
@@ -302,40 +293,46 @@ def _orchestrator(  # noqa: PLR0913
 def test_run_encounter_returns_peaceful_output_status_and_recap(
     tmp_path: Path,
 ) -> None:
-    # Utility commands (status, what happened) are available both before and after
-    # the encounter-ending action.  The loop uses `continue` (not `break`) after
-    # phase=ENCOUNTER_COMPLETE, so input ordering is not constrained here.
-    rules_agent = FakeRulesAgent()
+    rules_agent = FakeRulesAgent(
+        [
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="The offer of peace works.",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(
+                        effect_type="set_encounter_outcome",
+                        target="encounter:goblin-camp",
+                        value="peaceful",
+                    ),
+                ),
+                reasoning_summary="The check succeeds.",
+            )
+        ]
+    )
     narrator_agent = FakeNarratorAgent()
     orchestrator = _orchestrator(
         tmp_path,
-        decisions=[
-            _decision(
-                "complete_encounter",
-                reason_summary="The offer of peace works.",
-            )
+        state_repository=_social_repository(tmp_path),
+        intents=[
+            _intent(IntentCategory.STATUS),
+            _intent(IntentCategory.RECAP),
+            _intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion"),
         ],
         rules_agent=rules_agent,
         narrator_agent=narrator_agent,
-        io=ScriptedIO(
-            ["status", "what happened", "Hello there. I do not want trouble."],
-        ),
+        io=ScriptedIO(["status", "what happened", "Hello, I do not want trouble."]),
     )
 
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    assert result == EncounterRunResult(
-        encounter_id="goblin-camp",
-        output_text=result.output_text,
-        completed=True,
-    )
-    assert "complete_encounter: peaceful" in result.output_text
+    assert "social_resolution:" in result.output_text
     assert "status_response:" in result.output_text
     assert "recap_response:" in result.output_text
     state = orchestrator.current_state()
     assert state is not None
     assert state.outcome == "peaceful"
-    assert rules_agent.requests == []
 
 
 def test_status_routes_to_status_frame_without_rules_adjudication(
@@ -346,6 +343,7 @@ def test_status_routes_to_status_frame_without_rules_adjudication(
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
+        intents=[_intent(IntentCategory.STATUS)],
         rules_agent=rules_agent,
         narrator_agent=narrator_agent,
         io=ScriptedIO(["status", "exit"]),
@@ -370,6 +368,7 @@ def test_empty_input_is_ignored_and_look_around_routes_to_visible_scene(
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
+        intents=[_intent(IntentCategory.LOOK_AROUND)],
         rules_agent=rules_agent,
         narrator_agent=narrator_agent,
         io=ScriptedIO(["", "   ", "look around", "exit"]),
@@ -384,30 +383,6 @@ def test_empty_input_is_ignored_and_look_around_routes_to_visible_scene(
         "setting",
         "visible actors",
     )
-
-
-def test_friendly_social_input_can_complete_peacefully_through_decision(
-    tmp_path: Path,
-) -> None:
-    orchestrator = _orchestrator(
-        tmp_path,
-        state_repository=_social_repository(tmp_path),
-        decisions=[
-            _decision(
-                "complete_encounter",
-                reason_summary="The offer of peace works.",
-            )
-        ],
-        io=ScriptedIO(["I lower my weapon and ask to pass peacefully."]),
-    )
-
-    result = orchestrator.run_encounter(encounter_id="goblin-camp")
-
-    assert result.completed is True
-    assert "peaceful" in result.output_text
-    state = orchestrator.current_state()
-    assert state is not None
-    assert state.outcome == "peaceful"
 
 
 def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> None:
@@ -441,12 +416,8 @@ def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> No
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
-        decisions=[
-            _decision(
-                "adjudicate_action",
-                requires_rules_resolution=True,
-                recommended_check="Persuasion",
-            ),
+        intents=[
+            _intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion"),
         ],
         rules_agent=rules_agent,
         narrator_agent=narrator_agent,
@@ -506,8 +477,8 @@ def test_social_check_with_outcome_emits_encounter_completed_event(
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["I try to calm them down.", "exit"]),
-        _decision_agent=_mock_decision_agent(
-            [_decision("adjudicate_action", requires_rules_resolution=True)]
+        _player_intent_agent=FakePlayerIntentAgent(
+            [_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")]
         ),
     )
 
@@ -545,8 +516,8 @@ def test_social_check_without_outcome_does_not_emit_encounter_completed_event(
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["I try to calm them down.", "exit"]),
-        _decision_agent=_mock_decision_agent(
-            [_decision("adjudicate_action", requires_rules_resolution=True)]
+        _player_intent_agent=FakePlayerIntentAgent(
+            [_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")]
         ),
     )
 
@@ -557,17 +528,20 @@ def test_social_check_without_outcome_does_not_emit_encounter_completed_event(
 
 
 @pytest.mark.parametrize(
-    ("next_step", "purpose"),
-    [("npc_dialogue", "npc_dialogue"), ("narrate_scene", "scene_response")],
+    ("category", "purpose"),
+    [
+        (IntentCategory.NPC_DIALOGUE, "npc_dialogue"),
+        (IntentCategory.SCENE_OBSERVATION, "scene_response"),
+    ],
 )
 def test_non_combat_narrative_decisions_route_to_narrator(
-    tmp_path: Path, next_step: str, purpose: str
+    tmp_path: Path, category: IntentCategory, purpose: str
 ) -> None:
     narrator_agent = FakeNarratorAgent()
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
-        decisions=[_decision(next_step, reason_summary="The goblin answers.")],
+        intents=[_intent(category)],
         narrator_agent=narrator_agent,
         io=ScriptedIO(["I ask what they want.", "exit"]),
     )
@@ -575,9 +549,8 @@ def test_non_combat_narrative_decisions_route_to_narrator(
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
 
     assert narrator_agent.frames[-1].purpose == purpose
-    assert narrator_agent.frames[-1].resolved_outcomes == ("The goblin answers.",)
     assert narrator_agent.frames[-1].player_action == "I ask what they want."
-    assert f"{purpose}: The goblin answers." in result.output_text
+    assert purpose in result.output_text
 
 
 def test_aggressive_input_rolls_initiative_then_enters_combat(
@@ -596,7 +569,7 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path, goblin_hp=0),
-        decisions=[_decision("roll_initiative")],
+        intents=[_intent(IntentCategory.HOSTILE_ACTION)],
         narrator_agent=narrator_agent,
         roll_dice=roll_dice,
         io=ScriptedIO(["I draw steel and rush the goblin.", "end turn"]),
@@ -629,7 +602,9 @@ def test_enter_combat_emits_encounter_completed_event(tmp_path: Path) -> None:
         # Goblin gets 12, Talia gets 18 → Talia wins initiative and goes first.
         tools=OrchestratorTools(roll_dice=FakeDice([12, 18])),
         io=ScriptedIO(["I draw steel and rush the goblin.", "end turn"]),
-        _decision_agent=_mock_decision_agent([_decision("roll_initiative")]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            [_intent(IntentCategory.HOSTILE_ACTION)]
+        ),
         _combat_intent_agent=_mock_combat_intent_agent(["end_turn"]),
     )
 
@@ -680,96 +655,6 @@ def test_combat_orchestrator_is_invoked_when_phase_is_combat(tmp_path: Path) -> 
     assert len(rules_agent.requests) == 1
 
 
-def test_invalid_orchestration_decision_raises_without_saving_mutated_state(
-    tmp_path: Path,
-) -> None:
-    repository = _social_repository(tmp_path)
-    original_state = repository.load().encounter
-    orchestrator = _orchestrator(
-        tmp_path,
-        state_repository=repository,
-        decisions=[_decision("summon_dragon")],
-        io=ScriptedIO(["I try something confusing."]),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="invalid orchestration next_step: summon_dragon",
-    ):
-        orchestrator.run_encounter(encounter_id="goblin-camp")
-
-    assert repository.load().encounter == original_state
-
-
-def test_invalid_decision_after_scene_opening_leaves_default_state_unchanged(
-    tmp_path: Path,
-) -> None:
-    repository = _scene_opening_repository(tmp_path)
-    original_state = repository.load().encounter
-    orchestrator = _orchestrator(
-        tmp_path,
-        state_repository=repository,
-        decisions=[_decision("summon_dragon")],
-        io=ScriptedIO(["I try something confusing."]),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="invalid orchestration next_step: summon_dragon",
-    ):
-        orchestrator.run_encounter(encounter_id="goblin-camp")
-
-    assert repository.load().encounter == original_state
-
-
-@pytest.mark.parametrize(
-    ("decision", "player_input", "expected_outcome"),
-    [
-        (
-            _decision(
-                "complete_encounter",
-                phase_transition="de-escalated",
-            ),
-            "I lower my weapon.",
-            "de-escalated",
-        ),
-        (
-            _decision(
-                "complete_encounter",
-                reason_summary="The offer of peace works.",
-            ),
-            "I negotiate.",
-            "peaceful",
-        ),
-        (
-            _decision("complete_encounter"),
-            "I leave the ravine.",
-            "complete",
-        ),
-    ],
-)
-def test_completion_outcome_fallbacks(
-    tmp_path: Path,
-    decision: OrchestrationDecision,
-    player_input: str,
-    expected_outcome: str,
-) -> None:
-    orchestrator = _orchestrator(
-        tmp_path,
-        state_repository=_social_repository(tmp_path),
-        decisions=[decision],
-        io=ScriptedIO([player_input]),
-    )
-
-    result = orchestrator.run_encounter(encounter_id="goblin-camp")
-
-    assert result.completed is True
-    state = orchestrator.current_state()
-    assert state is not None
-    assert state.outcome == expected_outcome
-    assert f"complete_encounter: {expected_outcome}" in result.output_text
-
-
 def test_save_and_quit_persists_active_encounter_and_records_event(
     tmp_path: Path,
 ) -> None:
@@ -786,7 +671,7 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["save and quit"]),
-        _decision_agent=_mock_decision_agent(),
+        _player_intent_agent=FakePlayerIntentAgent(),
     )
 
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
@@ -820,7 +705,7 @@ def test_save_and_quit_without_memory_repository_does_not_raise(
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["save and quit"]),
-        _decision_agent=_mock_decision_agent(),
+        _player_intent_agent=FakePlayerIntentAgent(),
     )
 
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
@@ -831,23 +716,43 @@ def test_save_and_quit_without_memory_repository_does_not_raise(
 
 def test_completed_encounter_records_durable_event(tmp_path: Path) -> None:
     memory_repository = FakeMemoryRepository()
+    rules_agent = FakeRulesAgent(
+        [
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="The offer of peace works.",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(
+                        effect_type="set_encounter_outcome",
+                        target="encounter:goblin-camp",
+                        value="peaceful",
+                    ),
+                    StateEffect(
+                        effect_type="set_phase",
+                        target="encounter:goblin-camp",
+                        value="encounter_complete",
+                    ),
+                ),
+                reasoning_summary="The check succeeds.",
+            ),
+        ]
+    )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
             state=_social_repository(tmp_path),
             memory=memory_repository,
         ),
         agents=OrchestratorAgents(
-            rules=FakeRulesAgent(),
+            rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["I offer peace."]),
-        _decision_agent=_mock_decision_agent(
+        _player_intent_agent=FakePlayerIntentAgent(
             [
-                _decision(
-                    "complete_encounter",
-                    reason_summary="The offer of peace works.",
-                )
+                _intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion"),
             ]
         ),
     )
@@ -864,7 +769,7 @@ def test_completed_encounter_records_durable_event(tmp_path: Path) -> None:
 
 
 def test_adjudicate_action_routing_replaces_adjudicate_action(tmp_path: Path) -> None:
-    """The renamed next_step 'adjudicate_action' must route to rules adjudication."""
+    """SKILL_CHECK intent must route to rules adjudication."""
     rules_agent = FakeRulesAgent(
         [
             RulesAdjudication(
@@ -878,12 +783,8 @@ def test_adjudicate_action_routing_replaces_adjudicate_action(tmp_path: Path) ->
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
-        decisions=[
-            _decision(
-                "adjudicate_action",
-                requires_rules_resolution=True,
-                recommended_check="Persuasion",
-            ),
+        intents=[
+            _intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion"),
         ],
         rules_agent=rules_agent,
         io=ScriptedIO(["I ask them to stand down.", "exit"]),
@@ -909,7 +810,7 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["save and quit"]),
-        _decision_agent=_mock_decision_agent(),
+        _player_intent_agent=FakePlayerIntentAgent(),
         _combat_intent_agent=_mock_combat_intent_agent(["exit_session"]),
     )
 
@@ -941,7 +842,7 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["exit"]),
-        _decision_agent=_mock_decision_agent(),
+        _player_intent_agent=FakePlayerIntentAgent(),
         _combat_intent_agent=_mock_combat_intent_agent(["exit_session"]),
     )
 
@@ -1027,8 +928,27 @@ def test_narrative_summary_no_hp_numbers() -> None:
 
 
 def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
-    """The orchestrator decision input shows actor name and injury status in summaries."""
-    mock_agent = _mock_decision_agent([_decision("npc_dialogue")])
+    """The orchestrator passes actor name and injury status to the intent classifier."""
+    captured_summaries: list[tuple[str, ...]] = []
+
+    class CapturingIntentAgent(FakePlayerIntentAgent):
+        def classify(
+            self,
+            raw_text: str,
+            *,
+            phase: EncounterPhase,
+            setting: str,
+            recent_events: tuple[str, ...],
+            actor_summaries: tuple[str, ...],
+        ) -> PlayerIntent:
+            captured_summaries.append(actor_summaries)
+            return super().classify(
+                raw_text,
+                phase=phase,
+                setting=setting,
+                recent_events=recent_events,
+                actor_summaries=actor_summaries,
+            )
 
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -1040,13 +960,14 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
         ),
         tools=OrchestratorTools(roll_dice=FakeDice([])),
         io=ScriptedIO(["Hello.", "exit"]),
-        _decision_agent=mock_agent,
+        _player_intent_agent=CapturingIntentAgent(
+            [_intent(IntentCategory.NPC_DIALOGUE)]
+        ),
     )
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    call_args = mock_agent.run_sync.call_args_list[0]
-    input_dict = json.loads(call_args[0][0])
-    summaries = input_dict.get("public_actor_summaries", [])
+    assert captured_summaries, "classify was not called with actor summaries"
+    summaries = captured_summaries[0]
     assert any("Talia" in s and "uninjured" in s for s in summaries)
     assert not any("HP" in s or "AC" in s for s in summaries)
 
@@ -1077,6 +998,7 @@ def test_tone_guidance_propagated_to_subsequent_narration_frames(
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_scene_opening_repository(tmp_path),
+        intents=[_intent(IntentCategory.STATUS)],
         narrator_agent=narrator,
         io=ScriptedIO(["status", "exit"]),
     )
@@ -1110,24 +1032,44 @@ def test_non_utility_input_after_completion_exits_loop_without_further_agent_cal
 ) -> None:
     """Non-utility input typed after ENCOUNTER_COMPLETE is a no-op and exits the loop.
 
-    The guard at the top of the non-combat branch breaks immediately when the
-    encounter is already complete, so neither the rules agent nor the narrator
-    should be called for the trailing junk input.
+    The guard at the top of the loop breaks immediately when the encounter is
+    already complete, so the trailing "let us celebrate" input is never read
+    and neither rules adjudication nor narration should fire for it.
     """
-    rules_agent = FakeRulesAgent()
+    rules_agent = FakeRulesAgent(
+        [
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="They stand aside and let you pass.",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(
+                        effect_type="set_encounter_outcome",
+                        target="encounter:goblin-camp",
+                        value="peaceful",
+                    ),
+                    StateEffect(
+                        effect_type="set_phase",
+                        target="encounter:goblin-camp",
+                        value="encounter_complete",
+                    ),
+                ),
+                reasoning_summary="Persuasion succeeds.",
+            )
+        ]
+    )
     narrator_agent = FakeNarratorAgent()
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
-        decisions=[
-            _decision(
-                "complete_encounter",
-                reason_summary="The offer of peace works.",
-            )
+        intents=[
+            _intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion"),
         ],
         rules_agent=rules_agent,
         narrator_agent=narrator_agent,
-        # First input completes the encounter; second is non-utility junk.
+        # First input completes the encounter; second is non-utility junk that
+        # must never be consumed because the loop exits after completion.
         io=ScriptedIO(
             ["I lower my weapon and ask to pass peacefully.", "let us celebrate"]
         ),
@@ -1137,18 +1079,17 @@ def test_non_utility_input_after_completion_exits_loop_without_further_agent_cal
 
     assert result.completed is True
     assert result.encounter_id == "goblin-camp"
-    # No rules adjudication should ever have been triggered.
-    assert rules_agent.requests == []
-    # The narrator was called only for the completion narration, not for the
-    # trailing junk input.  The last frame purpose must be the completion frame,
-    # not any new action frame spawned by "let us celebrate".
-    assert narrator_agent.frames[-1].purpose == "complete_encounter"
+    # Rules were called exactly once for the completing action.
+    assert len(rules_agent.requests) == 1
+    # The narrator was called only for the completion narration; the last frame
+    # must be social_resolution, not any frame spawned by "let us celebrate".
+    assert narrator_agent.frames[-1].purpose == "social_resolution"
 
 
-def test_encounter_orchestrator_raises_if_neither_adapter_nor_decision_agent_provided(
+def test_encounter_orchestrator_raises_if_neither_adapter_nor_player_intent_agent_provided(
     tmp_path: Path,
 ) -> None:
-    """EncounterOrchestrator without adapter= or _decision_agent= must raise."""
+    """EncounterOrchestrator without adapter= or _player_intent_agent= must raise."""
     with pytest.raises(ValueError, match="EncounterOrchestrator requires adapter="):
         EncounterOrchestrator(
             repositories=OrchestratorRepositories(
@@ -1163,77 +1104,6 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_decision_agent_pro
         )
 
 
-def _capture_decision_agent_instructions(tmp_path: Path) -> str:
-    """Build an orchestrator with a real adapter path and capture the routing instructions.
-
-    Patches Agent from pydantic_ai so no live LLM call is made. Returns the
-    instructions string passed to the decision Agent constructor.
-    """
-    fake_adapter = MagicMock()
-    fake_adapter.model = "fake-model"
-
-    captured: list[str] = []
-
-    def _fake_agent_init(model: object, **kwargs: object) -> MagicMock:
-        instructions = kwargs.get("instructions", "")
-        captured.append(str(instructions))
-        mock_agent = MagicMock()
-
-        def _run_sync(input_json: str) -> MagicMock:
-            result = MagicMock()
-            result.output = OrchestrationDecision(
-                next_step="narrate_scene",
-                requires_rules_resolution=False,
-                reason_summary="default",
-            )
-            return result
-
-        mock_agent.run_sync.side_effect = _run_sync
-        return mock_agent
-
-    with patch(
-        "campaignnarrator.orchestrators.encounter_orchestrator.Agent",
-        side_effect=_fake_agent_init,
-    ):
-        EncounterOrchestrator(
-            repositories=OrchestratorRepositories(
-                state=_scene_opening_repository(tmp_path),
-            ),
-            agents=OrchestratorAgents(
-                rules=FakeRulesAgent(),
-                narrator=FakeNarratorAgent(),
-            ),
-            tools=OrchestratorTools(roll_dice=FakeDice([])),
-            io=ScriptedIO([], on_exhaust="exit"),
-            adapter=fake_adapter,
-        )
-
-    assert captured, "Agent constructor was not called — instructions not captured"
-    # The decision agent is created first; return its instructions
-    return captured[0]
-
-
-def test_decision_agent_instructions_contain_routing_rules(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "enter_combat" in instructions
-    assert "attack" in instructions.lower()
-    assert "adjudicate_action" in instructions
-    assert "npc_dialogue" in instructions
-    assert "complete_encounter" in instructions
-
-
-def test_decision_agent_instructions_forbid_self_resolution(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "Do not resolve rules yourself" in instructions
-
-
-def test_decision_agent_instructions_contain_few_shot_examples(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I draw my sword" in instructions
-    assert "I ask the innkeeper" in instructions
-    assert "I try to pick the lock" in instructions
-
-
 def test_thinking_indicator_displayed_before_action_processing(
     tmp_path: Path,
 ) -> None:
@@ -1241,7 +1111,7 @@ def test_thinking_indicator_displayed_before_action_processing(
     io = ScriptedIO(["I look around.", "exit"])
     orchestrator = _orchestrator(
         tmp_path,
-        decisions=[_decision("narrate_scene")],
+        intents=[_intent(IntentCategory.SCENE_OBSERVATION)],
         io=io,
     )
     orchestrator.run_encounter(encounter_id="goblin-camp")
@@ -1255,76 +1125,13 @@ def test_considering_rules_displayed_before_adjudication(
     io = ScriptedIO(["I try to pick the lock.", "exit"])
     orchestrator = _orchestrator(
         tmp_path,
-        decisions=[
-            _decision(
-                "adjudicate_action",
-                requires_rules_resolution=True,
-                recommended_check="Dexterity",
-            ),
+        intents=[
+            _intent(IntentCategory.SKILL_CHECK, check_hint="Dexterity"),
         ],
         io=io,
     )
     orchestrator.run_encounter(encounter_id="goblin-camp")
     assert any("Considering the rules" in msg for msg in io.displayed)
-
-
-def test_decision_agent_instructions_list_all_18_srd_skills(tmp_path: Path) -> None:
-    """All 18 SRD skills must be named in the routing instructions sent to the adapter."""
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    expected_skills = [
-        "Arcana",
-        "History",
-        "Nature",
-        "Religion",
-        "Investigation",
-        "Perception",
-        "Medicine",
-        "Persuasion",
-        "Deception",
-        "Intimidation",
-        "Performance",
-        "Athletics",
-        "Acrobatics",
-        "Sleight of Hand",
-        "Stealth",
-        "Survival",
-        "Animal Handling",
-        "Insight",
-    ]
-    for skill in expected_skills:
-        assert skill in instructions, f"Missing skill: {skill}"
-
-
-def test_decision_agent_instructions_contain_knowledge_example(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I try to determine if they are undead." in instructions
-
-
-def test_decision_agent_instructions_contain_investigation_example(
-    tmp_path: Path,
-) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I examine the runes on the wall." in instructions
-
-
-def test_decision_agent_instructions_contain_social_example(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I try to persuade the guard to let us pass." in instructions
-
-
-def test_decision_agent_instructions_contain_physical_example(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I try to climb the cliff face." in instructions
-
-
-def test_decision_agent_instructions_contain_stealth_example(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I attempt to sneak past the sleeping guard." in instructions
-
-
-def test_decision_agent_instructions_contain_survival_example(tmp_path: Path) -> None:
-    instructions = _capture_decision_agent_instructions(tmp_path)
-    assert "I try to track the creature through the forest." in instructions
 
 
 def test_resume_encounter_displays_recap_before_prompt(tmp_path: Path) -> None:
@@ -1385,3 +1192,27 @@ def test_open_scene_failure_emits_fallback_message_and_continues(
     assert "Scene narration unavailable" in result.output_text
     assert "Continuing" in result.output_text
     assert result.completed is False
+
+
+def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
+    memory = FakeMemoryRepository()
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            state=_social_repository(tmp_path),
+            memory=memory,
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(),
+            narrator=FakeNarratorAgent(),
+        ),
+        tools=OrchestratorTools(roll_dice=FakeDice([])),
+        io=ScriptedIO(["save and exit the game"]),
+        _player_intent_agent=FakePlayerIntentAgent([_intent(IntentCategory.SAVE_EXIT)]),
+    )
+
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert result.completed is False
+    saved = [e for e in memory.events if e.get("type") == "encounter_saved"]
+    assert len(saved) == 1
+    assert saved[0]["encounter_id"] == "goblin-camp"

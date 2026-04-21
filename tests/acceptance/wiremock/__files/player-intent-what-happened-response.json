@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"category\": \"skill_check\", \"check_hint\": \"Stealth\", \"reason\": \"Talia attempts to slip past undetected.\"}"
+          "arguments": "{\"category\": \"recap\", \"check_hint\": null, \"reason\": \"Player requesting a recap of recent events.\"}"
         }
       }]
     },

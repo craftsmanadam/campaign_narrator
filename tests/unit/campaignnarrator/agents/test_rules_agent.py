@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -120,39 +121,6 @@ class FakeRulesRepository:
         )
 
 
-def test_adjudicate_social_phase_injects_loaded_rule_text() -> None:
-    repo = FakeRulesRepository(
-        {
-            "core_resolution": "CORE RESOLUTION RULES",
-            "social_interaction": "SOCIAL INTERACTION RULES",
-        }
-    )
-    mock_agent = MagicMock()
-    mock_agent.run_sync.return_value.output = _canned_adjudication()
-    rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=repo, _agent=mock_agent
-    )
-    rules_agent.adjudicate(_make_request(phase=EncounterPhase.SOCIAL))
-    call_args = mock_agent.run_sync.call_args[0][0]
-    assert "CORE RESOLUTION RULES" in call_args
-    assert "SOCIAL INTERACTION RULES" in call_args
-
-
-def test_adjudicate_combat_phase_injects_loaded_rule_text() -> None:
-    repo = FakeRulesRepository(
-        {"core_resolution": "CORE RESOLUTION RULES", "combat": "COMBAT RULES"}
-    )
-    mock_agent = MagicMock()
-    mock_agent.run_sync.return_value.output = _canned_adjudication()
-    rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=repo, _agent=mock_agent
-    )
-    rules_agent.adjudicate(_make_request(phase=EncounterPhase.COMBAT))
-    call_args = mock_agent.run_sync.call_args[0][0]
-    assert "CORE RESOLUTION RULES" in call_args
-    assert "COMBAT RULES" in call_args
-
-
 def test_adjudicate_without_rules_repository_passes_empty_context() -> None:
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
@@ -165,10 +133,11 @@ def test_adjudicate_without_rules_repository_passes_empty_context() -> None:
     assert payload["rules_context"] == []
 
 
-def test_stealth_hint_loads_stealth_topic_in_addition_to_social_topics() -> None:
+def test_adjudicate_skill_check_hint_loads_skill_check_topic() -> None:
+    """A recognised D&D 5e skill name as check_hint selects 'skill_check' topic."""
     captured: list[tuple[str, ...]] = []
 
-    class CapturingRulesRepository:
+    class CapturingRepo:
         def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
             captured.append(topics)
             return ()
@@ -176,19 +145,58 @@ def test_stealth_hint_loads_stealth_topic_in_addition_to_social_topics() -> None
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(),
-        rules_repository=CapturingRulesRepository(),
-        _agent=mock_agent,
+        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+    )
+    rules_agent.adjudicate(_make_request(check_hints=("Persuasion",)))
+    assert "skill_check" in captured[0]
+    assert "core_resolution" not in captured[0]
+    assert "social_interaction" not in captured[0]
+
+
+def test_adjudicate_no_hint_loads_social_interaction_topic() -> None:
+    """No check_hint selects 'social_interaction' base topic."""
+    captured: list[tuple[str, ...]] = []
+
+    class CapturingRepo:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            captured.append(topics)
+            return ()
+
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(
+        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+    )
+    rules_agent.adjudicate(_make_request())
+    assert "social_interaction" in captured[0]
+    assert "core_resolution" not in captured[0]
+
+
+def test_adjudicate_stealth_hint_loads_skill_check_and_stealth_topics() -> None:
+    """'Stealth' loads skill_check + stealth extra topic."""
+    captured: list[tuple[str, ...]] = []
+
+    class CapturingRepo:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            captured.append(topics)
+            return ()
+
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(
+        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
     )
     rules_agent.adjudicate(_make_request(check_hints=("Stealth",)))
+    assert "skill_check" in captured[0]
     assert "stealth" in captured[0]
-    assert "core_resolution" in captured[0]
+    assert "core_resolution" not in captured[0]
 
 
 def test_hide_hint_also_loads_stealth_topic() -> None:
+    """'hide' is not a skill name — falls back to social_interaction + stealth extra."""
     captured: list[tuple[str, ...]] = []
 
-    class CapturingRulesRepository:
+    class CapturingRepo:
         def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
             captured.append(topics)
             return ()
@@ -197,17 +205,19 @@ def test_hide_hint_also_loads_stealth_topic() -> None:
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=CapturingRulesRepository(),
+        rules_repository=CapturingRepo(),
         _agent=mock_agent,
     )
     rules_agent.adjudicate(_make_request(check_hints=("hide",)))
     assert "stealth" in captured[0]
+    assert "core_resolution" not in captured[0]
 
 
 def test_unknown_hint_does_not_expand_topics() -> None:
+    """An unrecognised hint falls back to social_interaction with no extra topics."""
     captured: list[tuple[str, ...]] = []
 
-    class CapturingRulesRepository:
+    class CapturingRepo:
         def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
             captured.append(topics)
             return ()
@@ -216,11 +226,55 @@ def test_unknown_hint_does_not_expand_topics() -> None:
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=CapturingRulesRepository(),
+        rules_repository=CapturingRepo(),
         _agent=mock_agent,
     )
     rules_agent.adjudicate(_make_request(check_hints=("UnrecognisedHint",)))
     assert "stealth" not in captured[0]
+    assert "skill_check" not in captured[0]
+    assert "social_interaction" in captured[0]
+
+
+def test_adjudicate_combat_phase_no_hint_loads_attack_resolution_topic() -> None:
+    """phase=COMBAT with no check_hint selects 'attack_resolution', not 'social_interaction'."""
+    captured: list[tuple[str, ...]] = []
+
+    class CapturingRepo:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            captured.append(topics)
+            return ()
+
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(
+        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+    )
+    rules_agent.adjudicate(_make_request(phase=EncounterPhase.COMBAT))
+    assert "attack_resolution" in captured[0]
+    assert "social_interaction" not in captured[0]
+    assert "core_resolution" not in captured[0]
+
+
+def test_adjudicate_logs_error_when_context_exceeds_size_threshold(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """adjudicate() logs an error when total rule context chars exceed the threshold."""
+    large_text = "x" * 3501
+
+    class LargeRulesRepo:
+        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+            return (large_text,)
+
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(
+        adapter=MagicMock(), rules_repository=LargeRulesRepo(), _agent=mock_agent
+    )
+    with caplog.at_level(logging.ERROR, logger="campaignnarrator.agents.rules_agent"):
+        rules_agent.adjudicate(_make_request())
+
+    assert any("exceeds threshold" in r.message for r in caplog.records)
+    mock_agent.run_sync.assert_called_once()
 
 
 def test_init_raises_type_error_when_adapter_is_not_pydantic_ai_adapter() -> None:
@@ -250,3 +304,15 @@ def test_rules_instructions_guide_empty_state_effects_for_knowledge_checks() -> 
         or "no state" in RULES_INSTRUCTIONS.lower()
         or "leave" in RULES_INSTRUCTIONS.lower()
     )
+
+
+def test_rules_instructions_include_skill_ability_mapping() -> None:
+    """RULES_INSTRUCTIONS must have an authoritative skill→ability table."""
+    assert "Stealth" in RULES_INSTRUCTIONS
+    assert "Dexterity" in RULES_INSTRUCTIONS
+    assert "Athletics" in RULES_INSTRUCTIONS
+    assert "Strength" in RULES_INSTRUCTIONS
+    assert "Perception" in RULES_INSTRUCTIONS
+    assert "Wisdom" in RULES_INSTRUCTIONS
+    assert "Persuasion" in RULES_INSTRUCTIONS
+    assert "Charisma" in RULES_INSTRUCTIONS

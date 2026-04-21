@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from pydantic_ai import Agent
-
 from campaignnarrator.agents.narrator_agent import NarratorAgent
-from campaignnarrator.agents.prompts import DECISION_AGENT_INSTRUCTIONS
+from campaignnarrator.agents.player_intent_agent import PlayerIntentAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     ActorState,
@@ -20,10 +17,11 @@ from campaignnarrator.domain.models import (
     EncounterState,
     GameState,
     InitiativeTurn,
+    IntentCategory,
     Narration,
     NarrationFrame,
-    OrchestrationDecision,
     PlayerInput,
+    PlayerIntent,
     PlayerIO,
     RollRequest,
     RollVisibility,
@@ -42,17 +40,6 @@ from campaignnarrator.tools.dice_expression import (
 from campaignnarrator.tools.state_updates import apply_state_effects
 
 _log = logging.getLogger(__name__)
-
-_ALLOWED_SOCIAL_NEXT_STEPS = {
-    "npc_dialogue",
-    "narrate_scene",
-    "adjudicate_action",
-    "roll_initiative",
-    "enter_combat",
-    "complete_encounter",
-}
-
-_DECISION_AGENT_INSTRUCTIONS = DECISION_AGENT_INSTRUCTIONS
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +85,7 @@ class EncounterOrchestrator:
         tools: OrchestratorTools,
         io: PlayerIO,
         adapter: object | None = None,
-        _decision_agent: object | None = None,
+        _player_intent_agent: object | None = None,
         _combat_intent_agent: object | None = None,
     ) -> None:
         self._state_repository = repositories.state
@@ -109,19 +96,15 @@ class EncounterOrchestrator:
         self._memory_repository = repositories.memory
         self._adapter = adapter
         self._combat_intent_agent = _combat_intent_agent
-        if _decision_agent is not None:
-            self._decision_agent = _decision_agent
+        if _player_intent_agent is not None:
+            self._player_intent_agent = _player_intent_agent
         else:
             if adapter is None:
                 raise ValueError(  # noqa: TRY003
                     "EncounterOrchestrator requires adapter= or "
-                    "_decision_agent= to be set"
+                    "_player_intent_agent= to be set"
                 )
-            self._decision_agent = Agent(
-                adapter.model,
-                output_type=OrchestrationDecision,
-                instructions=_DECISION_AGENT_INSTRUCTIONS,
-            )
+            self._player_intent_agent = PlayerIntentAgent(adapter=adapter)
 
     def run_encounter(self, *, encounter_id: str) -> EncounterRunResult:
         """Run the encounter loop until an end condition is reached."""
@@ -177,36 +160,88 @@ class EncounterOrchestrator:
                 self._run_combat(state, player)
                 break
 
-            raw_input = self._io.prompt("> ")
-            player_input = PlayerInput(raw_text=raw_input)
-            normalized = player_input.normalized
-            if not normalized:
-                continue
-
-            directive = self._handle_utility_command(normalized, state, output, player)
-            if directive == "break":
-                break
-            if directive == "continue":
-                continue
-
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
                 break
 
+            raw_input = self._io.prompt("> ")
+            player_input = PlayerInput(raw_text=raw_input)
+            if not player_input.normalized:
+                continue
+
+            intent = self._classify_intent(state, player_input)
+
+            match intent.category:
+                case IntentCategory.SAVE_EXIT:
+                    self._save_state(state, player)
+                    msg = "Game saved. You can resume this encounter later."
+                    self._io.display(msg)
+                    output.append(msg)
+                    self._append_event(
+                        {
+                            "type": "encounter_saved",
+                            "encounter_id": state.encounter_id,
+                            "phase": state.phase.value,
+                            "outcome": state.outcome,
+                        }
+                    )
+                    break
+                case IntentCategory.STATUS:
+                    text = self._narrate(_status_frame(state)).text
+                    self._io.display(text)
+                    output.append(text)
+                    continue
+                case IntentCategory.RECAP:
+                    text = self._narrate(_recap_frame(state)).text
+                    self._io.display(text)
+                    output.append(text)
+                    continue
+                case IntentCategory.LOOK_AROUND:
+                    text = self._narrate(_look_frame(state)).text
+                    self._io.display(text)
+                    output.append(text)
+                    continue
+
             self._io.display("\n...\n")
-            state = self._apply_action(state, player_input, player, output)
+            state = self._apply_action(state, player_input, intent, player, output)
         return state
+
+    def _classify_intent(
+        self,
+        state: EncounterState,
+        player_input: PlayerInput,
+    ) -> PlayerIntent:
+        result = self._player_intent_agent.classify(
+            player_input.raw_text,
+            phase=state.phase,
+            setting=state.setting,
+            recent_events=state.public_events[-5:],
+            actor_summaries=_public_actor_summaries(state),
+        )
+        _log.debug(
+            "Intent classified: category=%s check_hint=%r reason=%r input=%r",
+            result.category,
+            result.check_hint,
+            result.reason,
+            player_input.raw_text,
+        )
+        return result
+
+    def _save_state(self, state: EncounterState, player: ActorState) -> None:
+        """Persist current encounter state for save-and-quit."""
+        self._state_repository.save(GameState(player=player, encounter=state))
 
     def _apply_action(
         self,
         state: EncounterState,
         player_input: PlayerInput,
+        intent: PlayerIntent,
         player: ActorState,
         output: list[str],
     ) -> EncounterState:
         """Apply a non-combat player action; display narration; return updated state."""
         try:
             state, narration = self._handle_non_combat_action(
-                state, player_input, player
+                state, player_input, intent, player
             )
         except ValueError:
             raise
@@ -260,47 +295,6 @@ class EncounterOrchestrator:
             )
         return result
 
-    def _handle_utility_command(
-        self,
-        normalized: str,
-        state: EncounterState,
-        output: list[str],
-        player: ActorState,
-    ) -> str | None:
-        """Handle built-in player commands. Returns 'break', 'continue', or None."""
-
-        if normalized in ("exit", "save and quit"):
-            if state.phase is not EncounterPhase.ENCOUNTER_COMPLETE:
-                self._state_repository.save(GameState(player=player, encounter=state))
-                self._append_event(
-                    {
-                        "type": "encounter_saved",
-                        "encounter_id": state.encounter_id,
-                        "phase": state.phase.value,
-                        "outcome": state.outcome,
-                    }
-                )
-                msg = "Game saved. You can resume this encounter later."
-                self._io.display(msg)
-                output.append(msg)
-            return "break"
-        if normalized == "status":
-            text = self._narrate(_status_frame(state)).text
-            self._io.display(text)
-            output.append(text)
-            return "continue"
-        if normalized == "what happened":
-            text = self._narrate(_recap_frame(state)).text
-            self._io.display(text)
-            output.append(text)
-            return "continue"
-        if normalized == "look around":
-            text = self._narrate(_look_frame(state)).text
-            self._io.display(text)
-            output.append(text)
-            return "continue"
-        return None
-
     def current_state(self) -> EncounterState | None:
         """Return the current persisted encounter state."""
 
@@ -310,42 +304,50 @@ class EncounterOrchestrator:
         self,
         state: EncounterState,
         player_input: PlayerInput,
+        intent: PlayerIntent,
         player: ActorState,
     ) -> tuple[EncounterState, Narration]:
         compendium_context = player.references
-        decision = self._generate_orchestration_decision(state, player_input)
-        if decision.next_step not in _ALLOWED_SOCIAL_NEXT_STEPS:
-            raise ValueError(  # noqa: TRY003
-                f"invalid orchestration next_step: {decision.next_step}"
-            )
-
-        if decision.next_step == "adjudicate_action":
-            return self._handle_action(
-                state, player_input, decision, compendium_context, player
-            )
-
-        if decision.next_step in {"roll_initiative", "enter_combat"}:
-            return self._enter_combat(state, player)
-
-        if decision.next_step == "complete_encounter":
-            return self._complete_encounter(state, decision, player_input, player)
-
-        purpose = (
-            "npc_dialogue" if decision.next_step == "npc_dialogue" else "scene_response"
-        )
-        narration = self._narrate(
-            replace(
-                _frame(state, purpose, resolved_outcomes=(decision.reason_summary,)),
-                player_action=player_input.raw_text,
-            )
-        )
-        return state, narration
+        match intent.category:
+            case IntentCategory.HOSTILE_ACTION:
+                return self._enter_combat(state, player)
+            case IntentCategory.SKILL_CHECK:
+                return self._handle_action(
+                    state, player_input, intent, compendium_context, player
+                )
+            case IntentCategory.NPC_DIALOGUE:
+                narration = self._narrate(
+                    replace(
+                        _frame(state, "npc_dialogue"),
+                        player_action=player_input.raw_text,
+                    )
+                )
+                return state, narration
+            case IntentCategory.SCENE_OBSERVATION:
+                narration = self._narrate(
+                    replace(
+                        _frame(state, "scene_response"),
+                        player_action=player_input.raw_text,
+                    )
+                )
+                return state, narration
+            case _:
+                _log.warning(
+                    "Unhandled intent category in narrative path: %s", intent.category
+                )
+                narration = self._narrate(
+                    replace(
+                        _frame(state, "scene_response"),
+                        player_action=player_input.raw_text,
+                    )
+                )
+                return state, narration
 
     def _handle_action(
         self,
         state: EncounterState,
         player_input: PlayerInput,
-        decision: OrchestrationDecision,
+        intent: PlayerIntent,
         compendium_context: tuple[str, ...],
         player: ActorState,
     ) -> tuple[EncounterState, Narration]:
@@ -354,7 +356,7 @@ class EncounterOrchestrator:
             intent=player_input.raw_text,
             phase=state.phase,
             allowed_outcomes=("success", "failure", "complication", "peaceful"),
-            check_hints=_non_empty_tuple((decision.recommended_check,)),
+            check_hints=_non_empty_tuple((intent.check_hint,)),
             compendium_context=compendium_context,
             actor_modifiers=actor_modifiers(player),
         )
@@ -422,41 +424,6 @@ class EncounterOrchestrator:
         )
         return updated_state, narration
 
-    def _complete_encounter(
-        self,
-        state: EncounterState,
-        decision: OrchestrationDecision,
-        player_input: PlayerInput,
-        player: ActorState,
-    ) -> tuple[EncounterState, Narration]:
-        outcome = _completion_outcome(decision, player_input)
-        updated_state = apply_state_effects(
-            replace(state, phase=EncounterPhase.ENCOUNTER_COMPLETE),
-            (
-                StateEffect(
-                    effect_type="set_encounter_outcome",
-                    target=f"encounter:{state.encounter_id}",
-                    value=outcome,
-                ),
-            ),
-        )
-        self._state_repository.save(GameState(player=player, encounter=updated_state))
-        self._append_event(
-            {
-                "type": "encounter_completed",
-                "encounter_id": updated_state.encounter_id,
-                "outcome": outcome,
-            }
-        )
-        narration = self._narrate(
-            _frame(
-                updated_state,
-                "complete_encounter",
-                resolved_outcomes=(outcome,),
-            )
-        )
-        return updated_state, narration
-
     def _apply_adjudication(
         self,
         state: EncounterState,
@@ -481,59 +448,12 @@ class EncounterOrchestrator:
             roll_events,
         )
 
-    def _generate_orchestration_decision(
-        self,
-        state: EncounterState,
-        player_input: PlayerInput,
-    ) -> OrchestrationDecision:
-        result = self._decision_agent.run_sync(
-            json.dumps(
-                {
-                    "phase": state.phase.value,
-                    "setting": state.setting,
-                    "public_actor_summaries": _public_actor_summaries(state),
-                    "hidden_facts": dict(state.hidden_facts),
-                    "recent_public_events": list(state.public_events[-5:]),
-                    "latest_input": player_input.raw_text,
-                    "allowed_next_steps": sorted(_ALLOWED_SOCIAL_NEXT_STEPS),
-                },
-                indent=2,
-                sort_keys=True,
-            )
-        ).output
-        _log.debug(
-            "Routing decision: next_step=%s requires_rules=%s input=%r",
-            result.next_step,
-            result.requires_rules_resolution,
-            player_input.raw_text,
-        )
-        return result
-
     def _narrate(self, frame: NarrationFrame) -> Narration:
         return self._narrator_agent.narrate(frame)
 
     def _append_event(self, event: dict[str, object]) -> None:
         if self._memory_repository is not None:
             self._memory_repository.append_event(event)
-
-
-def _completion_outcome(
-    decision: OrchestrationDecision,
-    player_input: PlayerInput,
-) -> str:
-    if (
-        decision.phase_transition is not None
-        and decision.phase_transition != EncounterPhase.ENCOUNTER_COMPLETE.value
-    ):
-        return decision.phase_transition
-    peaceful_signals = (
-        decision.reason_summary,
-        decision.player_prompt or "",
-        player_input.raw_text,
-    )
-    if any("peace" in signal.lower() for signal in peaceful_signals):
-        return "peaceful"
-    return "complete"
 
 
 def _status_frame(state: EncounterState) -> NarrationFrame:

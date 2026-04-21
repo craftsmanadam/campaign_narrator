@@ -1,5 +1,6 @@
 services:
   app:
+    mem_limit: 2g
     build:
       context: .
       dockerfile: Dockerfile
@@ -16,6 +17,7 @@ services:
 
   wiremock:
     image: wiremock/wiremock:3.13.1
+    mem_limit: 2g
     command:
       - --global-response-templating
       - --verbose

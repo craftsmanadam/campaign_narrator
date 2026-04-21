@@ -302,7 +302,6 @@ def test_build_application_graph_wires_repository_paths(
         f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
     monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", lambda **_kw: object())
-    monkeypatch.setattr(f"{af_ns}.CharacterInterpreterAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", lambda **_kw: object())
@@ -354,7 +353,6 @@ def test_build_application_graph_wires_agents_and_orchestrators(
         f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
     monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", lambda **_kw: object())
-    monkeypatch.setattr(f"{af_ns}.CharacterInterpreterAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", lambda **_kw: object())
@@ -476,7 +474,6 @@ def test_application_factory_build_returns_application_graph(
         f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
     )
     monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", _noop_agent)
-    monkeypatch.setattr(f"{af_ns}.CharacterInterpreterAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", _noop_agent)

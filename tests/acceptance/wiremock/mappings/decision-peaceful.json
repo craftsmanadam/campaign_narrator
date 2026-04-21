@@ -4,7 +4,7 @@
     "method": "POST",
     "urlPath": "/v1/chat/completions",
     "bodyPatterns": [
-      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "Choose the next encounter orchestration step"}},
+      {"matchesJsonPath": {"expression": "$.messages[0].content", "contains": "Classify the player's input into exactly one IntentCategory"}},
       {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "Hello there. I do not want trouble."}}
     ]
   },

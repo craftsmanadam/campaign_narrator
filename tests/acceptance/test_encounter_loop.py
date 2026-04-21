@@ -6,8 +6,7 @@ import json
 from pathlib import Path
 from subprocess import CompletedProcess
 
-import pytest
-from pytest_bdd import given, parsers, scenario, then
+from pytest_bdd import parsers, scenario, then
 
 
 @scenario(
@@ -84,28 +83,6 @@ def _read_event_log(runtime_data_root: Path) -> list[dict[str, object]]:
 def _read_encounter(runtime_data_root: Path, encounter_id: str) -> dict[str, object]:
     path = runtime_data_root / "state" / "encounters" / "active.json"
     return json.loads(path.read_text())
-
-
-@given(
-    # The negative lookahead (?!.*\bon encounter\b) prevents this step from
-    # matching any step text that contains "on encounter", which would otherwise
-    # create an ambiguous match with the conftest.py step
-    # `configure_openai_api_for_scenario_with_encounter`. If you add new
-    # scenario names containing "on encounter", use the conftest step instead.
-    parsers.re(
-        r"the OpenAI API is configured for (?P<scenario_name>(?!.*\bon encounter\b).+)"
-    ),
-    target_fixture="encounter_config",
-)
-def configure_openai_api_for_scenario(
-    scenario_name: str,
-    request: pytest.FixtureRequest,
-    wiremock_stack: None,
-) -> dict[str, str]:
-    """Start the acceptance stack and record which scenario is under test."""
-
-    request.node._encounter_scenario_name = scenario_name
-    return {"scenario_name": scenario_name, "encounter_id": "goblin-camp"}
 
 
 @then(parsers.parse('the CLI output does not include "{unexpected}"'))

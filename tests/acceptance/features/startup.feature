@@ -6,7 +6,7 @@ Feature: Game startup flow
     Given the game state is empty for scenario startup-s1
     When the player runs the game with scripted input:
       """
-      I want to be a warrior
+      1
       Aldric
       Human
       I served the king's guard for six years and lost everything when the city fell.

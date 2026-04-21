@@ -1,6 +1,7 @@
 services:
   ollama:
     image: ollama/ollama:latest
+    mem_limit: 16g
     ports:
       - "11434:11434"
     volumes:

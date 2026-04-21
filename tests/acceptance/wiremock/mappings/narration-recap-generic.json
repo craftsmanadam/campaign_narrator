@@ -1,0 +1,11 @@
+{
+  "priority": 200,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {"matchesJsonPath": {"expression": "$.messages[1].content", "contains": "\"purpose\": \"recap_response\""}}
+    ]
+  },
+  "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "narration-recap-generic-response.json"}
+}

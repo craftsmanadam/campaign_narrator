@@ -1,0 +1,12 @@
+{
+  "id": "chatcmpl_xxx",
+  "object": "chat.completion",
+  "created": 1710000001,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "The encounter is ongoing. No notable events to report."},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+}

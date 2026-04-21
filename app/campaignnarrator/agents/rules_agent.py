@@ -17,16 +17,35 @@ from campaignnarrator.domain.models import (
 
 _log = logging.getLogger(__name__)
 
-_TOPICS_BY_PHASE: dict[EncounterPhase, tuple[str, ...]] = {
-    EncounterPhase.SOCIAL: ("core_resolution", "social_interaction"),
-    EncounterPhase.COMBAT: ("core_resolution", "combat"),
-}
-_FALLBACK_TOPICS: tuple[str, ...] = ("core_resolution",)
+_SKILL_CHECK_TOPICS: frozenset[str] = frozenset(
+    {
+        "Acrobatics",
+        "Animal Handling",
+        "Arcana",
+        "Athletics",
+        "Deception",
+        "History",
+        "Insight",
+        "Intimidation",
+        "Investigation",
+        "Medicine",
+        "Nature",
+        "Perception",
+        "Performance",
+        "Persuasion",
+        "Religion",
+        "Sleight of Hand",
+        "Stealth",
+        "Survival",
+    }
+)
 
 _EXTRA_TOPICS_BY_HINT: dict[str, tuple[str, ...]] = {
     "stealth": ("stealth",),
     "hide": ("stealth",),
 }
+
+_MAX_EXPECTED_RULES_CONTEXT: int = 3500
 
 _RULES_INSTRUCTIONS = RULES_INSTRUCTIONS
 
@@ -59,7 +78,17 @@ class RulesAgent:
 
     def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication:
         """Return a structured adjudication for the supplied request."""
-        rule_texts = self._load_rule_texts(request.phase, request.check_hints)
+        check_hint = request.check_hints[0] if request.check_hints else None
+        rule_texts = self._load_rule_texts(check_hint, phase=request.phase)
+        total_chars = sum(len(t) for t in rule_texts)
+        if total_chars > _MAX_EXPECTED_RULES_CONTEXT:
+            _log.error(
+                "Rules context size %d exceeds threshold %d — "
+                "topic selection needs review (check_hint=%r)",
+                total_chars,
+                _MAX_EXPECTED_RULES_CONTEXT,
+                request.check_hints,
+            )
         input_json = json.dumps(
             self._build_input(request, rule_texts), indent=2, sort_keys=True
         )
@@ -83,18 +112,28 @@ class RulesAgent:
 
     def _load_rule_texts(
         self,
-        phase: EncounterPhase,
-        check_hints: tuple[str, ...] = (),
+        check_hint: str | None = None,
+        phase: EncounterPhase | None = None,
     ) -> tuple[str, ...]:
         if self._rules_repository is None:
             return ()
-        topics = list(_TOPICS_BY_PHASE.get(phase, _FALLBACK_TOPICS))
-        for hint in check_hints:
-            extra = _EXTRA_TOPICS_BY_HINT.get(hint.lower(), ())
-            for topic in extra:
-                if topic not in topics:
-                    topics.append(topic)
-        return self._rules_repository.load_context_for_topics(tuple(topics))
+
+        hint_lower = (check_hint or "").lower()
+
+        if check_hint and check_hint in _SKILL_CHECK_TOPICS:
+            base_topics: list[str] = ["skill_check"]
+        elif phase is EncounterPhase.COMBAT:
+            base_topics = ["attack_resolution"]
+        else:
+            base_topics = ["social_interaction"]
+
+        for hint_key, extra in _EXTRA_TOPICS_BY_HINT.items():
+            if hint_key in hint_lower:
+                for topic in extra:
+                    if topic not in base_topics:
+                        base_topics.append(topic)
+
+        return self._rules_repository.load_context_for_topics(tuple(base_topics))
 
     def _build_input(
         self,
