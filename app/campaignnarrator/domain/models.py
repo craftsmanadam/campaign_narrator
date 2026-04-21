@@ -519,6 +519,7 @@ class NarrationFrame:
     allowed_disclosures: tuple[str, ...]
     tone_guidance: str | None = None
     player_action: str | None = None
+    prior_narrative_context: str = ""
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
     npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
 

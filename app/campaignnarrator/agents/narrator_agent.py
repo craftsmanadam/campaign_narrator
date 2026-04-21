@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 from pydantic_ai import Agent
 
@@ -154,6 +155,11 @@ class NarratorAgent:
 
     def narrate(self, frame: NarrationFrame) -> Narration:
         """Render narration for the supplied public frame."""
+        if frame.purpose == "scene_opening" and not frame.prior_narrative_context:
+            frame = replace(
+                frame,
+                prior_narrative_context=self.retrieve_memory(frame.setting or ""),
+            )
         npc_block = _serialize_npc_presences(frame.npc_presences)
         frame_dict: dict[str, object] = {
             "purpose": frame.purpose,
@@ -169,10 +175,9 @@ class NarratorAgent:
             frame_dict["npc_presences"] = npc_block
         if frame.player_action:
             frame_dict["player_action"] = frame.player_action
+        if frame.prior_narrative_context:
+            frame_dict["prior_narrative_context"] = frame.prior_narrative_context
         if frame.purpose == "scene_opening":
-            frame_dict["prior_narrative_context"] = self.retrieve_memory(
-                frame.setting or ""
-            )
             frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
             result = self._scene_agent.run_sync(frame_json).output
             if not result.text.strip():
@@ -199,6 +204,11 @@ class NarratorAgent:
         can inspect introduced_npcs before the encounter loop begins.
         Raises ValueError if the narration text is blank.
         """
+        if not frame.prior_narrative_context:
+            frame = replace(
+                frame,
+                prior_narrative_context=self.retrieve_memory(frame.setting or ""),
+            )
         frame_dict: dict[str, object] = {
             "purpose": frame.purpose,
             "phase": frame.phase.value,
@@ -208,7 +218,7 @@ class NarratorAgent:
             "resolved_outcomes": list(frame.resolved_outcomes),
             "allowed_disclosures": list(frame.allowed_disclosures),
             "tone_guidance": frame.tone_guidance,
-            "prior_narrative_context": self.retrieve_memory(frame.setting or ""),
+            "prior_narrative_context": frame.prior_narrative_context,
         }
         frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
         result: SceneOpeningResponse = self._scene_agent.run_sync(frame_json).output

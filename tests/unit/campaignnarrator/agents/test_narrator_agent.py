@@ -883,3 +883,69 @@ def test_narrate_omits_player_action_key_when_none() -> None:
     )
     assert input_text is not None
     assert "player_action" not in input_text
+
+
+def test_narrate_scene_opening_skips_retrieve_memory_when_context_pre_populated() -> (
+    None
+):
+    """When prior_narrative_context is pre-populated, retrieve_memory is not called."""
+    narrator, mock_repo, mock_scene_agent = _make_scene_narrator(
+        memory_returns=["should not appear"]
+    )
+    frame = replace(
+        _make_scene_frame("The docks at midnight."),
+        prior_narrative_context="Pre-existing lore about the docks.",
+    )
+    narrator.narrate(frame)
+
+    mock_repo.retrieve_relevant.assert_not_called()
+    call_args = mock_scene_agent.run_sync.call_args[0][0]
+    assert "Pre-existing lore about the docks." in call_args
+
+
+def test_narrate_non_opening_includes_prior_narrative_context_when_set() -> None:
+    """Non-scene-opening frames include prior_narrative_context in LLM input when set."""
+    narrator, mock_adapter, _ = _make_narrator("Narration text.")
+    frame = replace(
+        _frame("social_resolution"),
+        prior_narrative_context="Earlier, the party camped near the river.",
+    )
+    narrator.narrate(frame)
+
+    call_args = mock_adapter.generate_text.call_args
+    input_text = call_args.kwargs.get("input_text") or (
+        call_args.args[1] if len(call_args.args) > 1 else None
+    )
+    assert input_text is not None
+    assert "prior_narrative_context" in input_text
+    assert "Earlier, the party camped near the river." in input_text
+
+
+def test_open_scene_retrieves_memory_and_injects_it() -> None:
+    """open_scene() retrieves memory using the frame setting and injects it."""
+    narrator, mock_repo, mock_scene_agent = _make_scene_narrator(
+        memory_returns=["Malachar had pale hollow eyes."]
+    )
+    narrator.open_scene(_make_scene_frame("The docks at midnight."))
+
+    mock_repo.retrieve_relevant.assert_called_once_with(
+        "The docks at midnight.", limit=5
+    )
+    call_args = mock_scene_agent.run_sync.call_args[0][0]
+    assert "Malachar had pale hollow eyes." in call_args
+
+
+def test_open_scene_skips_retrieve_memory_when_context_pre_populated() -> None:
+    """open_scene() does not call retrieve_memory when prior_narrative_context is set."""
+    narrator, mock_repo, mock_scene_agent = _make_scene_narrator(
+        memory_returns=["should not appear"]
+    )
+    frame = replace(
+        _make_scene_frame("The docks at midnight."),
+        prior_narrative_context="Pre-loaded context from the caller.",
+    )
+    narrator.open_scene(frame)
+
+    mock_repo.retrieve_relevant.assert_not_called()
+    call_args = mock_scene_agent.run_sync.call_args[0][0]
+    assert "Pre-loaded context from the caller." in call_args
