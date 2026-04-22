@@ -43,7 +43,7 @@ fi
 puts "${BLUE}Loading env profile: ${ENV_FILE}${RESET}"
 set -a && source "$ENV_FILE" && set +a
 
-DATA_ROOT="${DATA_ROOT:-tmp/data_store}"
+DATA_ROOT="${DATA_ROOT:-var/data_store}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-${OPENAI_MODEL:-orieg/gemma3-tools:12b-ft-v2}}"
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-nomic-embed-text}"
 LLM_PROVIDER="${LLM_PROVIDER:-ollama}"

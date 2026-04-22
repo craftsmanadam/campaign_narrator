@@ -71,9 +71,9 @@ def test_settings_ignores_unrelated_env_vars(
 
 
 def test_settings_data_root_default() -> None:
-    """data_root defaults to tmp/data_store when DATA_ROOT is not set."""
+    """data_root defaults to var/data_store when DATA_ROOT is not set."""
     s = Settings()
-    assert s.data_root == "tmp/data_store"
+    assert s.data_root == "var/data_store"
 
 
 def test_settings_data_root_overridden_by_env(

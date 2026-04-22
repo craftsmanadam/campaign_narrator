@@ -8,7 +8,7 @@ if [ -f .env ]; then
   set -a && source .env && set +a
 fi
 
-DATA_ROOT="${DATA_ROOT:-tmp/data_store}"
+DATA_ROOT="${DATA_ROOT:-var/data_store}"
 
 if [ ! -d "$DATA_ROOT" ]; then
   echo "Nothing to clear — $DATA_ROOT does not exist."

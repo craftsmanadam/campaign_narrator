@@ -257,7 +257,7 @@ def test_main_uses_settings_default_data_root_when_env_unset(
     exit_code = main([], stdin=StringIO(), stdout=StringIO())
 
     assert exit_code == 0
-    assert captured == [Path("tmp/data_store")]
+    assert captured == [Path("var/data_store")]
 
 
 # ---------------------------------------------------------------------------

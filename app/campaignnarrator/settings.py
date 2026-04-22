@@ -33,7 +33,7 @@ class Settings(BaseSettings):
             Default WARNING. Does not affect the file handler (always DEBUG).
     """
 
-    data_root: str = "tmp/data_store"
+    data_root: str = "var/data_store"
     embedding_provider: Literal["stub", "ollama"] = "ollama"
     embedding_model: str = "nomic-embed-text"
     embedding_base_url: str = "http://localhost:11434"
