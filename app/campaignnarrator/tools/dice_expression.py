@@ -43,10 +43,17 @@ def resolve_dice_expression(expression: str, actor: ActorState) -> str:
     return result
 
 
-def format_roll_event(roll_request: RollRequest, total: int) -> str:
-    """Format a completed dice roll as a player-facing event string."""
-    purpose = roll_request.purpose or roll_request.expression
-    return f"Roll: {purpose} = {total}."
+def format_roll_event(
+    roll_request: RollRequest,
+    total: int,
+    resolved_expression: str | None = None,
+) -> str:
+    """Format a completed dice roll as a player-facing event string.
+
+    Label priority: purpose (from LLM) → resolved_expression → original expression.
+    """
+    label = roll_request.purpose or resolved_expression or roll_request.expression
+    return f"Roll: {label} = {total}."
 
 
 def execute_roll(
@@ -64,7 +71,7 @@ def execute_roll(
         expression,
         total,
     )
-    return format_roll_event(roll_request, total)
+    return format_roll_event(roll_request, total, resolved_expression=expression)
 
 
 def actor_modifiers(actor: ActorState) -> dict[str, int]:

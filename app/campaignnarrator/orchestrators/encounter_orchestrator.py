@@ -120,8 +120,12 @@ class EncounterOrchestrator:
             output.append(text)
 
         if not scene_texts and state.public_events:
+            prior_context = self._retrieve_prior_context(state.setting)
+            recap_frame = replace(
+                _recap_frame(state), prior_narrative_context=prior_context
+            )
             recap_text = self._narrate(
-                _recap_frame(state), encounter_id=state.encounter_id
+                recap_frame, encounter_id=state.encounter_id
             ).text
             self._io.display(recap_text)
             output.append(recap_text)
@@ -477,6 +481,13 @@ class EncounterOrchestrator:
             apply_state_effects(state, (*roll_effects, *adjudication.state_effects)),
             roll_events,
         )
+
+    def _retrieve_prior_context(self, query: str) -> str:
+        """Query memory for prior session context."""
+        if self._memory_repository is None:
+            return ""
+        retrieved = self._memory_repository.retrieve_relevant(query, limit=3)
+        return "\n\n".join(retrieved) if retrieved else ""
 
     def _narrate(self, frame: NarrationFrame, *, encounter_id: str) -> Narration:
         narration = self._narrator_agent.narrate(frame)

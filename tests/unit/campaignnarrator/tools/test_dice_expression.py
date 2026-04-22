@@ -218,8 +218,43 @@ def test_execute_roll_resolves_tokens_and_returns_formatted_event() -> None:
     assert result == "Roll: Insight check = 14."
 
 
-def test_execute_roll_uses_expression_as_label_when_purpose_absent() -> None:
-    """execute_roll falls back to the resolved expression as the label."""
+def test_format_roll_event_uses_resolved_expression_over_original_when_no_purpose() -> None:
+    """format_roll_event prefers resolved_expression over raw expression as fallback."""
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+{wisdom_mod}",
+    )
+    result = format_roll_event(roll, 15, resolved_expression="1d20+3")
+    assert result == "Roll: 1d20+3 = 15."
+
+
+def test_format_roll_event_purpose_wins_over_resolved_expression() -> None:
+    """purpose field takes priority over resolved_expression."""
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+{wisdom_mod}",
+        purpose="Insight check",
+    )
+    result = format_roll_event(roll, 15, resolved_expression="1d20+3")
+    assert result == "Roll: Insight check = 15."
+
+
+def test_execute_roll_uses_resolved_expression_as_label_when_purpose_absent() -> None:
+    """execute_roll uses resolved expression (tokens substituted) as label, not template."""
+    actor = _actor(wisdom=16, proficiency_bonus=3)
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+{wisdom_mod}+{proficiency_bonus}",
+    )
+    result = execute_roll(roll, actor, lambda _: 14)
+    assert result == "Roll: 1d20+3+3 = 14."
+
+
+def test_execute_roll_uses_expression_as_label_when_no_tokens_and_no_purpose() -> None:
+    """execute_roll falls back to the (unchanged) expression when it has no tokens."""
     actor = _actor()
     roll = RollRequest(
         owner="player",

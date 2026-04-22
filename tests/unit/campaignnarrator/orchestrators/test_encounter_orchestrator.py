@@ -47,15 +47,21 @@ _DAMAGED_GOBLIN_HP = 2
 
 
 class FakeMemoryRepository:
-    def __init__(self) -> None:
+    def __init__(self, prior_context: list[str] | None = None) -> None:
         self.events: list[dict[str, object]] = []
         self.narratives: list[tuple[str, dict[str, str]]] = []
+        self._prior_context: list[str] = prior_context or []
+        self.retrieve_queries: list[str] = []
 
     def append_event(self, event: Mapping[str, object]) -> None:
         self.events.append(dict(event))
 
     def store_narrative(self, text: str, metadata: dict[str, str]) -> None:
         self.narratives.append((text, metadata))
+
+    def retrieve_relevant(self, query: str, *, limit: int = 5) -> list[str]:
+        self.retrieve_queries.append(query)
+        return self._prior_context[:limit]
 
 
 class FakeRulesAgent:
@@ -1344,3 +1350,45 @@ def test_public_roll_event_is_displayed_to_player_in_social_path(
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
     assert any("Roll:" in msg for msg in io.displayed)
+
+
+def test_resume_recap_populates_prior_narrative_context_from_memory(
+    tmp_path: Path,
+) -> None:
+    """On resume, prior session context is retrieved from memory and passed to narrator."""
+    prior_summary = "You searched the woods and found a mysterious mirror."
+    memory_repository = FakeMemoryRepository(prior_context=[prior_summary])
+    narrator_agent = FakeNarratorAgent()
+
+    encounter_repo = EncounterRepository(tmp_path)
+    actor_repo = ActorRepository(tmp_path)
+    actor_repo.save(_default_player())
+    encounter_repo.save(
+        EncounterState(
+            encounter_id="goblin-camp",
+            phase=EncounterPhase.SOCIAL,
+            setting="A ruined roadside camp.",
+            actors={"pc:talia": _default_player()},
+            public_events=("Roll: Investigation = 15.",),  # triggers recap path
+        )
+    )
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            state=StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo),
+            memory=memory_repository,
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(),
+            narrator=narrator_agent,
+        ),
+        tools=OrchestratorTools(roll_dice=FakeDice([])),
+        io=ScriptedIO(["exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(),
+    )
+
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    # The recap frame must have prior_narrative_context populated from memory
+    recap_frames = [f for f in narrator_agent.frames if f.purpose == "recap_response"]
+    assert recap_frames, "Expected at least one recap_response frame"
+    assert prior_summary in recap_frames[0].prior_narrative_context
