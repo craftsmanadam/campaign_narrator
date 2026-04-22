@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia strikes Goblin Scout 1 with her longsword — a critical hit!\",\"reasoning_summary\":\"Player declared attack; target is in range; crit applied.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+5\",\"purpose\":\"Attack roll vs Goblin Scout 1\"}],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-1\",\"value\":-14}],\"rule_references\":[]}"
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia strikes Goblin Scout 1 with her longsword.\",\"reasoning_summary\":\"Player declared attack; target is in range.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+7\",\"purpose\":\"Attack roll vs Goblin Scout 1\"},{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d8+4\",\"purpose\":\"Damage: Longsword (one-hand)\"}],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-1\",\"value\":0}],\"rule_references\":[]}"
         }
       }]
     },

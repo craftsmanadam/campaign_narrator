@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia swings at Goblin Scout 2, connecting solidly.\",\"reasoning_summary\":\"Player declared attack; target is alive and in range.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-2\",\"value\":-3}],\"rule_references\":[]}"
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Talia swings at Goblin Scout 2, connecting solidly.\",\"reasoning_summary\":\"Player declared attack; target is alive and in range.\",\"roll_requests\":[{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d20+7\",\"purpose\":\"Attack roll vs Goblin Scout 2\"},{\"owner\":\"player\",\"visibility\":\"public\",\"expression\":\"1d8+4\",\"purpose\":\"Damage: Longsword (one-hand)\"}],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"npc:goblin-2\",\"value\":0}],\"rule_references\":[]}"
         }
       }]
     },

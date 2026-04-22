@@ -465,7 +465,7 @@ class EncounterOrchestrator:
         player: ActorState,
     ) -> tuple[EncounterState, tuple[str, ...]]:
         roll_events = tuple(
-            execute_roll(roll_request, player, self._roll_dice)
+            execute_roll(roll_request, player, self._roll_dice)[0]
             for roll_request in adjudication.roll_requests
             if roll_request.visibility is RollVisibility.PUBLIC
         )

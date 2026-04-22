@@ -18,7 +18,6 @@ from campaignnarrator.domain.models import (
     CombatIntent,
     CombatResult,
     CombatStatus,
-    CritReview,
     EncounterPhase,
     EncounterState,
     InitiativeTurn,
@@ -111,7 +110,6 @@ class _NarratorAgentProtocol(Protocol):
     def narrate(self, frame: NarrationFrame) -> Narration: ...
     def declare_npc_intent_from_json(self, context_json: str) -> str: ...
     def assess_combat_from_json(self, state_json: str) -> CombatAssessment: ...
-    def review_crit_from_json(self, context_json: str) -> CritReview: ...
 
 
 class CombatOrchestrator:
@@ -268,18 +266,25 @@ class CombatOrchestrator:
         if overspent:
             return state, resources, ""
 
-        roll_events = tuple(
-            execute_roll(rr, actor, self._roll_dice)
-            for rr in adjudication.roll_requests
-            if rr.visibility is RollVisibility.PUBLIC
-        )
+        roll_event_strings: list[str] = []
+        roll_totals_by_purpose: dict[str, int] = {}
+        for rr in adjudication.roll_requests:
+            if rr.visibility is RollVisibility.PUBLIC:
+                event_str, total = execute_roll(rr, actor, self._roll_dice)
+                roll_event_strings.append(event_str)
+                if rr.purpose:
+                    roll_totals_by_purpose[rr.purpose] = total
+        roll_events = tuple(roll_event_strings)
         for event in roll_events:
             self._io.display(event)
 
         actor_effects = tuple(
             e for e in adjudication.state_effects if e.effect_type != "movement"
         )
-        state = self._materialize_effects(state, actor_effects)
+        resolved_effects = self._resolve_attack_effects(
+            state, actor_effects, roll_totals_by_purpose
+        )
+        state = self._materialize_effects(state, resolved_effects)
         resources = self._consume_resource(resources, adjudication.action_type)
         narration = self._narrator_agent.narrate(
             self._build_narrator_frame(
@@ -308,6 +313,47 @@ class CombatOrchestrator:
                     movement_remaining=resources.movement_remaining - feet,
                 )
         return resources, False
+
+    def _resolve_attack_effects(
+        self,
+        state: EncounterState,
+        effects: tuple[StateEffect, ...],
+        roll_totals_by_purpose: dict[str, int],
+    ) -> tuple[StateEffect, ...]:
+        """Replace change_hp placeholder (value=0) with resolved damage.
+
+        The LLM generates change_hp(target, 0) as a placeholder for attacks.
+        This method checks the attack roll total against the target's AC and
+        substitutes the actual damage total on a hit, or drops the effect on a miss.
+        If no attack roll or damage roll is present, effects are returned unchanged.
+        """
+        attack_total: int | None = None
+        damage_total: int | None = None
+        for purpose, total in roll_totals_by_purpose.items():
+            if purpose.startswith("Attack roll"):
+                attack_total = total
+            elif purpose.startswith("Damage"):
+                damage_total = total
+        if attack_total is None or damage_total is None:
+            return effects
+        resolved: list[StateEffect] = []
+        for effect in effects:
+            if effect.effect_type == "change_hp" and effect.value == 0:
+                target_actor = state.actors.get(effect.target)
+                if target_actor is None:
+                    continue
+                if attack_total >= target_actor.armor_class:
+                    resolved.append(
+                        StateEffect(
+                            effect_type="change_hp",
+                            target=effect.target,
+                            value=-damage_total,
+                        )
+                    )
+                # miss: drop the placeholder — no effect applied
+            else:
+                resolved.append(effect)
+        return tuple(resolved)
 
     def _classify_combat_intent(self, raw_input: str) -> str:
         return self._intent_agent.run_sync(
@@ -465,37 +511,16 @@ class CombatOrchestrator:
             )
         )
 
-        effects = list(adjudication.state_effects)
-        pc_ids = {
-            a.actor_id for a in state.actors.values() if a.actor_type == ActorType.PC
-        }
-        crit_index: int | None = None
-        crit_effect: StateEffect | None = None
-        for i, effect in enumerate(effects):
-            if effect.effect_type == "critical_hit" and effect.target in pc_ids:
-                crit_index = i
-                crit_effect = effect
-                break
+        roll_totals_by_purpose: dict[str, int] = {}
+        for rr in adjudication.roll_requests:
+            _, total = execute_roll(rr, actor, self._roll_dice)
+            if rr.purpose:
+                roll_totals_by_purpose[rr.purpose] = total
 
-        if crit_index is not None and crit_effect is not None:
-            crit_payload = {
-                "attacker_id": actor.actor_id,
-                "attacker_name": actor.name,
-                "target_id": crit_effect.target,
-                "damage": crit_effect.value,
-                "setting": state.setting,
-            }
-            crit_json = json.dumps(crit_payload, indent=2, sort_keys=True)
-            review = self._narrator_agent.review_crit_from_json(crit_json)
-            crit_value = require_int(crit_effect.value, "critical hit damage")
-            resolved_damage = -crit_value if review.approved else -(crit_value // 2)
-            effects[crit_index] = StateEffect(
-                effect_type="change_hp",
-                target=crit_effect.target,
-                value=resolved_damage,
-            )
-
-        state = self._materialize_effects(state, tuple(effects))
+        resolved_effects = self._resolve_attack_effects(
+            state, adjudication.state_effects, roll_totals_by_purpose
+        )
+        state = self._materialize_effects(state, resolved_effects)
 
         narration = self._narrator_agent.narrate(
             self._build_narrator_frame(

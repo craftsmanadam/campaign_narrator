@@ -314,6 +314,24 @@ def cli_output_includes(
     assert expected in cli_result.stdout
 
 
+@then(parsers.parse('the encounter actor "{actor_id}" is defeated'))
+def encounter_actor_is_defeated(
+    actor_id: str,
+    runtime_data_root: Path,
+) -> None:
+    """Assert that the named actor has hp_current==0 and 'dead' in conditions."""
+
+    state_path = runtime_data_root / "state" / "encounters" / "active.json"
+    state_data = json.loads(state_path.read_text())
+    actor_data = state_data["actors"][actor_id]
+    assert actor_data["hp_current"] == 0, (
+        f"{actor_id} hp_current={actor_data['hp_current']}, expected 0"
+    )
+    assert "dead" in actor_data["conditions"], (
+        f"{actor_id} conditions={actor_data['conditions']!r}, expected 'dead'"
+    )
+
+
 _STARTUP_SCENARIO_TO_WIREMOCK: dict[str, str] = {
     "startup-s1": "startup-s1",
     "startup-s2": "startup-s2",

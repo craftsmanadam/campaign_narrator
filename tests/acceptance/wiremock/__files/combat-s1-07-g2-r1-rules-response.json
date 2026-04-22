@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Goblin Scout 2 slashes at Talia with its scimitar.\",\"reasoning_summary\":\"NPC declared attack; Talia is in range; hit resolves.\",\"roll_requests\":[],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"pc:talia\",\"value\":-2}],\"rule_references\":[]}"
+          "arguments": "{\"is_legal\":true,\"action_type\":\"attack\",\"summary\":\"Goblin Scout 2 slashes at Talia with its scimitar.\",\"reasoning_summary\":\"NPC declared attack; Talia is in range.\",\"roll_requests\":[{\"owner\":\"npc\",\"visibility\":\"hidden\",\"expression\":\"1d20+4\",\"purpose\":\"Attack roll vs Talia Ironveil\"},{\"owner\":\"npc\",\"visibility\":\"hidden\",\"expression\":\"1d6+2\",\"purpose\":\"Damage: Scimitar\"}],\"state_effects\":[{\"effect_type\":\"change_hp\",\"target\":\"pc:talia\",\"value\":0}],\"rule_references\":[]}"
         }
       }]
     },

@@ -16,6 +16,8 @@ Feature: Full combat encounters
     And the CLI output includes "Goblin Scout 1 falls dead"
     And the CLI output includes "Goblin Scout 2 falls"
     And the CLI output includes "Victory"
+    And the encounter actor "npc:goblin-1" is defeated
+    And the encounter actor "npc:goblin-2" is defeated
 
   Scenario: Fighter uses a healing potion and defeats three goblins
     Given the OpenAI API is configured for fighter-vs-3-goblins on encounter fighter-vs-3-goblins

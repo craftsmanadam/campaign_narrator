@@ -14,7 +14,6 @@ from campaignnarrator.domain.models import (
     CombatIntent,
     CombatOutcome,
     CombatStatus,
-    CritReview,
     EncounterPhase,
     EncounterState,
     InitiativeTurn,
@@ -56,16 +55,13 @@ class ScriptedNarratorAgent:
         text: str = "The battle rages on.",
         npc_intents: list[str] | None = None,
         assessments: list[CombatAssessment] | None = None,
-        crit_reviews: list[CritReview] | None = None,
     ) -> None:
         self._text = text
         self._npc_intents: list[str] = npc_intents or []
         self._assessments: list[CombatAssessment] = assessments or []
-        self._crit_reviews: list[CritReview] = crit_reviews or []
         self.frames_seen: list[NarrationFrame] = []
         self.intent_contexts_seen: list[str] = []
         self.assessment_contexts_seen: list[str] = []
-        self.crit_contexts_seen: list[str] = []
 
     def narrate(self, frame: NarrationFrame) -> Narration:
         self.frames_seen.append(frame)
@@ -82,12 +78,6 @@ class ScriptedNarratorAgent:
         if self._assessments:
             return self._assessments.pop(0)
         return CombatAssessment(combat_active=True, outcome=None)
-
-    def review_crit_from_json(self, context_json: str) -> CritReview:
-        self.crit_contexts_seen.append(context_json)
-        if self._crit_reviews:
-            return self._crit_reviews.pop(0)
-        return CritReview(approved=True)
 
 
 # ---------------------------------------------------------------------------
@@ -178,7 +168,6 @@ def _orchestrator(  # noqa: PLR0913
     roll_dice: Callable[[str], int] | None = None,
     npc_intents: list[str] | None = None,
     assessments: list[CombatAssessment] | None = None,
-    crit_reviews: list[CritReview] | None = None,
 ) -> tuple[CombatOrchestrator, ScriptedIO, ScriptedRulesAgent, ScriptedNarratorAgent]:
     io = ScriptedIO(inputs, on_exhaust="end turn")
     rules = ScriptedRulesAgent(adjudications)
@@ -186,7 +175,6 @@ def _orchestrator(  # noqa: PLR0913
         text=narrator_text,
         npc_intents=npc_intents,
         assessments=assessments,
-        crit_reviews=crit_reviews,
     )
     orchestrator = CombatOrchestrator(
         rules_agent=rules,
@@ -723,7 +711,7 @@ def test_combat_intent_exit_session_returns_saved_and_quit() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Task 4: NPC turn, crit override, materialize effects
+# NPC turn, attack resolution, materialize effects
 # ---------------------------------------------------------------------------
 
 
@@ -839,122 +827,6 @@ def test_npc_turn_rules_request_includes_intent_field() -> None:
     orc.run(state)
     assert len(rules.requests_seen) >= 1
     assert rules.requests_seen[0].intent == scripted_intent
-
-
-def test_npc_crit_approved_applies_full_damage() -> None:
-    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
-    crit_adj = RulesAdjudication(
-        is_legal=True,
-        action_type="attack",
-        summary="Goblin lands a critical hit on Talia!",
-        roll_requests=(),
-        state_effects=(
-            StateEffect(effect_type="critical_hit", target="pc:talia", value=8),
-        ),
-        rule_references=(),
-        reasoning_summary="Natural 20.",
-    )
-    state = EncounterState(
-        encounter_id="test-crit-approved",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        actors={"npc:goblin-1": goblin, "pc:talia": TALIA},
-        combat_turns=(
-            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
-            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
-        ),
-    )
-    orc, _, _, _ = _orchestrator(
-        inputs=["end turn"],
-        adjudications=[crit_adj],
-        crit_reviews=[CritReview(approved=True)],
-        assessments=[
-            CombatAssessment(combat_active=True, outcome=None),
-            CombatAssessment(
-                combat_active=False,
-                outcome=CombatOutcome(
-                    short_description="End",
-                    full_description="Combat ends.",
-                ),
-            ),
-        ],
-    )
-    result = orc.run(state)
-    talia_final = result.final_state.actors["pc:talia"]
-    assert talia_final.hp_current == TALIA.hp_current - 8
-
-
-def test_npc_crit_downgraded_applies_half_damage() -> None:
-    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
-    crit_adj = RulesAdjudication(
-        is_legal=True,
-        action_type="attack",
-        summary="Goblin lands a critical hit on Talia!",
-        roll_requests=(),
-        state_effects=(
-            StateEffect(effect_type="critical_hit", target="pc:talia", value=8),
-        ),
-        rule_references=(),
-        reasoning_summary="Natural 20.",
-    )
-    state = EncounterState(
-        encounter_id="test-crit-downgraded",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        actors={"npc:goblin-1": goblin, "pc:talia": TALIA},
-        combat_turns=(
-            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
-            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
-        ),
-    )
-    orc, _, _, _ = _orchestrator(
-        inputs=["end turn"],
-        adjudications=[crit_adj],
-        crit_reviews=[CritReview(approved=False, reason="Too early in the fight.")],
-        assessments=[
-            CombatAssessment(combat_active=True, outcome=None),
-            CombatAssessment(
-                combat_active=False,
-                outcome=CombatOutcome(
-                    short_description="End",
-                    full_description="Combat ends.",
-                ),
-            ),
-        ],
-    )
-    result = orc.run(state)
-    talia_final = result.final_state.actors["pc:talia"]
-    assert talia_final.hp_current == TALIA.hp_current - 4  # 8 // 2 = 4
-
-
-def test_npc_crit_review_not_called_when_no_crit_effect() -> None:
-    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
-    state = EncounterState(
-        encounter_id="test-no-crit",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        actors={"npc:goblin-1": goblin, "pc:talia": TALIA},
-        combat_turns=(
-            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
-            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
-        ),
-    )
-    orc, _, _, narrator = _orchestrator(
-        inputs=["end turn"],
-        adjudications=[_npc_attack_adjudication()],
-        assessments=[
-            CombatAssessment(combat_active=True, outcome=None),
-            CombatAssessment(
-                combat_active=False,
-                outcome=CombatOutcome(
-                    short_description="End",
-                    full_description="Combat ends.",
-                ),
-            ),
-        ],
-    )
-    orc.run(state)
-    assert len(narrator.crit_contexts_seen) == 0
 
 
 def test_materialize_effects_converts_heal_to_change_hp_using_roll() -> None:
@@ -1278,6 +1150,221 @@ def test_considering_rules_displayed_before_combat_adjudication() -> None:
     )
     orc.run(state)
     assert any("Considering the rules" in msg for msg in io.displayed)
+
+
+# ---------------------------------------------------------------------------
+# Attack resolution via roll_requests + change_hp placeholder
+# ---------------------------------------------------------------------------
+
+
+def _attack_adj_with_placeholder(
+    target: str = "npc:goblin-1",
+    attack_expression: str = "1d20+7",
+    damage_expression: str = "1d8+4",
+) -> RulesAdjudication:
+    """Adjudication for a player attack using the new roll_requests + placeholder pattern."""
+    return RulesAdjudication(
+        is_legal=True,
+        action_type="attack",
+        summary="Talia swings her longsword.",
+        roll_requests=(
+            RollRequest(
+                owner="player",
+                visibility=RollVisibility.PUBLIC,
+                expression=attack_expression,
+                purpose="Attack roll vs Goblin Scout 1",
+            ),
+            RollRequest(
+                owner="player",
+                visibility=RollVisibility.PUBLIC,
+                expression=damage_expression,
+                purpose="Damage: Longsword",
+            ),
+        ),
+        state_effects=(StateEffect(effect_type="change_hp", target=target, value=0),),
+        rule_references=(),
+        reasoning_summary="Valid attack with placeholder.",
+    )
+
+
+def _npc_attack_adj_with_placeholder(
+    target: str = "pc:talia",
+) -> RulesAdjudication:
+    """NPC attack adjudication using roll_requests + change_hp placeholder."""
+    return RulesAdjudication(
+        is_legal=True,
+        action_type="attack",
+        summary="Goblin slashes at Talia.",
+        roll_requests=(
+            RollRequest(
+                owner="npc",
+                visibility=RollVisibility.HIDDEN,
+                expression="1d20+4",
+                purpose="Attack roll vs Talia Ironveil",
+            ),
+            RollRequest(
+                owner="npc",
+                visibility=RollVisibility.HIDDEN,
+                expression="1d6+2",
+                purpose="Damage: Scimitar",
+            ),
+        ),
+        state_effects=(StateEffect(effect_type="change_hp", target=target, value=0),),
+        rule_references=(),
+        reasoning_summary="Valid NPC attack with placeholder.",
+    )
+
+
+def test_attack_hit_applies_damage_to_target() -> None:
+    """Player attack that hits (roll >= AC) applies damage and kills the goblin."""
+    # Goblin AC=15, HP=7. roll_dice=20 → attack total=20 ≥ 15 → hit → damage=20 → dead
+    state = _make_combat_state(goblin_hp=7)
+    orc, _, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_attack_adj_with_placeholder()],
+        roll_dice=lambda _: 20,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="Victory",
+                    full_description="The goblin falls.",
+                ),
+            )
+        ],
+    )
+    result = orc.run(state)
+    goblin = result.final_state.actors["npc:goblin-1"]
+    assert goblin.hp_current == 0
+    assert "dead" in goblin.conditions
+
+
+def test_attack_miss_does_not_apply_damage() -> None:
+    """Player attack that misses (roll < AC) leaves target HP unchanged."""
+    # Goblin AC=15. roll_dice=1 → attack total=1 < 15 → miss → no damage
+    initial_hp = make_goblin_scout("npc:goblin-1", "G").hp_max
+    state = _make_combat_state(goblin_hp=initial_hp)
+    orc, _, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_attack_adj_with_placeholder()],
+        roll_dice=lambda _: 1,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat ends.",
+                ),
+            )
+        ],
+    )
+    result = orc.run(state)
+    goblin = result.final_state.actors["npc:goblin-1"]
+    assert goblin.hp_current == initial_hp
+
+
+def test_npc_attack_hit_applies_damage_to_player() -> None:
+    """NPC attack that hits applies damage to the player via hidden dice rolls."""
+    # Talia AC=20, HP=44. roll_dice=20 → attack total=20 ≥ 20 → hit → damage=20
+    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
+    state = EncounterState(
+        encounter_id="test-npc-hit",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actors={"npc:goblin-1": goblin, "pc:talia": TALIA},
+        combat_turns=(
+            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
+            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
+        ),
+    )
+    orc, _, _, _ = _orchestrator(
+        inputs=["end turn"],
+        adjudications=[_npc_attack_adj_with_placeholder()],
+        roll_dice=lambda _: 20,
+        assessments=[
+            CombatAssessment(combat_active=True, outcome=None),
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat ends.",
+                ),
+            ),
+        ],
+    )
+    result = orc.run(state)
+    talia = result.final_state.actors["pc:talia"]
+    assert talia.hp_current == TALIA.hp_current - 20  # 44 - 20 = 24
+
+
+def test_npc_attack_miss_does_not_apply_damage() -> None:
+    """NPC attack that misses leaves target HP unchanged."""
+    # Talia AC=20. roll_dice=1 → attack total=1 < 20 → miss → no damage
+    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
+    state = EncounterState(
+        encounter_id="test-npc-miss",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actors={"npc:goblin-1": goblin, "pc:talia": TALIA},
+        combat_turns=(
+            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
+            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
+        ),
+    )
+    orc, _, _, _ = _orchestrator(
+        inputs=["end turn"],
+        adjudications=[_npc_attack_adj_with_placeholder()],
+        roll_dice=lambda _: 1,
+        assessments=[
+            CombatAssessment(combat_active=True, outcome=None),
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat ends.",
+                ),
+            ),
+        ],
+    )
+    result = orc.run(state)
+    talia = result.final_state.actors["pc:talia"]
+    assert talia.hp_current == TALIA.hp_current
+
+
+def test_direct_change_hp_without_roll_requests_passes_through_unchanged() -> None:
+    """Existing change_hp effects with non-zero value pass through _resolve_attack_effects."""
+    # _npc_attack_adjudication has roll_requests=() and direct change_hp(-4).
+    # With no roll_totals, _resolve_attack_effects returns effects unchanged.
+    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
+    state = EncounterState(
+        encounter_id="test-direct-damage",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actors={"npc:goblin-1": goblin, "pc:talia": TALIA},
+        combat_turns=(
+            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
+            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
+        ),
+    )
+    orc, _, _, _ = _orchestrator(
+        inputs=["end turn"],
+        adjudications=[_npc_attack_adjudication(damage_hp=-4)],
+        assessments=[
+            CombatAssessment(combat_active=True, outcome=None),
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat ends.",
+                ),
+            ),
+        ],
+    )
+    result = orc.run(state)
+    talia = result.final_state.actors["pc:talia"]
+    assert talia.hp_current == TALIA.hp_current - 4
 
 
 def _legal_attack_with_roll(

@@ -198,7 +198,7 @@ def test_format_roll_event_falls_back_to_expression_when_no_purpose() -> None:
 
 
 def test_execute_roll_resolves_tokens_and_returns_formatted_event() -> None:
-    """execute_roll substitutes actor tokens, calls roll_dice, and returns formatted string."""
+    """execute_roll substitutes actor tokens, calls roll_dice, and returns (str, int) tuple."""
     actor = _actor(wisdom=16, proficiency_bonus=3)
     roll = RollRequest(
         owner="player",
@@ -207,15 +207,31 @@ def test_execute_roll_resolves_tokens_and_returns_formatted_event() -> None:
         purpose="Insight check",
     )
     calls: list[str] = []
+    fake_total = 14
 
     def fake_dice(expression: str) -> int:
         calls.append(expression)
-        return 14
+        return fake_total
 
-    result = execute_roll(roll, actor, fake_dice)
+    result, total = execute_roll(roll, actor, fake_dice)
 
     assert calls == ["1d20+3+3"]
-    assert result == "Roll: Insight check = 14."
+    assert result == f"Roll: Insight check = {fake_total}."
+    assert total == fake_total
+
+
+def test_execute_roll_returns_numeric_total() -> None:
+    """execute_roll second element is the raw integer total from roll_dice."""
+    actor = _actor(strength=18)
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d8+{strength_mod}",
+        purpose="Damage: Longsword",
+    )
+    fake_total = 7
+    _result, total = execute_roll(roll, actor, lambda _: fake_total)
+    assert total == fake_total
 
 
 def test_format_roll_event_uses_resolved_expression_over_original_when_no_purpose() -> (
@@ -251,7 +267,7 @@ def test_execute_roll_uses_resolved_expression_as_label_when_purpose_absent() ->
         visibility=RollVisibility.PUBLIC,
         expression="1d20+{wisdom_mod}+{proficiency_bonus}",
     )
-    result = execute_roll(roll, actor, lambda _: 14)
+    result, _total = execute_roll(roll, actor, lambda _: 14)
     assert result == "Roll: 1d20+3+3 = 14."
 
 
@@ -264,6 +280,6 @@ def test_execute_roll_uses_expression_as_label_when_no_tokens_and_no_purpose() -
         expression="2d6+3",
     )
 
-    result = execute_roll(roll, actor, lambda _: 9)
+    result, _total = execute_roll(roll, actor, lambda _: 9)
 
     assert result == "Roll: 2d6+3 = 9."

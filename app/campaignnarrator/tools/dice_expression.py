@@ -60,8 +60,8 @@ def execute_roll(
     roll_request: RollRequest,
     actor: ActorState,
     roll_dice: Callable[[str], int],
-) -> str:
-    """Resolve token placeholders, roll dice, and return a formatted event string."""
+) -> tuple[str, int]:
+    """Resolve token placeholders, roll dice, and return (display string, total)."""
     expression = resolve_dice_expression(roll_request.expression, actor)
     total = roll_dice(expression)
     _log.info(
@@ -71,7 +71,7 @@ def execute_roll(
         expression,
         total,
     )
-    return format_roll_event(roll_request, total, resolved_expression=expression)
+    return format_roll_event(roll_request, total, resolved_expression=expression), total
 
 
 def actor_modifiers(actor: ActorState) -> dict[str, int]:

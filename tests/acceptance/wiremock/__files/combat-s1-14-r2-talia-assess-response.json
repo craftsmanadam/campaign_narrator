@@ -13,7 +13,7 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"combat_active\":true,\"outcome\":null}"
+          "arguments": "{\"combat_active\":false,\"outcome\":{\"short_description\":\"Victory\",\"full_description\":\"Victory! Both goblin scouts lie defeated. The forest falls silent.\"}}"
         }
       }]
     },
