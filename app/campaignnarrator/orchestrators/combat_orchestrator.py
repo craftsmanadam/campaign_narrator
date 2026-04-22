@@ -31,6 +31,7 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
     TurnResources,
+    WeaponState,
 )
 from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
 from campaignnarrator.tools.dice_expression import actor_modifiers, execute_roll
@@ -80,6 +81,26 @@ _NPC_COMBAT_ALLOWED_OUTCOMES = (
     "hide",
     "bonus_action",
 )
+
+
+def _format_weapon(weapon: "WeaponState") -> str:
+    damage = weapon.damage_dice
+    if weapon.damage_bonus > 0:
+        damage += f"+{weapon.damage_bonus}"
+    elif weapon.damage_bonus < 0:
+        damage += str(weapon.damage_bonus)
+    return (
+        f"Weapon — {weapon.name}: attack_bonus +{weapon.attack_bonus}, "
+        f"damage {damage} {weapon.damage_type}"
+    )
+
+
+def _format_visible_actor(actor: ActorState) -> str:
+    role = "player" if actor.actor_type == ActorType.PC else actor.actor_type.value
+    return (
+        f"Actor {actor.actor_id} — {actor.name} ({role}), "
+        f"AC {actor.armor_class}, HP {actor.hp_current}/{actor.hp_max}"
+    )
 
 
 class _RulesAgentProtocol(Protocol):
@@ -307,14 +328,19 @@ class CombatOrchestrator:
             f"Item — {inv.item} (item_id: {inv.item_id}, count: {inv.count})"
             for inv in actor.inventory
         )
+        weapon_context = tuple(_format_weapon(w) for w in actor.equipped_weapons)
+        visible_actors_context = tuple(
+            _format_visible_actor(a) for a in state.actors.values()
+        )
         return RulesAdjudicationRequest(
             actor_id=actor.actor_id,
             encounter_id=state.encounter_id,
             intent=intent,
             phase=EncounterPhase.COMBAT,
             allowed_outcomes=allowed_outcomes,
-            compendium_context=feat_context + inventory_context,
+            compendium_context=feat_context + inventory_context + weapon_context,
             actor_modifiers=actor_modifiers(actor),
+            visible_actors_context=visible_actors_context,
         )
 
     def _build_narrator_frame(

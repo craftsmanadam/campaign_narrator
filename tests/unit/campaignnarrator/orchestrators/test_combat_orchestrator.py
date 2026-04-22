@@ -1426,3 +1426,54 @@ def test_ally_actor_skips_npc_turn_in_combat() -> None:
     # If the ALLY had triggered a rules call, requests_seen would have 2 entries
     # (or ScriptedRulesAgent would have raised ValueError on an empty queue).
     assert len(rules.requests_seen) == 1
+
+
+def test_rules_request_includes_equipped_weapon_in_compendium_context() -> None:
+    """Weapon name, attack_bonus, damage expression, and type must appear in context."""
+    state = _make_combat_state()
+    orc, _, rules, _ = _orchestrator(
+        inputs=["I attack", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack(damage_hp=-100)],
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state)
+    assert len(rules.requests_seen) >= 1
+    context = " ".join(rules.requests_seen[0].compendium_context)
+    assert "Longsword" in context
+    assert "attack_bonus" in context
+    assert "1d8" in context
+    assert "slashing" in context
+
+
+def test_rules_request_includes_visible_actors_context() -> None:
+    """All encounter actors with their actor_id, AC, and HP must be in context."""
+    state = _make_combat_state()
+    orc, _, rules, _ = _orchestrator(
+        inputs=["I attack", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack(damage_hp=-100)],
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state)
+    assert len(rules.requests_seen) >= 1
+    ctx = " ".join(rules.requests_seen[0].visible_actors_context)
+    assert "pc:talia" in ctx
+    assert "npc:goblin-1" in ctx
+    assert "AC" in ctx

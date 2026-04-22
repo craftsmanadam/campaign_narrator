@@ -152,4 +152,6 @@ class RulesAgent:
         }
         if request.actor_modifiers:
             data["actor_modifiers"] = dict(request.actor_modifiers)
+        if request.visible_actors_context:
+            data["visible_actors_context"] = list(request.visible_actors_context)
         return data

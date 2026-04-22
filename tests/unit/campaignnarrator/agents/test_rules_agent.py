@@ -107,6 +107,36 @@ def test_adjudicate_includes_encounter_id_in_input() -> None:
     assert payload["encounter_id"] == "goblin-camp"
 
 
+def test_adjudicate_includes_visible_actors_context_in_input() -> None:
+    """visible_actors_context must be serialized into the input when present."""
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(adapter=MagicMock(), _agent=mock_agent)
+    actors = (
+        "Actor pc:talia — Talia (player), AC 18, HP 45/45",
+        "Actor npc:goblin-1 — Goblin Scout 1 (npc), AC 15, HP 7/7",
+    )
+    request = _make_request(visible_actors_context=actors)
+    rules_agent.adjudicate(request)
+    call_args = mock_agent.run_sync.call_args[0][0]
+    payload = json.loads(call_args)
+    assert "visible_actors_context" in payload
+    assert any("pc:talia" in entry for entry in payload["visible_actors_context"])
+    assert any("npc:goblin-1" in entry for entry in payload["visible_actors_context"])
+
+
+def test_adjudicate_omits_visible_actors_context_when_empty() -> None:
+    """visible_actors_context must not appear in the input when the tuple is empty."""
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(adapter=MagicMock(), _agent=mock_agent)
+    request = _make_request()
+    rules_agent.adjudicate(request)
+    call_args = mock_agent.run_sync.call_args[0][0]
+    payload = json.loads(call_args)
+    assert "visible_actors_context" not in payload
+
+
 def test_adjudicate_roll_request_without_purpose_produces_none() -> None:
     adj = _canned_adjudication(
         roll_requests=(

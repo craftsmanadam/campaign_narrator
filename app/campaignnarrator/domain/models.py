@@ -491,6 +491,7 @@ class RulesAdjudicationRequest:
     check_hints: tuple[str, ...] = field(default_factory=tuple)
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
     actor_modifiers: Mapping[str, int] = field(default_factory=dict)
+    visible_actors_context: tuple[str, ...] = field(default_factory=tuple)
 
 
 class RulesAdjudication(BaseModel):
