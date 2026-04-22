@@ -471,3 +471,86 @@ def test_create_encounter_seeds_simple_npc(tmp_path: Path) -> None:
     assert len(saved.npc_presences) == 1
     assert saved.npc_presences[0].description == "the innkeeper"
     assert saved.phase == EncounterPhase.SOCIAL
+
+
+def test_create_encounter_simple_npc_gets_ally_actor_type(tmp_path: Path) -> None:
+    """Simple NPCs (social, non-combat) must be seeded as ActorType.ALLY."""
+    tmp = tmp_path
+    (tmp / "state" / "actors").mkdir(parents=True)
+    (tmp / "state" / "encounters").mkdir(parents=True)
+    (tmp / "compendium" / "monsters").mkdir(parents=True)
+    (tmp / "compendium" / "monsters" / "index.json").write_text("[]")
+
+    actor_repo = ActorRepository(tmp / "state")
+    encounter_repo = EncounterRepository(tmp / "state")
+    compendium_repo = CompendiumRepository(tmp / "compendium")
+
+    mock_narrator = MagicMock()
+    mock_narrator.open_scene.return_value = SceneOpeningResponse(
+        text="The tavern hums with life.",
+        scene_tone="warm and welcoming",
+        introduced_npcs=[
+            NpcPresenceResult(
+                display_name="Mira",
+                description="the innkeeper",
+                name_known=False,
+                stat_source="simple_npc",
+            )
+        ],
+    )
+
+    player = ActorState(
+        actor_id="pc:fighter",
+        name="Fighter",
+        actor_type=ActorType.PC,
+        hp_max=12,
+        hp_current=12,
+        armor_class=16,
+        strength=16,
+        dexterity=12,
+        constitution=14,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=1,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Attack",),
+        ac_breakdown=("chain mail",),
+    )
+    module = ModuleState(
+        module_id="module-001",
+        campaign_id="camp-001",
+        title="Test Module",
+        summary="A test module",
+        guiding_milestone_id="m-001",
+        next_encounter_seed="A dimly lit tavern.",
+    )
+
+    orchestrator = ModuleOrchestrator(
+        io=ScriptedIO(["exit"]),
+        repositories=ModuleOrchestratorRepositories(
+            campaign=MagicMock(spec=CampaignRepository),
+            module=MagicMock(spec=ModuleRepository),
+            encounter=encounter_repo,
+            actor=actor_repo,
+            memory=MagicMock(spec=MemoryRepository),
+            compendium=compendium_repo,
+        ),
+        agents=ModuleOrchestratorAgents(
+            narrator=mock_narrator,
+            module_generator=MagicMock(),
+        ),
+        encounter_orchestrator=MagicMock(),
+    )
+    orchestrator._create_and_run_encounter(
+        campaign=MagicMock(),
+        player=player,
+        module=module,
+    )
+
+    saved = encounter_repo.load_active()
+    assert saved is not None
+    npc_id = next(aid for aid in saved.actors if aid != "pc:fighter")
+    assert saved.actors[npc_id].actor_type == ActorType.ALLY

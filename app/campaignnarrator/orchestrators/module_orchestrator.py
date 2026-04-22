@@ -67,7 +67,12 @@ def _build_npc_actor(
         try:
             actor = _load_monster(result.monster_name, index_path=index_path)
             return replace(actor, actor_id=actor_id, name=result.display_name)
-        except KeyError, FileNotFoundError:
+        except KeyError:
+            _log.warning(
+                "Monster %r not found in compendium; using simple NPC stats",
+                result.monster_name,
+            )
+        except FileNotFoundError:
             _log.warning(
                 "Monster %r not found in compendium; using simple NPC stats",
                 result.monster_name,
@@ -75,7 +80,9 @@ def _build_npc_actor(
     return ActorState(
         actor_id=actor_id,
         name=result.display_name,
-        actor_type=ActorType.NPC,
+        actor_type=(
+            ActorType.ALLY if result.stat_source == "simple_npc" else ActorType.NPC
+        ),
         hp_max=_SIMPLE_NPC_HP,
         hp_current=_SIMPLE_NPC_HP,
         armor_class=_SIMPLE_NPC_AC,

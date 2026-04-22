@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from campaignnarrator.domain.models import (
+    ActorType,
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
@@ -1370,3 +1371,58 @@ def test_hidden_roll_request_is_not_displayed_to_player() -> None:
     )
     orc.run(state)
     assert not any("Roll:" in msg for msg in io.displayed)
+
+
+def test_ally_actor_skips_npc_turn_in_combat() -> None:
+    """An ALLY actor in the initiative order must not trigger a rules adjudication."""
+    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
+    villager = replace(
+        goblin, actor_id="npc:villager", name="Villager", actor_type=ActorType.ALLY
+    )
+    state = EncounterState(
+        encounter_id="test-ally-skip",
+        phase=EncounterPhase.COMBAT,
+        setting="Village road",
+        actors={
+            "pc:talia": TALIA,
+            "npc:villager": villager,
+            "npc:goblin-1": goblin,
+        },
+        combat_turns=(
+            InitiativeTurn(actor_id="pc:talia", initiative_roll=20),
+            InitiativeTurn(actor_id="npc:villager", initiative_roll=15),
+            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=10),
+        ),
+    )
+    # Player ends turn → assessment 1 (active, combat continues).
+    # Villager (ALLY) skips → narration=None → no assessment.
+    # Goblin acts → assessment 2 (inactive, combat ends).
+    orc, _, rules, _ = _orchestrator(
+        inputs=["end turn"],
+        intents=[],
+        adjudications=[
+            RulesAdjudication(
+                is_legal=True,
+                action_type="attack",
+                roll_requests=[],
+                summary="Goblin swings.",
+                rule_references=[],
+                state_effects=[],
+            )
+        ],
+        assessments=[
+            CombatAssessment(combat_active=True, outcome=None),
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            ),
+        ],
+    )
+    orc.run(state)
+    # Only goblin's turn should have generated a rules request — one, not two.
+    # If the ALLY had triggered a rules call, requests_seen would have 2 entries
+    # (or ScriptedRulesAgent would have raised ValueError on an empty queue).
+    assert len(rules.requests_seen) == 1

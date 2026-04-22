@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
@@ -20,6 +21,8 @@ from campaignnarrator.domain.models import (
     ResourceState,
     WeaponState,
 )
+
+_log = logging.getLogger(__name__)
 
 
 class EncounterRepository:
@@ -467,7 +470,8 @@ def _weapons_from_seed(seed: Mapping[str, object]) -> tuple[WeaponState, ...]:
                     properties=tuple(str(p) for p in w.get("properties", ())),
                 )
             )
-        except TypeError, ValueError:
+        except (TypeError, ValueError) as exc:
+            _log.warning("Skipping malformed weapon entry in encounter: %s", exc)
             continue
     return tuple(weapons)
 
@@ -497,7 +501,8 @@ def _feats_from_seed(seed: Mapping[str, object]) -> tuple[FeatState, ...]:
                     ),
                 )
             )
-        except TypeError, ValueError, KeyError:
+        except (TypeError, ValueError, KeyError) as exc:
+            _log.warning("Skipping malformed feat entry in encounter: %s", exc)
             continue
     return tuple(feats)
 
@@ -540,7 +545,8 @@ def _resources_from_seed(seed: Mapping[str, object]) -> tuple[ResourceState, ...
                     ),
                 )
             )
-        except TypeError, ValueError, KeyError:
+        except (TypeError, ValueError, KeyError) as exc:
+            _log.warning("Skipping malformed resource entry in encounter: %s", exc)
             continue
     return tuple(resources)
 
@@ -577,7 +583,8 @@ def _inventory_from_seed(seed: Mapping[str, object]) -> tuple[InventoryItem, ...
                     ),
                 )
             )
-        except TypeError, ValueError, KeyError:
+        except (TypeError, ValueError, KeyError) as exc:
+            _log.warning("Skipping malformed inventory entry in encounter: %s", exc)
             continue
     return tuple(items)
 

@@ -179,6 +179,8 @@ class CombatOrchestrator:
 
         if actor.actor_type == ActorType.PC:
             result = self._run_player_turn(state, actor)
+        elif actor.actor_type == ActorType.ALLY:
+            return _TurnResult(state=self._rotate_turns(state), narration=None)
         else:
             result = self._run_npc_turn(state, actor)
 

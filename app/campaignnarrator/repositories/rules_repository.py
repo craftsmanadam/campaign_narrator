@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 
 class RulesRepository:
@@ -58,6 +61,12 @@ class RulesRepository:
         for relative_path in relative_paths:
             try:
                 topic_markdown.append(self.load_topic_markdown(relative_path))
-            except FileNotFoundError, ValueError:
+            except (FileNotFoundError, ValueError) as exc:
+                _log.warning(
+                    "Could not load rule topic %r (%r): %s",
+                    topic,
+                    relative_path,
+                    exc,
+                )
                 return f"{self._missing_context_marker} {topic}"
         return "\n\n".join(topic_markdown)
