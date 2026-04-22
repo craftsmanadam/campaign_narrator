@@ -364,3 +364,9 @@ def test_rules_instructions_include_skill_ability_mapping() -> None:
     assert "Wisdom" in RULES_INSTRUCTIONS
     assert "Persuasion" in RULES_INSTRUCTIONS
     assert "Charisma" in RULES_INSTRUCTIONS
+
+
+def test_rules_instructions_constrain_skill_checks_to_one_roll_request() -> None:
+    """RULES_INSTRUCTIONS must tell the LLM that skill checks use exactly one roll_request."""
+    assert "SKILL CHECKS" in RULES_INSTRUCTIONS
+    assert "exactly ONE" in RULES_INSTRUCTIONS or "exactly one" in RULES_INSTRUCTIONS
