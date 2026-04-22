@@ -379,6 +379,7 @@ class EncounterOrchestrator:
     ) -> tuple[EncounterState, Narration]:
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
+            encounter_id=state.encounter_id,
             intent=player_input.raw_text,
             phase=state.phase,
             allowed_outcomes=("success", "failure", "complication", "peaceful"),

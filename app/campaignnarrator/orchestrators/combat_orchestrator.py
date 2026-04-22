@@ -293,6 +293,7 @@ class CombatOrchestrator:
         )
         return RulesAdjudicationRequest(
             actor_id=actor.actor_id,
+            encounter_id=state.encounter_id,
             intent=intent,
             phase=EncounterPhase.COMBAT,
             allowed_outcomes=allowed_outcomes,

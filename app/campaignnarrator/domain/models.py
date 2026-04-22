@@ -487,6 +487,7 @@ class RulesAdjudicationRequest:
     intent: str
     phase: EncounterPhase
     allowed_outcomes: tuple[str, ...]
+    encounter_id: str = ""
     check_hints: tuple[str, ...] = field(default_factory=tuple)
     compendium_context: tuple[str, ...] = field(default_factory=tuple)
     actor_modifiers: Mapping[str, int] = field(default_factory=dict)

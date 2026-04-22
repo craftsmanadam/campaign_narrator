@@ -95,6 +95,18 @@ def test_adjudicate_passes_serialized_request_to_agent() -> None:
     assert "goblin camp lore" in payload["compendium_context"]
 
 
+def test_adjudicate_includes_encounter_id_in_input() -> None:
+    """encounter_id must appear in the serialized input so the LLM can form correct targets."""
+    mock_agent = MagicMock()
+    mock_agent.run_sync.return_value.output = _canned_adjudication()
+    rules_agent = RulesAgent(adapter=MagicMock(), _agent=mock_agent)
+    request = _make_request(encounter_id="goblin-camp")
+    rules_agent.adjudicate(request)
+    call_args = mock_agent.run_sync.call_args[0][0]
+    payload = json.loads(call_args)
+    assert payload["encounter_id"] == "goblin-camp"
+
+
 def test_adjudicate_roll_request_without_purpose_produces_none() -> None:
     adj = _canned_adjudication(
         roll_requests=(
@@ -294,6 +306,12 @@ def test_rules_instructions_enumerate_valid_effect_types() -> None:
     ]
     for effect_type in valid_types:
         assert effect_type in RULES_INSTRUCTIONS, f"Missing effect type: {effect_type}"
+
+
+def test_rules_instructions_document_target_format() -> None:
+    """Prompt must tell the LLM the correct target format for encounter-level effects."""
+    assert "encounter:{encounter_id}" in RULES_INSTRUCTIONS
+    assert "TARGETING RULES" in RULES_INSTRUCTIONS
 
 
 def test_rules_instructions_guide_empty_state_effects_for_knowledge_checks() -> None:

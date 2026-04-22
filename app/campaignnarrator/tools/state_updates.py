@@ -157,8 +157,18 @@ def _require_actor(state: EncounterState, actor_id: str) -> ActorState:
 
 
 def _require_encounter_target(state: EncounterState, target: str) -> None:
-    if target != f"encounter:{state.encounter_id}":
+    expected = f"encounter:{state.encounter_id}"
+    if target == expected:
+        return
+    if target.startswith("encounter:"):
+        # Properly formatted but wrong encounter ID — genuine state mismatch.
         raise ValueError(f"state effect target mismatch: {target}")  # noqa: TRY003
+    # Malformed target (LLM did not use encounter:{id} format) — log and continue.
+    _log.warning(
+        "Malformed encounter target %r (expected %r) — applying to current encounter",
+        target,
+        expected,
+    )
 
 
 def _coerce_phase(value: object) -> EncounterPhase:

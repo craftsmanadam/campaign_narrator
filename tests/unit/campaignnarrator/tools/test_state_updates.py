@@ -220,6 +220,26 @@ def test_apply_state_effects_rejects_wrong_encounter_target() -> None:
         )
 
 
+def test_apply_state_effects_warns_and_applies_malformed_encounter_target(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Malformed targets (not 'encounter:*' format) log a warning and still apply."""
+    state = _default_encounter()
+    with caplog.at_level(logging.WARNING, logger="campaignnarrator"):
+        result = apply_state_effects(
+            state,
+            (
+                StateEffect(
+                    effect_type="set_phase",
+                    target="combat",
+                    value=EncounterPhase.COMBAT,
+                ),
+            ),
+        )
+    assert result.phase is EncounterPhase.COMBAT
+    assert any("Malformed encounter target" in msg for msg in caplog.messages)
+
+
 def test_apply_state_effects_never_mutates_input_state() -> None:
     """Effect application should return a fresh state and leave input untouched."""
 
