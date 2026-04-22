@@ -218,7 +218,9 @@ def test_execute_roll_resolves_tokens_and_returns_formatted_event() -> None:
     assert result == "Roll: Insight check = 14."
 
 
-def test_format_roll_event_uses_resolved_expression_over_original_when_no_purpose() -> None:
+def test_format_roll_event_uses_resolved_expression_over_original_when_no_purpose() -> (
+    None
+):
     """format_roll_event prefers resolved_expression over raw expression as fallback."""
     roll = RollRequest(
         owner="player",
