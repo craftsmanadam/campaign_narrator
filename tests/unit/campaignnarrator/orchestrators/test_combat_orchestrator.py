@@ -20,6 +20,8 @@ from campaignnarrator.domain.models import (
     Narration,
     NarrationFrame,
     RecoveryPeriod,
+    RollRequest,
+    RollVisibility,
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
@@ -1275,3 +1277,96 @@ def test_considering_rules_displayed_before_combat_adjudication() -> None:
     )
     orc.run(state)
     assert any("Considering the rules" in msg for msg in io.displayed)
+
+
+def _legal_attack_with_roll(
+    roll_visibility: RollVisibility = RollVisibility.PUBLIC,
+    damage_hp: int = -5,
+    target: str = "npc:goblin-1",
+) -> RulesAdjudication:
+    return RulesAdjudication(
+        is_legal=True,
+        action_type="attack",
+        summary="Attack lands.",
+        roll_requests=(
+            RollRequest(
+                owner="player",
+                visibility=roll_visibility,
+                expression="1d20+3",
+                purpose="Attack roll",
+            ),
+        ),
+        state_effects=(
+            StateEffect(effect_type="change_hp", target=target, value=damage_hp),
+        ),
+        rule_references=(),
+        reasoning_summary="Valid attack.",
+    )
+
+
+def test_public_roll_request_is_displayed_to_player() -> None:
+    """A PUBLIC roll_request must produce a 'Roll:' line in io output."""
+    state = _make_combat_state(goblin_hp=5)
+    orc, io, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
+        roll_dice=lambda _: 12,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state)
+    assert any("Roll:" in msg for msg in io.displayed)
+
+
+def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes() -> None:
+    """Roll events from PUBLIC roll_requests must appear in the narrator frame."""
+    state = _make_combat_state(goblin_hp=5)
+    orc, _, _, narrator = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
+        roll_dice=lambda _: 12,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state)
+    assert len(narrator.frames_seen) >= 1
+    combat_frame = narrator.frames_seen[0]
+    assert any("Roll:" in outcome for outcome in combat_frame.resolved_outcomes)
+
+
+def test_hidden_roll_request_is_not_displayed_to_player() -> None:
+    """A HIDDEN roll_request must not produce any 'Roll:' output to the player."""
+    state = _make_combat_state(goblin_hp=5)
+    orc, io, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack_with_roll(RollVisibility.HIDDEN, damage_hp=-5)],
+        roll_dice=lambda _: 12,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state)
+    assert not any("Roll:" in msg for msg in io.displayed)

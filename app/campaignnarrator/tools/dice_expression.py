@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from campaignnarrator.domain.models import ActorState
+import logging
+from collections.abc import Callable
+
+from campaignnarrator.domain.models import ActorState, RollRequest
+
+_log = logging.getLogger(__name__)
 
 
 def _ability_modifier(score: int) -> int:
@@ -36,6 +41,30 @@ def resolve_dice_expression(expression: str, actor: ActorState) -> str:
         result = result.replace(token, value)
     result = result.replace("+-", "-")
     return result
+
+
+def format_roll_event(roll_request: RollRequest, total: int) -> str:
+    """Format a completed dice roll as a player-facing event string."""
+    purpose = roll_request.purpose or roll_request.expression
+    return f"Roll: {purpose} = {total}."
+
+
+def execute_roll(
+    roll_request: RollRequest,
+    actor: ActorState,
+    roll_dice: Callable[[str], int],
+) -> str:
+    """Resolve token placeholders, roll dice, and return a formatted event string."""
+    expression = resolve_dice_expression(roll_request.expression, actor)
+    total = roll_dice(expression)
+    _log.info(
+        "Roll executed: purpose=%r expression=%r resolved=%r total=%d",
+        roll_request.purpose,
+        roll_request.expression,
+        expression,
+        total,
+    )
+    return format_roll_event(roll_request, total)
 
 
 def actor_modifiers(actor: ActorState) -> dict[str, int]:

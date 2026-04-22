@@ -12,7 +12,8 @@ Feature: Full combat encounters
       I attack Goblin Scout 2
       end turn
       """
-    Then the CLI output includes "Goblin Scout 1 falls dead"
+    Then the CLI output includes "Roll:"
+    And the CLI output includes "Goblin Scout 1 falls dead"
     And the CLI output includes "Goblin Scout 2 falls"
     And the CLI output includes "Victory"
 

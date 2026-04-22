@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
-from campaignnarrator.domain.models import ActorState, ActorType
+from campaignnarrator.domain.models import (
+    ActorState,
+    ActorType,
+    RollRequest,
+    RollVisibility,
+)
 from campaignnarrator.tools.dice_expression import (
     actor_modifiers,
+    execute_roll,
+    format_roll_event,
     resolve_dice_expression,
 )
 
@@ -165,3 +172,61 @@ def test_actor_modifiers_negative_ability_modifier() -> None:
     actor = _actor(strength=8)
     result = actor_modifiers(actor)
     assert result["strength_mod"] == -1
+
+
+def test_format_roll_event_uses_purpose_when_set() -> None:
+    """format_roll_event uses the purpose field as label when it is provided."""
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+3",
+        purpose="Persuasion check",
+    )
+    result = format_roll_event(roll, 18)
+    assert result == "Roll: Persuasion check = 18."
+
+
+def test_format_roll_event_falls_back_to_expression_when_no_purpose() -> None:
+    """format_roll_event uses the expression as label when purpose is absent."""
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+3",
+    )
+    result = format_roll_event(roll, 7)
+    assert result == "Roll: 1d20+3 = 7."
+
+
+def test_execute_roll_resolves_tokens_and_returns_formatted_event() -> None:
+    """execute_roll substitutes actor tokens, calls roll_dice, and returns formatted string."""
+    actor = _actor(wisdom=16, proficiency_bonus=3)
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="1d20+{wisdom_mod}+{proficiency_bonus}",
+        purpose="Insight check",
+    )
+    calls: list[str] = []
+
+    def fake_dice(expression: str) -> int:
+        calls.append(expression)
+        return 14
+
+    result = execute_roll(roll, actor, fake_dice)
+
+    assert calls == ["1d20+3+3"]
+    assert result == "Roll: Insight check = 14."
+
+
+def test_execute_roll_uses_expression_as_label_when_purpose_absent() -> None:
+    """execute_roll falls back to the resolved expression as the label."""
+    actor = _actor()
+    roll = RollRequest(
+        owner="player",
+        visibility=RollVisibility.PUBLIC,
+        expression="2d6+3",
+    )
+
+    result = execute_roll(roll, actor, lambda _: 9)
+
+    assert result == "Roll: 2d6+3 = 9."

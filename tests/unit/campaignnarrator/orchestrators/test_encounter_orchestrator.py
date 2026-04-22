@@ -1300,3 +1300,47 @@ def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
     ]
     assert len(partial) == 1
     assert partial[0]["encounter_id"] == "goblin-camp"
+
+
+def test_public_roll_event_is_displayed_to_player_in_social_path(
+    tmp_path: Path,
+) -> None:
+    """A PUBLIC roll_request from rules adjudication must be displayed to the player."""
+    rules_agent = FakeRulesAgent(
+        [
+            RulesAdjudication(
+                is_legal=True,
+                action_type="social_check",
+                summary="The goblins are convinced.",
+                roll_requests=(
+                    RollRequest(
+                        owner="player",
+                        visibility=RollVisibility.PUBLIC,
+                        expression="1d20+2",
+                        purpose="Persuasion check",
+                    ),
+                ),
+                state_effects=(
+                    StateEffect(
+                        effect_type="set_encounter_outcome",
+                        target="encounter:goblin-camp",
+                        value="de-escalated",
+                    ),
+                ),
+                reasoning_summary="Persuasion succeeds.",
+            ),
+        ]
+    )
+    io = ScriptedIO(["I appeal to their sense of reason.", "exit"])
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_social_repository(tmp_path),
+        intents=[_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")],
+        rules_agent=rules_agent,
+        roll_dice=FakeDice([15]),
+        io=io,
+    )
+
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert any("Roll:" in msg for msg in io.displayed)

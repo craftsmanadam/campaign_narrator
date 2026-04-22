@@ -26,12 +26,14 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     PlayerIO,
     RecoveryPeriod,
+    RollVisibility,
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
     TurnResources,
 )
 from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
+from campaignnarrator.tools.dice_expression import actor_modifiers, execute_roll
 from campaignnarrator.tools.state_updates import apply_state_effects, require_int
 
 _logger = logging.getLogger(__name__)
@@ -243,6 +245,14 @@ class CombatOrchestrator:
         if overspent:
             return state, resources, ""
 
+        roll_events = tuple(
+            execute_roll(rr, actor, self._roll_dice)
+            for rr in adjudication.roll_requests
+            if rr.visibility is RollVisibility.PUBLIC
+        )
+        for event in roll_events:
+            self._io.display(event)
+
         actor_effects = tuple(
             e for e in adjudication.state_effects if e.effect_type != "movement"
         )
@@ -250,7 +260,11 @@ class CombatOrchestrator:
         resources = self._consume_resource(resources, adjudication.action_type)
         narration = self._narrator_agent.narrate(
             self._build_narrator_frame(
-                state, actor, adjudication.summary, purpose="combat_turn_result"
+                state,
+                actor,
+                adjudication.summary,
+                purpose="combat_turn_result",
+                roll_events=roll_events,
             )
         )
         self._io.display(narration.text)
@@ -298,6 +312,7 @@ class CombatOrchestrator:
             phase=EncounterPhase.COMBAT,
             allowed_outcomes=allowed_outcomes,
             compendium_context=feat_context + inventory_context,
+            actor_modifiers=actor_modifiers(actor),
         )
 
     def _build_narrator_frame(
@@ -306,6 +321,7 @@ class CombatOrchestrator:
         actor: ActorState,
         summary: str,
         purpose: str,
+        roll_events: tuple[str, ...] = (),
     ) -> NarrationFrame:
         return NarrationFrame(
             purpose=purpose,
@@ -315,7 +331,7 @@ class CombatOrchestrator:
                 actor_narrative_summary(a) for a in state.actors.values()
             ),
             recent_public_events=(),
-            resolved_outcomes=(summary,),
+            resolved_outcomes=(*roll_events, summary),
             allowed_disclosures=("public encounter state",),
             tone_guidance=state.scene_tone,
         )

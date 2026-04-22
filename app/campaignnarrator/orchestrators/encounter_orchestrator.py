@@ -23,7 +23,6 @@ from campaignnarrator.domain.models import (
     PlayerInput,
     PlayerIntent,
     PlayerIO,
-    RollRequest,
     RollVisibility,
     RulesAdjudication,
     RulesAdjudicationRequest,
@@ -35,7 +34,7 @@ from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.tools.dice_expression import (
     actor_modifiers,
-    resolve_dice_expression,
+    execute_roll,
 )
 from campaignnarrator.tools.state_updates import apply_state_effects
 
@@ -392,6 +391,8 @@ class EncounterOrchestrator:
         updated_state, roll_events = self._apply_adjudication(
             state, adjudication, player
         )
+        for event in roll_events:
+            self._io.display(event)
         self._state_repository.save(GameState(player=player, encounter=updated_state))
         if updated_state.outcome is not None:
             self._append_event(
@@ -460,7 +461,7 @@ class EncounterOrchestrator:
         player: ActorState,
     ) -> tuple[EncounterState, tuple[str, ...]]:
         roll_events = tuple(
-            _execute_roll(roll_request, player, self._roll_dice)
+            execute_roll(roll_request, player, self._roll_dice)
             for roll_request in adjudication.roll_requests
             if roll_request.visibility is RollVisibility.PUBLIC
         )
@@ -548,28 +549,6 @@ def _frame(
 
 def _public_actor_summaries(state: EncounterState) -> tuple[str, ...]:
     return tuple(actor_narrative_summary(actor) for actor in state.actors.values())
-
-
-def _execute_roll(
-    roll_request: RollRequest,
-    actor: ActorState,
-    roll_dice: Callable[[str], int],
-) -> str:
-    expression = resolve_dice_expression(roll_request.expression, actor)
-    total = roll_dice(expression)
-    _log.info(
-        "Roll executed: purpose=%r expression=%r resolved=%r total=%d",
-        roll_request.purpose,
-        roll_request.expression,
-        expression,
-        total,
-    )
-    return _public_roll_event(roll_request, total)
-
-
-def _public_roll_event(roll_request: RollRequest, total: int) -> str:
-    purpose = roll_request.purpose or roll_request.expression
-    return f"Roll: {purpose} = {total}."
 
 
 def _non_empty_tuple(values: tuple[str | None, ...]) -> tuple[str, ...]:
