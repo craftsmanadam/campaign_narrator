@@ -14,7 +14,9 @@ from campaignnarrator.agents.encounter_planner_agent import EncounterPlannerAgen
 from campaignnarrator.domain.models import (
     ActorState,
     CampaignState,
+    DivergenceAssessment,
     EncounterReady,
+    EncounterTemplate,
     MilestoneAchieved,
     ModuleState,
 )
@@ -115,6 +117,109 @@ class EncounterPlannerOrchestrator:
         campaign: CampaignState,
         player: ActorState,
     ) -> EncounterReady | MilestoneAchieved:
+        """Steps 2-3: divergence check, optional recovery, then instantiation."""
+        narrative_context = self._narrative_context(module=module)
+        milestone = campaign.milestones[campaign.current_milestone_index]
+
+        # Determine the next template (None if index is out of bounds)
+        if module.next_encounter_index >= len(module.planned_encounters):
+            template: EncounterTemplate | None = None
+        else:
+            template = module.planned_encounters[module.next_encounter_index]
+
+        # Step 2: Divergence check
+        assessment = self._agents.planner.assess_divergence(
+            template=template,
+            module=module,
+            milestone=milestone,
+            narrative_context=narrative_context,
+        )
+
+        if assessment.milestone_achieved:
+            return MilestoneAchieved()
+
+        # Step 2b: Recovery if needed
+        module = self._recover_if_needed(
+            assessment=assessment,
+            module=module,
+            campaign=campaign,
+            narrative_context=narrative_context,
+        )
+
+        # Fetch template again after potential recovery.
+        # Index may still be out-of-bounds (viable + out-of-bounds edge case).
+        if module.next_encounter_index < len(module.planned_encounters):
+            template = module.planned_encounters[module.next_encounter_index]
+
+        # Step 3: instantiation (Plan 3c)
+        return self._instantiate(module=module, template=template, player=player)
+
+    def _recover_if_needed(
+        self,
+        *,
+        assessment: DivergenceAssessment,
+        module: ModuleState,
+        campaign: CampaignState,
+        narrative_context: str,
+    ) -> ModuleState:
+        """Apply recovery if assessment is not viable.
+
+        Returns the (possibly updated) module.
+        """
+        if assessment.status == "viable":
+            return module
+
+        recovery_type_map = {
+            "needs_bridge": "bridge_inserted",
+            "needs_rebuild": "template_replaced",
+            "needs_full_replan": "full_replan",
+        }
+        recovery_type = recovery_type_map[assessment.status]
+
+        current_index = module.next_encounter_index
+        remaining = module.planned_encounters[current_index:]
+
+        recovery = self._agents.planner.recover_encounters(
+            divergence_reason=assessment.reason,
+            recovery_type=recovery_type,
+            current_index=current_index,
+            remaining_templates=remaining,
+            module=module,
+            campaign=campaign,
+            narrative_context=narrative_context,
+        )
+
+        if not recovery.updated_templates:
+            _log.warning(
+                "Recovery for module %s returned empty templates"
+                " — escalating to full replan",
+                module.module_id,
+            )
+            recovery = self._agents.planner.recover_encounters(
+                divergence_reason=(
+                    f"Previous recovery returned empty list. {assessment.reason}"
+                ),
+                recovery_type="full_replan",
+                current_index=current_index,
+                remaining_templates=remaining,
+                module=module,
+                campaign=campaign,
+                narrative_context=narrative_context,
+            )
+
+        completed = module.planned_encounters[:current_index]
+        new_plans = tuple(completed) + tuple(recovery.updated_templates)
+        module = replace(module, planned_encounters=new_plans)
+        self._repos.module.save(module)
+        return module
+
+    def _instantiate(
+        self,
+        *,
+        module: ModuleState,
+        template: EncounterTemplate | None,
+        player: ActorState,
+    ) -> EncounterReady:
         raise NotImplementedError
 
     # ── Helpers ───────────────────────────────────────────────────────────────

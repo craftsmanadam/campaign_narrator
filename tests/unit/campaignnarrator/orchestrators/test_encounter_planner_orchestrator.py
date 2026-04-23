@@ -11,9 +11,12 @@ from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
     CampaignState,
+    DivergenceAssessment,
     EncounterNpc,
+    EncounterRecoveryResult,
     EncounterTemplate,
     Milestone,
+    MilestoneAchieved,
     ModuleState,
 )
 from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
@@ -188,6 +191,9 @@ class TestEmptyPlanDetection:
         repos = _make_repos()
         agents = _make_agents()
         agents.planner.plan_encounters.return_value = templates
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
         repos.memory.retrieve_relevant.return_value = []
         repos.compendium.monster_index_path.return_value = None
 
@@ -211,6 +217,9 @@ class TestEmptyPlanDetection:
         repos = _make_repos()
         agents = _make_agents()
         agents.planner.plan_encounters.return_value = templates
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
         repos.memory.retrieve_relevant.return_value = ["A prior narrative entry."]
         repos.compendium.monster_index_path.return_value = None
 
@@ -230,6 +239,9 @@ class TestEmptyPlanDetection:
         """When planned_encounters is populated, plan_encounters() is NOT called."""
         repos = _make_repos()
         agents = _make_agents()
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
         repos.memory.retrieve_relevant.return_value = []
         repos.compendium.monster_index_path.return_value = None
 
@@ -248,3 +260,301 @@ class TestEmptyPlanDetection:
             )
 
         agents.planner.plan_encounters.assert_not_called()
+
+
+# ─── Out-of-bounds index ──────────────────────────────────────────────────────
+
+
+class TestOutOfBoundsIndex:
+    def test_index_at_end_of_list_triggers_milestone_only_check(self) -> None:
+        """When next_encounter_index >= len(planned_encounters), run milestone check."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        milestone_assessment = DivergenceAssessment(
+            status="milestone_achieved",
+            reason="Module complete.",
+            milestone_achieved=True,
+        )
+        agents.planner.assess_divergence.return_value = milestone_assessment
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),),
+            next_encounter_index=1,  # out of bounds (only 1 template at index 0)
+        )
+
+        result = orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
+
+        assert isinstance(result, MilestoneAchieved)
+        # assess_divergence must be called with template=None (milestone-only check)
+        call_kwargs = agents.planner.assess_divergence.call_args[1]
+        assert call_kwargs["template"] is None
+
+    def test_index_at_end_viable_status_falls_through_to_instantiation(
+        self,
+    ) -> None:
+        """Out-of-bounds index + viable status → instantiation (NotImplementedError in 3c)."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable",
+            reason="ok",
+            milestone_achieved=False,
+        )
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),),
+            next_encounter_index=1,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+
+# ─── Viable path ─────────────────────────────────────────────────────────────
+
+
+class TestViablePath:
+    def test_viable_path_calls_instantiate(self) -> None:
+        """Viable assessment → proceed directly to instantiation (NotImplementedError 3c)."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable",
+            reason="ok",
+            milestone_achieved=False,
+        )
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),),
+            next_encounter_index=0,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+        agents.planner.recover_encounters.assert_not_called()
+
+    def test_milestone_achieved_returns_milestone_achieved_object(self) -> None:
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="milestone_achieved",
+            reason="Cult leader defeated.",
+            milestone_achieved=True,
+        )
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),),
+            next_encounter_index=0,
+        )
+
+        result = orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
+        assert isinstance(result, MilestoneAchieved)
+
+
+# ─── Recovery branches ────────────────────────────────────────────────────────
+
+
+class TestRecovery:
+    def _setup_recovery(
+        self,
+        status: str,
+        recovery_type: str,
+        updated_templates: tuple[EncounterTemplate, ...],
+    ) -> tuple[
+        EncounterPlannerOrchestratorRepositories, EncounterPlannerOrchestratorAgents
+    ]:
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status=status,
+            reason="NPC is dead.",
+            milestone_achieved=False,
+        )
+        agents.planner.recover_encounters.return_value = EncounterRecoveryResult(
+            updated_templates=updated_templates,
+            recovery_type=recovery_type,
+        )
+        return repos, agents
+
+    def test_needs_bridge_calls_recover_and_saves_updated_module(self) -> None:
+        bridge = _make_template("enc-bridge")
+        original = _make_template("enc-001")
+        repos, agents = self._setup_recovery(
+            "needs_bridge",
+            "bridge_inserted",
+            (bridge, original),
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(original,),
+            next_encounter_index=0,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+        agents.planner.recover_encounters.assert_called_once()
+        call_kwargs = agents.planner.recover_encounters.call_args[1]
+        assert call_kwargs["recovery_type"] == "bridge_inserted"
+        repos.module.save.assert_called()
+
+    def test_needs_bridge_updated_module_has_new_templates(self) -> None:
+        bridge = _make_template("enc-bridge")
+        original = _make_template("enc-001")
+        repos, agents = self._setup_recovery(
+            "needs_bridge",
+            "bridge_inserted",
+            (bridge, original),
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(original,),
+            next_encounter_index=0,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+        last_save = repos.module.save.call_args[0][0]
+        expected_count = 2
+        assert len(last_save.planned_encounters) == expected_count
+        assert last_save.planned_encounters[0].template_id == "enc-bridge"
+
+    def test_needs_rebuild_replaces_current_template(self) -> None:
+        replacement = _make_template("enc-001-rebuilt")
+        original = _make_template("enc-001")
+        repos, agents = self._setup_recovery(
+            "needs_rebuild",
+            "template_replaced",
+            (replacement,),
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(original,),
+            next_encounter_index=0,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+        last_save = repos.module.save.call_args[0][0]
+        assert last_save.planned_encounters[0].template_id == "enc-001-rebuilt"
+
+    def test_needs_full_replan_replaces_all_remaining_templates(self) -> None:
+        new1 = _make_template("enc-new-001")
+        new2 = _make_template("enc-new-002", order=1)
+        existing_done = _make_template("enc-done")
+        repos, agents = self._setup_recovery(
+            "needs_full_replan",
+            "full_replan",
+            (new1, new2),
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        # Two templates; first is done (index=1), second needs replan
+        module = _make_module(
+            planned_encounters=(existing_done, _make_template("enc-002", order=1)),
+            next_encounter_index=1,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+        last_save = repos.module.save.call_args[0][0]
+        assert existing_done in last_save.planned_encounters
+        assert new1 in last_save.planned_encounters
+        assert new2 in last_save.planned_encounters
+
+    def test_recovery_empty_result_escalates_to_full_replan(self) -> None:
+        """Empty updated_templates triggers fallback to full module replan."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="needs_rebuild",
+            reason="Broken.",
+            milestone_achieved=False,
+        )
+        # First recovery returns empty; second returns valid template
+        fallback_template = _make_template("enc-fallback")
+        agents.planner.recover_encounters.side_effect = [
+            EncounterRecoveryResult(
+                updated_templates=(),
+                recovery_type="template_replaced",
+            ),
+            EncounterRecoveryResult(
+                updated_templates=(fallback_template,),
+                recovery_type="full_replan",
+            ),
+        ]
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),),
+            next_encounter_index=0,
+        )
+
+        with pytest.raises(NotImplementedError):
+            orchestrator.prepare(
+                module=module,
+                campaign=_make_campaign(),
+                player=_make_player(),
+            )
+
+        # recover_encounters called twice (first empty, then fallback)
+        expected_call_count = 2
+        assert agents.planner.recover_encounters.call_count == expected_call_count
+        second_call_kwargs = agents.planner.recover_encounters.call_args_list[1][1]
+        assert second_call_kwargs["recovery_type"] == "full_replan"
