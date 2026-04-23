@@ -94,8 +94,10 @@ class ModuleState:
     guiding_milestone_id: str
     completed_encounter_ids: tuple[str, ...] = ()
     completed_encounter_summaries: tuple[str, ...] = ()
-    next_encounter_seed: str | None = None
+    next_encounter_seed: str | None = None  # deprecated — remove in Plan 4
     completed: bool = False
+    planned_encounters: tuple[EncounterTemplate, ...] = ()
+    next_encounter_index: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +158,54 @@ class NpcPresence:
     description: str  # Narrative label used when name_known=False ("the innkeeper")
     name_known: bool  # Has the player learned this NPC's name?
     visible: bool  # Is the NPC currently in the scene?
+
+
+class EncounterNpc(BaseModel):
+    """Planning-time NPC definition.
+
+    Single source of truth for ActorState and NpcPresence.
+    Supersedes NpcPresenceResult. Assigned by EncounterPlannerAgent at planning time.
+    template_npc_id must be unique within a module (not just within an encounter).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    template_npc_id: str
+    display_name: str
+    role: str
+    description: str
+    monster_name: str | None
+    stat_source: Literal["monster_compendium", "simple_npc"]
+    cr: float
+    name_known: bool = False
+
+    @field_validator("cr", mode="before")
+    @classmethod
+    def _parse_cr(cls, v: object) -> float:
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            if "/" in v:
+                num, den = v.split("/")
+                return int(num) / int(den)
+            return float(v)
+        raise ValueError(f"Cannot parse CR: {v!r}")  # noqa: TRY003
+
+
+class EncounterTemplate(BaseModel):
+    """Narrative skeleton for one planned encounter."""
+
+    model_config = ConfigDict(frozen=True)
+
+    template_id: str
+    order: int
+    setting: str
+    purpose: str
+    scene_tone: str | None = None
+    npcs: tuple[EncounterNpc, ...]
+    prerequisites: tuple[str, ...]
+    expected_outcomes: tuple[str, ...]
+    downstream_dependencies: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -582,6 +632,59 @@ class NpcPresenceResult(BaseModel):
     monster_name: str | None = None
 
 
+class DivergenceAssessment(BaseModel):
+    """Output of EncounterPlannerAgent._assess_agent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: Literal[
+        "viable",
+        "needs_bridge",
+        "needs_rebuild",
+        "needs_full_replan",
+        "milestone_achieved",
+    ]
+    reason: str
+    milestone_achieved: bool
+
+
+class EncounterPlanList(BaseModel):
+    """Output of EncounterPlannerAgent._plan_agent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    encounters: tuple[EncounterTemplate, ...]
+
+
+class EncounterRecoveryResult(BaseModel):
+    """Output of EncounterPlannerAgent._recovery_agent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    updated_templates: tuple[EncounterTemplate, ...]
+    recovery_type: Literal["bridge_inserted", "template_replaced", "full_replan"]
+
+
+@dataclass(frozen=True)
+class EncounterReady:
+    """Returned by EncounterPlannerOrchestrator.prepare() on success.
+
+    module may differ from the input module if recovery occurred.
+    Callers must use EncounterReady.module, not their local reference.
+    """
+
+    encounter_state: EncounterState
+    module: ModuleState
+
+
+@dataclass(frozen=True)
+class MilestoneAchieved:
+    """Returned by EncounterPlannerOrchestrator.prepare() when milestone is complete.
+
+    Signals ModuleOrchestrator to advance to the next module.
+    """
+
+
 class SceneOpeningResponse(BaseModel):
     """Structured LLM output for scene opening narration."""
 
@@ -657,14 +760,21 @@ __all__ = [
     "CombatResult",
     "CombatStatus",
     "CritReview",
+    "DivergenceAssessment",
+    "EncounterNpc",
     "EncounterPhase",
+    "EncounterPlanList",
+    "EncounterReady",
+    "EncounterRecoveryResult",
     "EncounterState",
+    "EncounterTemplate",
     "FeatState",
     "GameState",
     "InitiativeTurn",
     "IntentCategory",
     "InventoryItem",
     "Milestone",
+    "MilestoneAchieved",
     "ModuleState",
     "Narration",
     "NarrationFrame",

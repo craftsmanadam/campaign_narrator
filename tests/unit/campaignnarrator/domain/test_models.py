@@ -19,14 +19,21 @@ from campaignnarrator.domain.models import (
     CombatResult,
     CombatStatus,
     CritReview,
+    DivergenceAssessment,
+    EncounterNpc,
     EncounterPhase,
+    EncounterPlanList,
+    EncounterReady,
+    EncounterRecoveryResult,
     EncounterState,
+    EncounterTemplate,
     FeatState,
     GameState,
     InitiativeTurn,
     IntentCategory,
     InventoryItem,
     Milestone,
+    MilestoneAchieved,
     ModuleState,
     Narration,
     NarrationFrame,
@@ -1749,3 +1756,295 @@ def test_player_intent_normaliser_ignores_non_dict_input() -> None:
     """Non-dict input is passed through unchanged for pydantic to reject."""
     with pytest.raises(ValidationError):
         PlayerIntent.model_validate("not a dict")
+
+
+# ─── EncounterNpc ────────────────────────────────────────────────────────────
+
+
+def test_encounter_npc_accepts_float_cr() -> None:
+    cr_quarter = 0.25
+    npc = EncounterNpc(
+        template_npc_id="goblin-scout-a",
+        display_name="Goblin Scout A",
+        role="skittish lookout",
+        description="A small goblin clutching a rusty shortbow.",
+        monster_name="Goblin",
+        stat_source="monster_compendium",
+        cr=cr_quarter,
+    )
+    assert npc.cr == cr_quarter
+    assert npc.name_known is False
+
+
+def test_encounter_npc_parses_fraction_string_cr() -> None:
+    cr_quarter = 0.25
+    npc = EncounterNpc(
+        template_npc_id="goblin-scout-b",
+        display_name="Goblin Scout B",
+        role="pack fighter",
+        description="A goblin with a bent scimitar.",
+        monster_name="Goblin",
+        stat_source="monster_compendium",
+        cr="1/4",
+    )
+    assert npc.cr == cr_quarter
+
+
+def test_encounter_npc_parses_half_fraction_cr() -> None:
+    cr_half = 0.5
+    npc = EncounterNpc(
+        template_npc_id="orc",
+        display_name="Orc Raider",
+        role="brute",
+        description="A scarred orc with a greataxe.",
+        monster_name="Orc",
+        stat_source="monster_compendium",
+        cr="1/2",
+    )
+    assert npc.cr == cr_half
+
+
+def test_encounter_npc_rejects_invalid_cr() -> None:
+    with pytest.raises(ValidationError):
+        EncounterNpc(
+            template_npc_id="bad",
+            display_name="Bad",
+            role="",
+            description="",
+            monster_name=None,
+            stat_source="simple_npc",
+            cr=[1, 2],  # type: ignore[arg-type]
+        )
+
+
+def test_encounter_npc_simple_npc_has_no_monster_name() -> None:
+    npc = EncounterNpc(
+        template_npc_id="innkeeper-mira",
+        display_name="Mira",
+        role="innkeeper",
+        description="A tired woman with ink-stained fingers.",
+        monster_name=None,
+        stat_source="simple_npc",
+        cr=0.0,
+    )
+    assert npc.monster_name is None
+    assert npc.stat_source == "simple_npc"
+
+
+def test_encounter_npc_is_frozen() -> None:
+    npc = EncounterNpc(
+        template_npc_id="x",
+        display_name="X",
+        role="r",
+        description="d",
+        monster_name=None,
+        stat_source="simple_npc",
+        cr=0.0,
+    )
+    with pytest.raises((ValidationError, TypeError)):
+        npc.cr = 1.0  # type: ignore[misc]
+
+
+# ─── EncounterTemplate ────────────────────────────────────────────────────────
+
+
+def _make_encounter_npc(template_npc_id: str = "goblin-a") -> EncounterNpc:
+    return EncounterNpc(
+        template_npc_id=template_npc_id,
+        display_name="Goblin A",
+        role="scout",
+        description="A small goblin.",
+        monster_name="Goblin",
+        stat_source="monster_compendium",
+        cr=0.25,
+    )
+
+
+def test_encounter_template_stores_all_fields() -> None:
+    template = EncounterTemplate(
+        template_id="enc-001",
+        order=0,
+        setting="The fog-shrouded docks of Darkholm.",
+        purpose="Introduce the Drowned Lady cult threat.",
+        scene_tone="dark and ominous",
+        npcs=(
+            _make_encounter_npc("goblin-scout-a"),
+            _make_encounter_npc("goblin-scout-b"),
+        ),
+        prerequisites=(),
+        expected_outcomes=("Player learns of the Drowned Lady",),
+        downstream_dependencies=(),
+    )
+    assert template.template_id == "enc-001"
+    assert template.order == 0
+    assert template.npcs == (
+        _make_encounter_npc("goblin-scout-a"),
+        _make_encounter_npc("goblin-scout-b"),
+    )
+    assert template.scene_tone == "dark and ominous"
+
+
+def test_encounter_template_scene_tone_defaults_none() -> None:
+    template = EncounterTemplate(
+        template_id="enc-001",
+        order=0,
+        setting="The docks.",
+        purpose="A fight.",
+        npcs=(_make_encounter_npc(),),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    assert template.scene_tone is None
+
+
+def test_encounter_template_is_frozen() -> None:
+    template = EncounterTemplate(
+        template_id="enc-001",
+        order=0,
+        setting="x",
+        purpose="y",
+        npcs=(_make_encounter_npc(),),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    with pytest.raises((ValidationError, TypeError)):
+        template.order = 1  # type: ignore[misc]
+
+
+def test_encounter_template_empty_npcs_allowed() -> None:
+    template = EncounterTemplate(
+        template_id="enc-001",
+        order=0,
+        setting="x",
+        purpose="y",
+        npcs=(),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    assert template.npcs == ()
+
+
+# ─── DivergenceAssessment ─────────────────────────────────────────────────────
+
+
+def test_divergence_assessment_viable() -> None:
+    a = DivergenceAssessment(
+        status="viable", reason="prerequisites met", milestone_achieved=False
+    )
+    assert a.status == "viable"
+    assert a.milestone_achieved is False
+
+
+def test_divergence_assessment_milestone_achieved() -> None:
+    a = DivergenceAssessment(
+        status="milestone_achieved",
+        reason="Player defeated the cult leader.",
+        milestone_achieved=True,
+    )
+    assert a.milestone_achieved is True
+
+
+def test_divergence_assessment_rejects_invalid_status() -> None:
+    with pytest.raises(ValidationError):
+        DivergenceAssessment(status="unknown", reason="x", milestone_achieved=False)
+
+
+# ─── EncounterPlanList ────────────────────────────────────────────────────────
+
+
+def test_encounter_plan_list_stores_encounters() -> None:
+    t = EncounterTemplate(
+        template_id="enc-001",
+        order=0,
+        setting="x",
+        purpose="y",
+        npcs=(),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    plan = EncounterPlanList(encounters=(t,))
+    assert len(plan.encounters) == 1
+
+
+# ─── EncounterRecoveryResult ──────────────────────────────────────────────────
+
+
+def test_encounter_recovery_result_bridge_inserted() -> None:
+    t = EncounterTemplate(
+        template_id="enc-bridge",
+        order=0,
+        setting="x",
+        purpose="y",
+        npcs=(),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    result = EncounterRecoveryResult(
+        updated_templates=(t,), recovery_type="bridge_inserted"
+    )
+    assert result.recovery_type == "bridge_inserted"
+    assert len(result.updated_templates) == 1
+
+
+# ─── EncounterReady ───────────────────────────────────────────────────────────
+
+
+def test_encounter_ready_carries_encounter_state_and_module() -> None:
+    enc = EncounterState(
+        encounter_id="module-001-enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The docks.",
+        actors={},
+    )
+    mod = _make_module()
+    ready = EncounterReady(encounter_state=enc, module=mod)
+    assert ready.encounter_state.encounter_id == "module-001-enc-001"
+    assert ready.module is mod
+
+
+def test_encounter_ready_is_frozen() -> None:
+    enc = EncounterState(
+        encounter_id="x", phase=EncounterPhase.SOCIAL, setting="y", actors={}
+    )
+    ready = EncounterReady(encounter_state=enc, module=_make_module())
+    with pytest.raises(FrozenInstanceError):
+        ready.encounter_state = enc  # type: ignore[misc]
+
+
+# ─── MilestoneAchieved ────────────────────────────────────────────────────────
+
+
+def test_milestone_achieved_is_frozen() -> None:
+    ma = MilestoneAchieved()
+    with pytest.raises(FrozenInstanceError):
+        ma.__setattr__("x", 1)  # type: ignore[misc]
+
+
+# ─── ModuleState — new fields ─────────────────────────────────────────────────
+
+
+def test_module_state_planned_encounters_defaults_empty() -> None:
+    module = _make_module()
+    assert module.planned_encounters == ()
+    assert module.next_encounter_index == 0
+
+
+def test_module_state_accepts_planned_encounters() -> None:
+    t = EncounterTemplate(
+        template_id="enc-001",
+        order=0,
+        setting="The docks.",
+        purpose="Intro.",
+        npcs=(),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    module = _make_module(planned_encounters=(t,), next_encounter_index=0)
+    assert len(module.planned_encounters) == 1
+    assert module.planned_encounters[0].template_id == "enc-001"
