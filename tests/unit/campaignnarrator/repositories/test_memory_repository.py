@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import lancedb
 from campaignnarrator.adapters.embedding_adapter import StubEmbeddingAdapter
@@ -21,7 +21,7 @@ def test_memory_repository_appends_and_loads_event_log(tmp_path: Path) -> None:
         '{"event_id": "evt-001", "type": "seed"}\n'
     )
 
-    repository = MemoryRepository(memory_root)
+    repository = MemoryRepository(memory_root, state_repo=MagicMock())
 
     repository.append_event({"event_id": "evt-002", "type": "state_updated"})
 
@@ -32,7 +32,7 @@ def test_memory_repository_appends_and_loads_event_log(tmp_path: Path) -> None:
 
 
 def _make_repo(tmp: str) -> MemoryRepository:
-    return MemoryRepository(tmp)
+    return MemoryRepository(tmp, state_repo=MagicMock())
 
 
 def test_store_narrative_creates_file() -> None:
@@ -143,6 +143,7 @@ def _make_lancedb_repo(tmp: str) -> MemoryRepository:
     lancedb_path = Path(tmp) / "lancedb"
     return MemoryRepository(
         tmp,
+        state_repo=MagicMock(),
         embedding_adapter=adapter,
         lancedb_path=lancedb_path,
     )
@@ -177,7 +178,7 @@ def test_lancedb_mode_opens_existing_table_on_reconnect(tmp_path: Path) -> None:
 
 def test_no_adapter_does_not_create_lancedb_directory(tmp_path: Path) -> None:
     """JSONL-only mode: no LanceDB directory created."""
-    MemoryRepository(str(tmp_path))
+    MemoryRepository(str(tmp_path), state_repo=MagicMock())
     assert not (tmp_path / "lancedb").exists()
 
 

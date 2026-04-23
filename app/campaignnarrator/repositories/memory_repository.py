@@ -5,12 +5,16 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import lancedb
 import pyarrow as pa
+
+from campaignnarrator.domain.models import GameState
+from campaignnarrator.repositories.state_repository import StateRepository
 
 if TYPE_CHECKING:
     from campaignnarrator.adapters.embedding_adapter import EmbeddingAdapter
@@ -33,6 +37,21 @@ def _build_schema(dimensions: int) -> pa.Schema:
     )
 
 
+# max number of exchange items (player+narrator) retained per session
+_MAX_EXCHANGES = 10
+
+
+@dataclass
+class _SessionCache:
+    """In-memory session state. Only persist() writes this to disk."""
+
+    game_state: GameState | None = None
+    exchange_buffer: tuple[str, ...] = ()
+    # element shape: (text, metadata)
+    staged_narrations: list[tuple[str, dict[str, str]]] = field(default_factory=list)
+    combat_round_logs: list[str] = field(default_factory=list)
+
+
 class MemoryRepository:
     """Append and read newline-delimited JSON memory events.
 
@@ -45,6 +64,7 @@ class MemoryRepository:
         self,
         root: Path | str,
         *,
+        state_repo: StateRepository,
         embedding_adapter: EmbeddingAdapter | None = None,
         lancedb_path: Path | str | None = None,
     ) -> None:
@@ -58,6 +78,13 @@ class MemoryRepository:
             self._lancedb_table = self._init_lancedb(
                 Path(lancedb_path), embedding_adapter
             )
+
+        self._state_repo = state_repo
+        self._cache = _SessionCache()
+        self._restore_exchange_buffer()
+
+    def _restore_exchange_buffer(self) -> None:
+        """Load exchange buffer from disk on startup. Implemented in Task 3."""
 
     def _init_lancedb(
         self,
