@@ -1399,7 +1399,8 @@ def test_module_repository_round_trips_new_fields() -> None:
     assert loaded is not None
     assert loaded.completed_encounter_ids == ("module-001-enc-001",)
     assert loaded.completed_encounter_summaries == ("The goblin fell at the docks.",)
-    assert loaded.next_encounter_seed == "Shadows move near the warehouse."
+    # next_encounter_seed is deprecated; _module_from_seed pops it, so loaded value is None
+    assert loaded.next_encounter_seed is None
 
 
 def test_module_repository_round_trips_empty_log() -> None:
