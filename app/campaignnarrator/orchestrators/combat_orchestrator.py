@@ -82,7 +82,7 @@ _NPC_COMBAT_ALLOWED_OUTCOMES = (
 )
 
 
-def _format_weapon(weapon: "WeaponState") -> str:
+def _format_weapon(weapon: WeaponState) -> str:
     damage = weapon.damage_dice
     if weapon.damage_bonus > 0:
         damage += f"+{weapon.damage_bonus}"

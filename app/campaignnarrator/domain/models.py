@@ -163,7 +163,7 @@ class EncounterNpc(BaseModel):
     """Planning-time NPC definition.
 
     Single source of truth for ActorState and NpcPresence.
-    Supersedes NpcPresenceResult. Assigned by EncounterPlannerAgent at planning time.
+    Assigned by EncounterPlannerAgent at planning time.
     template_npc_id must be unique within a module (not just within an encounter).
     """
 

@@ -628,8 +628,7 @@ def test_base_narrate_instructions_contain_hard_rules() -> None:
 
 
 def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
-    """SCENE_OPENING_INSTRUCTIONS must reference NPC declaration fields."""
-    assert "introduced_npcs" in SCENE_OPENING_INSTRUCTIONS
+    """SCENE_OPENING_INSTRUCTIONS must reference NPC stat source fields."""
     assert "monster_compendium" in SCENE_OPENING_INSTRUCTIONS
     assert "simple_npc" in SCENE_OPENING_INSTRUCTIONS
     assert "public_actor_summaries" in SCENE_OPENING_INSTRUCTIONS

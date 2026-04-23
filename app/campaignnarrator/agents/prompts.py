@@ -44,7 +44,6 @@ SCENE_OPENING_INSTRUCTIONS: str = (
     "Also choose a short scene tone phrase (8 words or fewer) that captures the "
     "emotional register (e.g. 'tense and foreboding', 'warm and welcoming', "
     "'chaotic and urgent'). "
-    "Declare all NPCs present in the scene using introduced_npcs. "
     "For each NPC, choose stat_source='monster_compendium' if it is a "
     "recognizable creature (e.g. Goblin, Zombie) and set monster_name to the "
     "SRD creature name. Use stat_source='simple_npc' for human innkeepers, "
