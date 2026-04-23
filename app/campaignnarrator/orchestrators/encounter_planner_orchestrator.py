@@ -8,24 +8,94 @@ Called by ModuleOrchestrator only when no active encounter exists.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, replace
+from pathlib import Path
 
 from campaignnarrator.agents.encounter_planner_agent import EncounterPlannerAgent
 from campaignnarrator.domain.models import (
     ActorState,
+    ActorType,
     CampaignState,
     DivergenceAssessment,
+    EncounterNpc,
+    EncounterPhase,
     EncounterReady,
+    EncounterState,
     EncounterTemplate,
     MilestoneAchieved,
     ModuleState,
+    NpcPresence,
 )
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.tools.cr_scaling import scale_encounter_npcs
+from campaignnarrator.tools.monster_loader import load_by_name as _load_monster
 
 _log = logging.getLogger(__name__)
+
+
+class _OutOfBoundsTemplateError(ValueError):
+    """Raised when the encounter index is out of bounds with viable status."""
+
+
+_SIMPLE_NPC_HP = 1
+_SIMPLE_NPC_AC = 10
+_MAX_PREPARE_ATTEMPTS = 3
+
+
+def _build_npc_actor(
+    npc: EncounterNpc,
+    actor_id: str,
+    index_path: Path | None,
+) -> ActorState:
+    """Build an ActorState from an EncounterNpc planning-time definition.
+
+    Uses compendium stats when stat_source='monster_compendium' and
+    index_path is valid. Falls back to simple placeholder stats on any
+    lookup failure.
+    """
+    if (
+        npc.stat_source == "monster_compendium"
+        and npc.monster_name
+        and index_path is not None
+        and index_path.exists()
+    ):
+        try:
+            actor = _load_monster(npc.monster_name, index_path=index_path)
+            return replace(actor, actor_id=actor_id, name=npc.display_name)
+        except KeyError:
+            _log.warning(
+                "Monster %r not found in compendium; using simple NPC stats",
+                npc.monster_name,
+            )
+        except FileNotFoundError:
+            _log.warning(
+                "Monster %r not found in compendium; using simple NPC stats",
+                npc.monster_name,
+            )
+    return ActorState(
+        actor_id=actor_id,
+        name=npc.display_name,
+        actor_type=ActorType.NPC,
+        hp_max=_SIMPLE_NPC_HP,
+        hp_current=_SIMPLE_NPC_HP,
+        armor_class=_SIMPLE_NPC_AC,
+        strength=10,
+        dexterity=10,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
+        proficiency_bonus=2,
+        initiative_bonus=0,
+        speed=30,
+        attacks_per_action=1,
+        action_options=("Talk",),
+        ac_breakdown=(),
+    )
 
 
 @dataclass(frozen=True)
@@ -70,15 +140,35 @@ class EncounterPlannerOrchestrator:
     ) -> EncounterReady | MilestoneAchieved:
         """Produce a ready-to-run EncounterState.
 
-        Steps (implemented across Plans 3a, 3b, 3c):
-          1. [3a] If planned_encounters empty → call planner, save module
-          2. [3b] Divergence check → viable / milestone_achieved / recovery
-          3. [3c] CR scaling → instantiate actors + NpcPresences → save EncounterState
+        Retries up to _MAX_PREPARE_ATTEMPTS times on transient LLM failure.
         """
-        module = self._ensure_planned(module=module, campaign=campaign, player=player)
-        return self._diverge_and_instantiate(
-            module=module, campaign=campaign, player=player
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_PREPARE_ATTEMPTS):
+            try:
+                module = self._ensure_planned(
+                    module=module, campaign=campaign, player=player
+                )
+                return self._diverge_and_instantiate(
+                    module=module, campaign=campaign, player=player
+                )
+            except Exception as exc:
+                last_exc = exc
+                if attempt < _MAX_PREPARE_ATTEMPTS - 1:
+                    wait = 2**attempt
+                    _log.warning(
+                        "prepare() attempt %d/%d failed: %s — retrying in %ds",
+                        attempt + 1,
+                        _MAX_PREPARE_ATTEMPTS,
+                        exc,
+                        wait,
+                    )
+                    time.sleep(wait)
+        _log.error(
+            "prepare() failed after %d attempts for module %s",
+            _MAX_PREPARE_ATTEMPTS,
+            module.module_id,
         )
+        raise last_exc  # type: ignore[misc]
 
     # ── Step 1: ensure the module has a populated encounter list ─────────────
 
@@ -151,6 +241,9 @@ class EncounterPlannerOrchestrator:
         if module.next_encounter_index < len(module.planned_encounters):
             template = module.planned_encounters[module.next_encounter_index]
 
+        if template is None:
+            raise _OutOfBoundsTemplateError
+
         # Step 3: instantiation (Plan 3c)
         return self._instantiate(module=module, template=template, player=player)
 
@@ -217,10 +310,45 @@ class EncounterPlannerOrchestrator:
         self,
         *,
         module: ModuleState,
-        template: EncounterTemplate | None,
+        template: EncounterTemplate,
         player: ActorState,
     ) -> EncounterReady:
-        raise NotImplementedError
+        """Build ActorState + NpcPresence for each NPC, assemble EncounterState."""
+        index_path = self._repos.compendium.monster_index_path()
+
+        scaled_npcs = scale_encounter_npcs(template.npcs, player_level=player.level)
+
+        actors: dict[str, ActorState] = {player.actor_id: player}
+        npc_presences: list[NpcPresence] = []
+
+        for npc in scaled_npcs:
+            actor_id = f"npc:{npc.template_npc_id}"
+            npc_actor = _build_npc_actor(npc, actor_id=actor_id, index_path=index_path)
+            actors[actor_id] = npc_actor
+            npc_presences.append(
+                NpcPresence(
+                    actor_id=actor_id,
+                    display_name=npc.display_name,
+                    description=npc.description,
+                    name_known=npc.name_known,
+                    visible=True,
+                )
+            )
+
+        encounter_id = (
+            f"{module.module_id}-enc-{len(module.completed_encounter_ids) + 1:03d}"
+        )
+        encounter = EncounterState(
+            encounter_id=encounter_id,
+            phase=EncounterPhase.SCENE_OPENING,
+            setting=template.setting,
+            scene_tone=template.scene_tone,
+            actors=actors,
+            npc_presences=tuple(npc_presences),
+        )
+        self._repos.encounter.save(encounter)
+
+        return EncounterReady(encounter_state=encounter, module=module)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 

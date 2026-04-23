@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,6 +14,7 @@ from campaignnarrator.domain.models import (
     CampaignState,
     DivergenceAssessment,
     EncounterNpc,
+    EncounterReady,
     EncounterRecoveryResult,
     EncounterTemplate,
     Milestone,
@@ -23,6 +25,8 @@ from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     EncounterPlannerOrchestrator,
     EncounterPlannerOrchestratorAgents,
     EncounterPlannerOrchestratorRepositories,
+    _build_npc_actor,
+    _OutOfBoundsTemplateError,
 )
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
@@ -176,12 +180,11 @@ class TestEmptyPlanDetection:
         module = _make_module()
         assert module.planned_encounters == ()
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         agents.planner.plan_encounters.assert_called_once()
 
@@ -199,13 +202,13 @@ class TestEmptyPlanDetection:
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=_make_module(),
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=_make_module(),
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
+        # First save is from _ensure_planned; _recover_if_needed skips (viable)
         repos.module.save.assert_called_once()
         saved_module = repos.module.save.call_args[0][0]
         assert len(saved_module.planned_encounters) == 1
@@ -225,12 +228,11 @@ class TestEmptyPlanDetection:
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=_make_module(),
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=_make_module(),
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         call_kwargs = agents.planner.plan_encounters.call_args[1]
         assert "A prior narrative entry." in call_kwargs["narrative_context"]
@@ -252,12 +254,11 @@ class TestEmptyPlanDetection:
             next_encounter_index=0,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         agents.planner.plan_encounters.assert_not_called()
 
@@ -297,10 +298,10 @@ class TestOutOfBoundsIndex:
         call_kwargs = agents.planner.assess_divergence.call_args[1]
         assert call_kwargs["template"] is None
 
-    def test_index_at_end_viable_status_falls_through_to_instantiation(
+    def test_index_at_end_viable_status_raises_value_error(
         self,
     ) -> None:
-        """Out-of-bounds index + viable status → instantiation (NotImplementedError in 3c)."""
+        """Out-of-bounds index + viable status → ValueError (no template at that index)."""
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
@@ -318,7 +319,7 @@ class TestOutOfBoundsIndex:
             next_encounter_index=1,
         )
 
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(_OutOfBoundsTemplateError):
             orchestrator.prepare(
                 module=module,
                 campaign=_make_campaign(),
@@ -331,7 +332,7 @@ class TestOutOfBoundsIndex:
 
 class TestViablePath:
     def test_viable_path_calls_instantiate(self) -> None:
-        """Viable assessment → proceed directly to instantiation (NotImplementedError 3c)."""
+        """Viable assessment → proceed directly to instantiation, returns EncounterReady."""
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
@@ -349,13 +350,13 @@ class TestViablePath:
             next_encounter_index=0,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        result = orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
+        assert isinstance(result, EncounterReady)
         agents.planner.recover_encounters.assert_not_called()
 
     def test_milestone_achieved_returns_milestone_achieved_object(self) -> None:
@@ -425,12 +426,11 @@ class TestRecovery:
             next_encounter_index=0,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         agents.planner.recover_encounters.assert_called_once()
         call_kwargs = agents.planner.recover_encounters.call_args[1]
@@ -451,12 +451,11 @@ class TestRecovery:
             next_encounter_index=0,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         last_save = repos.module.save.call_args[0][0]
         expected_count = 2
@@ -477,12 +476,11 @@ class TestRecovery:
             next_encounter_index=0,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         last_save = repos.module.save.call_args[0][0]
         assert last_save.planned_encounters[0].template_id == "enc-001-rebuilt"
@@ -503,12 +501,11 @@ class TestRecovery:
             next_encounter_index=1,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         last_save = repos.module.save.call_args[0][0]
         assert existing_done in last_save.planned_encounters
@@ -546,15 +543,316 @@ class TestRecovery:
             next_encounter_index=0,
         )
 
-        with pytest.raises(NotImplementedError):
-            orchestrator.prepare(
-                module=module,
-                campaign=_make_campaign(),
-                player=_make_player(),
-            )
+        orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
 
         # recover_encounters called twice (first empty, then fallback)
         expected_call_count = 2
         assert agents.planner.recover_encounters.call_count == expected_call_count
         second_call_kwargs = agents.planner.recover_encounters.call_args_list[1][1]
         assert second_call_kwargs["recovery_type"] == "full_replan"
+
+
+# ─── _build_npc_actor helper ──────────────────────────────────────────────────
+
+
+class TestBuildNpcActor:
+    def test_simple_npc_gets_placeholder_stats(self) -> None:
+        npc = EncounterNpc(
+            template_npc_id="mira",
+            display_name="Mira",
+            role="innkeeper",
+            description="A tired woman.",
+            monster_name=None,
+            stat_source="simple_npc",
+            cr=0.0,
+        )
+        actor = _build_npc_actor(npc, actor_id="npc:mira", index_path=None)
+        assert actor.actor_id == "npc:mira"
+        assert actor.name == "Mira"
+        expected_hp = 1
+        expected_ac = 10
+        assert actor.hp_max == expected_hp
+        assert actor.armor_class == expected_ac
+
+    def test_monster_compendium_falls_back_to_simple_on_key_error(
+        self, tmp_path: Path
+    ) -> None:
+        npc = EncounterNpc(
+            template_npc_id="goblin-a",
+            display_name="Goblin Scout",
+            role="scout",
+            description="Small green creature.",
+            monster_name="NonExistentMonster",
+            stat_source="monster_compendium",
+            cr=0.25,
+        )
+        # index_path exists but monster not found → fallback
+        fake_index = tmp_path / "monster_index.json"
+        fake_index.write_text("{}")
+        actor = _build_npc_actor(npc, actor_id="npc:goblin-a", index_path=fake_index)
+        assert actor.actor_id == "npc:goblin-a"
+        expected_hp = 1
+        assert actor.hp_max == expected_hp  # fallback stats
+
+    def test_monster_compendium_falls_back_when_no_index(self) -> None:
+        """Without an index path, the function falls back to simple NPC stats."""
+        npc = EncounterNpc(
+            template_npc_id="goblin-b",
+            display_name="Goblin",
+            role="fighter",
+            description="A goblin.",
+            monster_name="Goblin",
+            stat_source="monster_compendium",
+            cr=0.25,
+        )
+        actor = _build_npc_actor(npc, actor_id="npc:goblin-b", index_path=None)
+        assert actor.actor_id == "npc:goblin-b"
+        expected_hp = 1
+        assert actor.hp_max == expected_hp
+
+
+# ─── Full instantiation ───────────────────────────────────────────────────────
+
+
+class TestInstantiation:
+    def _make_viable_orchestrator(
+        self,
+    ) -> tuple[
+        EncounterPlannerOrchestrator,
+        EncounterPlannerOrchestratorRepositories,
+        EncounterPlannerOrchestratorAgents,
+        ModuleState,
+    ]:
+        """Returns (orchestrator, repos, agents, module) ready for full prepare() call."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),),
+            next_encounter_index=0,
+        )
+        return orchestrator, repos, agents, module
+
+    def test_prepare_returns_encounter_ready(self) -> None:
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+
+    def test_encounter_state_has_player_actor(self) -> None:
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        player = _make_player()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=player
+        )
+        assert isinstance(result, EncounterReady)
+        assert player.actor_id in result.encounter_state.actors
+
+    def test_encounter_state_has_npc_actor(self) -> None:
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        assert "npc:goblin-a" in result.encounter_state.actors
+
+    def test_encounter_state_has_npc_presence(self) -> None:
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        presence_ids = {p.actor_id for p in result.encounter_state.npc_presences}
+        assert "npc:goblin-a" in presence_ids
+
+    def test_npc_actor_id_uses_stable_template_npc_id(self) -> None:
+        """actor_id = f'npc:{template_npc_id}' — not position-based."""
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        assert "npc:goblin-a" in result.encounter_state.actors
+
+    def test_encounter_state_saved_to_repository(self) -> None:
+        orchestrator, repos, _agents, module = self._make_viable_orchestrator()
+        orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        repos.encounter.save.assert_called_once()
+
+    def test_encounter_ready_module_is_updated_module(self) -> None:
+        """EncounterReady.module reflects any recovery updates."""
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        assert result.module.module_id == module.module_id
+
+    def test_encounter_id_includes_module_id(self) -> None:
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        assert "module-001" in result.encounter_state.encounter_id
+
+    def test_scene_tone_from_template_applied_to_encounter_state(self) -> None:
+        """EncounterState.scene_tone is set from template.scene_tone at instantiation."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+
+        template = EncounterTemplate(
+            template_id="enc-001",
+            order=0,
+            setting="The docks.",
+            purpose="Intro.",
+            scene_tone="dark and ominous",
+            npcs=(_make_npc(),),
+            prerequisites=(),
+            expected_outcomes=(),
+            downstream_dependencies=(),
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(planned_encounters=(template,), next_encounter_index=0)
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        assert result.encounter_state.scene_tone == "dark and ominous"
+
+    def test_cr_scaling_applied_before_instantiation(self) -> None:
+        """Over-budget NPCs are trimmed by scale_encounter_npcs before actor creation."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+
+        # Two CR 1.0 NPCs = 2.0 total; budget for level 1 = 0.5 → trimmed to 1
+        over_budget_npc1 = EncounterNpc(
+            template_npc_id="orc-a",
+            display_name="Orc A",
+            role="fighter",
+            description="An orc.",
+            monster_name=None,
+            stat_source="simple_npc",
+            cr=1.0,
+        )
+        over_budget_npc2 = EncounterNpc(
+            template_npc_id="orc-b",
+            display_name="Orc B",
+            role="fighter",
+            description="An orc.",
+            monster_name=None,
+            stat_source="simple_npc",
+            cr=1.0,
+        )
+        template = EncounterTemplate(
+            template_id="enc-001",
+            order=0,
+            setting="The docks.",
+            purpose="Intro.",
+            npcs=(over_budget_npc1, over_budget_npc2),
+            prerequisites=(),
+            expected_outcomes=(),
+            downstream_dependencies=(),
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(planned_encounters=(template,), next_encounter_index=0)
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player(level=1)
+        )
+        assert isinstance(result, EncounterReady)
+        npc_actors = [
+            a
+            for a in result.encounter_state.actors.values()
+            if a.actor_id.startswith("npc:")
+        ]
+        expected_npc_count = 1
+        assert len(npc_actors) == expected_npc_count
+
+
+# ─── Retry logic ─────────────────────────────────────────────────────────────
+
+
+class TestRetryLogic:
+    def test_prepare_retries_on_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """prepare() retries up to 3 times on LLM failure before raising."""
+        monkeypatch.setattr(
+            "campaignnarrator.orchestrators.encounter_planner_orchestrator.time.sleep",
+            lambda _: None,
+        )
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.side_effect = RuntimeError("LLM timeout")
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),), next_encounter_index=0
+        )
+
+        with pytest.raises(RuntimeError, match="LLM timeout"):
+            orchestrator.prepare(
+                module=module, campaign=_make_campaign(), player=_make_player()
+            )
+
+        expected_call_count = 3
+        assert agents.planner.assess_divergence.call_count == expected_call_count
+
+    def test_prepare_succeeds_on_second_attempt(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """prepare() succeeds if a later attempt succeeds within 3 tries."""
+        monkeypatch.setattr(
+            "campaignnarrator.orchestrators.encounter_planner_orchestrator.time.sleep",
+            lambda _: None,
+        )
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.side_effect = [
+            RuntimeError("transient failure"),
+            DivergenceAssessment(
+                status="viable", reason="ok", milestone_achieved=False
+            ),
+        ]
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        module = _make_module(
+            planned_encounters=(_make_template(),), next_encounter_index=0
+        )
+
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        expected_call_count = 2
+        assert agents.planner.assess_divergence.call_count == expected_call_count
