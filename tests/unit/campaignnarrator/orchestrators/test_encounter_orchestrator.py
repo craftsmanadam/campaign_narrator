@@ -1050,18 +1050,17 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
 
 def test_scene_tone_persisted_on_state_after_scene_opening(tmp_path: Path) -> None:
     """scene_tone returned from opening narration should be saved on EncounterState."""
-    repository = _scene_opening_repository(tmp_path)
     narrator = FakeNarratorAgent(scene_tone="eerie and quiet")
     orchestrator = _orchestrator(
         tmp_path,
-        state_repository=repository,
+        state_repository=_scene_opening_repository(tmp_path),
         narrator_agent=narrator,
         io=ScriptedIO(["save and quit"]),
     )
 
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    saved = repository.load().encounter
+    saved = orchestrator.current_state()
     assert saved is not None
     assert saved.scene_tone == "eerie and quiet"
 
@@ -1346,7 +1345,7 @@ def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
 
     partial = [
         m
-        for _, m in memory.narratives
+        for _, m in memory.staged_narrations
         if m.get("event_type") == "encounter_partial_summary"
     ]
     assert len(partial) == 1

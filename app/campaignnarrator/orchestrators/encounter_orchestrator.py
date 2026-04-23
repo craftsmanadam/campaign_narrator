@@ -116,6 +116,12 @@ class EncounterOrchestrator:
             self._io.display(text)
             output.append(text)
 
+        if scene_texts:
+            self._memory_repository.update_game_state(
+                GameState(player=player, encounter=state)
+            )
+            self._memory_repository.update_exchange("", scene_texts[0])
+
         if not scene_texts and state.public_events:
             prior_context = self._retrieve_prior_context(state.setting)
             recap_frame = replace(
@@ -177,7 +183,7 @@ class EncounterOrchestrator:
                     partial_summary = self._narrator_agent.summarize_encounter_partial(
                         state
                     )
-                    self._memory_repository.store_narrative(
+                    self._memory_repository.stage_narration(
                         partial_summary,
                         {
                             "event_type": "encounter_partial_summary",
@@ -185,6 +191,9 @@ class EncounterOrchestrator:
                             "campaign_id": "",
                             "module_id": "",
                         },
+                    )
+                    self._memory_repository.update_game_state(
+                        GameState(player=player, encounter=state)
                     )
                     msg = "Game saved. You can resume this encounter later."
                     self._io.display(msg)
@@ -269,6 +278,10 @@ class EncounterOrchestrator:
 
         self._io.display(narration.text)
         output.append(narration.text)
+        self._memory_repository.update_game_state(
+            GameState(player=player, encounter=state)
+        )
+        self._memory_repository.update_exchange(player_input.raw_text, narration.text)
         return state
 
     def _open_scene(self, state: EncounterState) -> tuple[EncounterState, list[str]]:
@@ -297,7 +310,7 @@ class EncounterOrchestrator:
             _intent_agent=self._combat_intent_agent,
         )
         result = orchestrator.run(state)
-        self._state_repository.save(
+        self._memory_repository.update_game_state(
             GameState(player=player, encounter=result.final_state)
         )
         if result.status is CombatStatus.SAVED_AND_QUIT:
@@ -388,7 +401,6 @@ class EncounterOrchestrator:
         )
         for event in roll_events:
             self._io.display(event)
-        self._state_repository.save(GameState(player=player, encounter=updated_state))
         if updated_state.outcome is not None:
             self._append_event(
                 {
@@ -435,7 +447,6 @@ class EncounterOrchestrator:
             outcome="combat",
             public_events=(*state.public_events, event),
         )
-        self._state_repository.save(GameState(player=player, encounter=updated_state))
         self._append_event(
             {
                 "type": "encounter_completed",
@@ -475,28 +486,24 @@ class EncounterOrchestrator:
 
     def _retrieve_prior_context(self, query: str) -> str:
         """Query memory for prior session context."""
-        if self._memory_repository is None:
-            return ""
         retrieved = self._memory_repository.retrieve_relevant(query, limit=3)
         return "\n\n".join(retrieved) if retrieved else ""
 
     def _narrate(self, frame: NarrationFrame, *, encounter_id: str) -> Narration:
         narration = self._narrator_agent.narrate(frame)
-        if self._memory_repository is not None:
-            self._memory_repository.store_narrative(
-                narration.text,
-                {
-                    "event_type": "narration",
-                    "encounter_id": encounter_id,
-                    "campaign_id": "",
-                    "module_id": "",
-                },
-            )
+        self._memory_repository.store_narrative(
+            narration.text,
+            {
+                "event_type": "narration",
+                "encounter_id": encounter_id,
+                "campaign_id": "",
+                "module_id": "",
+            },
+        )
         return narration
 
     def _append_event(self, event: dict[str, object]) -> None:
-        if self._memory_repository is not None:
-            self._memory_repository.append_event(event)
+        self._memory_repository.append_event(event)
 
 
 def _status_frame(state: EncounterState) -> NarrationFrame:
