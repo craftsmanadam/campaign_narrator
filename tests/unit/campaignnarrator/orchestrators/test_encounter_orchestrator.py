@@ -277,7 +277,7 @@ def _mock_combat_intent_agent(
     return mock_agent
 
 
-def _orchestrator(  # noqa: PLR0913
+def _orchestrator(
     tmp_path: Path,
     *,
     state_repository: StateRepository | None = None,

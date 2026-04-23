@@ -160,7 +160,7 @@ def _mock_intent_agent(intents: list[str] | None = None) -> MagicMock:
     return mock
 
 
-def _orchestrator(  # noqa: PLR0913
+def _orchestrator(
     inputs: list[str],
     adjudications: list[RulesAdjudication],
     intents: list[str] | None = None,

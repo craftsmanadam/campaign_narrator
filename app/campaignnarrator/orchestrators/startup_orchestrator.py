@@ -21,7 +21,7 @@ _DESTRUCTION_WARNING = (
 class StartupOrchestrator:
     """Route returning players to the right flow based on their stated intent."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         io: PlayerIO,
