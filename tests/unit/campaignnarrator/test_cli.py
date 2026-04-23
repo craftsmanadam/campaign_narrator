@@ -311,6 +311,8 @@ def test_build_application_graph_wires_repository_paths(
     monkeypatch.setattr(
         f"{af_ns}.CharacterCreationOrchestrator", lambda **_kw: object()
     )
+    monkeypatch.setattr(f"{af_ns}.EncounterPlannerAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.EncounterPlannerOrchestrator", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.ModuleOrchestrator", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignCreationOrchestrator", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.StartupOrchestrator", lambda **_kw: object())
@@ -362,6 +364,8 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     monkeypatch.setattr(
         f"{af_ns}.CharacterCreationOrchestrator", lambda **_kw: object()
     )
+    monkeypatch.setattr(f"{af_ns}.EncounterPlannerAgent", lambda **_kw: object())
+    monkeypatch.setattr(f"{af_ns}.EncounterPlannerOrchestrator", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.ModuleOrchestrator", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignCreationOrchestrator", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.StartupOrchestrator", lambda **_kw: object())
@@ -487,6 +491,8 @@ def test_application_factory_build_returns_application_graph(
     monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", _noop_repo)
     monkeypatch.setattr(f"{af_ns}.StateRepository", _noop_repo_kw)
     monkeypatch.setattr(f"{af_ns}.CharacterCreationOrchestrator", _noop_repo_kw)
+    monkeypatch.setattr(f"{af_ns}.EncounterPlannerAgent", _noop_agent)
+    monkeypatch.setattr(f"{af_ns}.EncounterPlannerOrchestrator", _noop_repo_kw)
     monkeypatch.setattr(f"{af_ns}.ModuleOrchestrator", _noop_repo_kw)
     monkeypatch.setattr(f"{af_ns}.CampaignCreationOrchestrator", _noop_repo_kw)
     monkeypatch.setattr(f"{af_ns}.StartupOrchestrator", _noop_repo_kw)

@@ -40,7 +40,6 @@ _MODULE_RESULT = ModuleGenerationResult(
     title="The Dockside Murders",
     summary="Bodies wash ashore.",
     guiding_milestone_id="m1",
-    opening_encounter_seed="You arrive at the fog-shrouded docks at dusk.",
 )
 
 
@@ -133,12 +132,11 @@ def test_v2_run_delegates_to_module_orchestrator() -> None:
     orch._module_orchestrator.run.assert_called_once()
 
 
-def test_v2_run_saves_module_with_new_schema() -> None:
+def test_v2_run_saves_module_with_empty_log() -> None:
     orch, _, mock_module_repo, __ = _make_orchestrator()
     orch.run()
     mock_module_repo.save.assert_called_once()
     saved = mock_module_repo.save.call_args[0][0]
-    assert saved.next_encounter_seed == _MODULE_RESULT.opening_encounter_seed
     assert saved.completed_encounter_ids == ()
 
 

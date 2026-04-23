@@ -16,11 +16,6 @@ _SAMPLE_RESULT = {
     "title": "The Dockside Murders",
     "summary": "Bodies wash ashore nightly. The city guard is bribed to silence.",
     "guiding_milestone_id": "m1",
-    "opening_encounter_seed": (
-        "You arrive at the fog-shrouded docks of Darkholm at dusk. "
-        "A sailor's corpse bobs in the black water. "
-        "A hooded figure watches from the shadows."
-    ),
 }
 
 
@@ -53,7 +48,6 @@ def test_generate_returns_module_result() -> None:
     assert isinstance(result, ModuleGenerationResult)
     assert result.title == "The Dockside Murders"
     assert result.guiding_milestone_id == "m1"
-    assert "docks" in result.opening_encounter_seed.lower()
 
 
 def test_generate_accepts_module_title_alias() -> None:

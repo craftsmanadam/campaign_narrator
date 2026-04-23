@@ -139,7 +139,6 @@ class CampaignCreationOrchestrator:
             title=module_result.title,
             summary=module_result.summary,
             guiding_milestone_id=module_result.guiding_milestone_id,
-            next_encounter_seed=module_result.opening_encounter_seed,
         )
         self._repos.module.save(module)
 

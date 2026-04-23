@@ -41,7 +41,6 @@ def _module_to_json(m: ModuleState) -> dict[str, object]:
         "guiding_milestone_id": m.guiding_milestone_id,
         "completed_encounter_ids": list(m.completed_encounter_ids),
         "completed_encounter_summaries": list(m.completed_encounter_summaries),
-        "next_encounter_seed": m.next_encounter_seed,  # deprecated — removed in Plan 4
         "completed": m.completed,
         "planned_encounters": [t.model_dump() for t in m.planned_encounters],
         "next_encounter_index": m.next_encounter_index,

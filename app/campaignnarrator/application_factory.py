@@ -15,6 +15,7 @@ from campaignnarrator.adapters.embedding_adapter import (
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
 from campaignnarrator.agents.campaign_generator_agent import CampaignGeneratorAgent
+from campaignnarrator.agents.encounter_planner_agent import EncounterPlannerAgent
 from campaignnarrator.agents.module_generator_agent import ModuleGeneratorAgent
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.prompts import NARRATOR_PERSONALITY
@@ -39,6 +40,11 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     OrchestratorAgents,
     OrchestratorRepositories,
     OrchestratorTools,
+)
+from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
+    EncounterPlannerOrchestrator,
+    EncounterPlannerOrchestratorAgents,
+    EncounterPlannerOrchestratorRepositories,
 )
 from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestrator,
@@ -237,6 +243,18 @@ class ApplicationFactory:
             adapter=agents.narrator.adapter,
         )
 
+        encounter_planner_orchestrator = EncounterPlannerOrchestrator(
+            repositories=EncounterPlannerOrchestratorRepositories(
+                module=repos.module,
+                encounter=repos.encounter,
+                memory=repos.memory,
+                compendium=repos.compendium,
+            ),
+            agents=EncounterPlannerOrchestratorAgents(
+                planner=EncounterPlannerAgent(adapter=agents.narrator.adapter),
+            ),
+        )
+
         module_orchestrator = ModuleOrchestrator(
             io=io,
             repositories=ModuleOrchestratorRepositories(
@@ -250,6 +268,7 @@ class ApplicationFactory:
             agents=ModuleOrchestratorAgents(
                 narrator=agents.narrator,
                 module_generator=agents.module_generator,
+                encounter_planner=encounter_planner_orchestrator,
             ),
             encounter_orchestrator=encounter_orchestrator,
         )

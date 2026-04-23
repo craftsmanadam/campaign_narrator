@@ -30,7 +30,6 @@ def test_save_and_load_roundtrip(tmp_path: Path) -> None:
     assert loaded.title == "The Dockside Murders"
     assert loaded.guiding_milestone_id == "m1"
     assert loaded.completed_encounter_ids == ()
-    assert loaded.next_encounter_seed is None
     assert loaded.completed is False
 
 
@@ -140,10 +139,6 @@ def test_load_old_record_without_planned_encounters(tmp_path: Path) -> None:
     assert loaded is not None
     assert loaded.planned_encounters == ()
     assert loaded.next_encounter_index == 0
-    # next_encounter_seed is still present in ModuleState (removed in Plan 4),
-    # but _module_from_seed pops it from the raw dict and does NOT forward it to
-    # the constructor — so the loaded value is the default (None).
-    assert loaded.next_encounter_seed is None
 
 
 def test_serialized_json_includes_planned_encounters_key(tmp_path: Path) -> None:

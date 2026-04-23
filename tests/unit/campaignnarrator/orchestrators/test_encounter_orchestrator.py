@@ -14,7 +14,6 @@ from campaignnarrator.domain.models import (
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
-    CritReview,
     EncounterPhase,
     EncounterState,
     InitiativeTurn,
@@ -107,9 +106,6 @@ class FakeNarratorAgent:
                 full_description="Combat concluded.",
             ),
         )
-
-    def review_crit_from_json(self, context_json: str) -> CritReview:
-        return CritReview(approved=True)
 
 
 class FakeDice:

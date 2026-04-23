@@ -16,10 +16,7 @@ _INSTRUCTIONS = (
     "module summaries, "
     "generate a new module that moves the story toward (but does not "
     "necessarily complete) "
-    "one of the milestones. "
-    "The opening_encounter_seed is a vivid 2-3 sentence narrative that sets "
-    "the scene for the module's first encounter. "
-    "It will be given directly to the narrator."
+    "one of the milestones."
 )
 
 
@@ -28,7 +25,6 @@ class ModuleGenerationResult(BaseModel):
     title: str = Field(validation_alias=AliasChoices("title", "module_title"))
     summary: str
     guiding_milestone_id: str
-    opening_encounter_seed: str
 
 
 class ModuleGeneratorAgent:

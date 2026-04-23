@@ -94,7 +94,6 @@ class ModuleState:
     guiding_milestone_id: str
     completed_encounter_ids: tuple[str, ...] = ()
     completed_encounter_summaries: tuple[str, ...] = ()
-    next_encounter_seed: str | None = None  # deprecated — remove in Plan 4
     completed: bool = False
     planned_encounters: tuple[EncounterTemplate, ...] = ()
     next_encounter_index: int = 0
@@ -462,29 +461,6 @@ class CombatAssessment(BaseModel):
     outcome: CombatOutcome | None  # None when combat_active is True
 
 
-class CritReview(BaseModel):
-    """Narrator's decision on an NPC critical hit against a PC."""
-
-    model_config = ConfigDict(frozen=True)
-    approved: bool
-    reason: str | None = None  # explanation when approved=False
-
-
-class NextEncounterPlan(BaseModel):
-    """Structured output from NarratorAgent.plan_next_encounter().
-
-    seed: Opening scene description for the next encounter. Used verbatim as
-          EncounterState.setting. Ignored when milestone_achieved=True.
-    milestone_achieved: True when the module's guiding milestone is narratively
-                        complete. ModuleOrchestrator transitions to next module.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    seed: str
-    milestone_achieved: bool
-
-
 class RollRequest(BaseModel):
     """An explicit request for a dice roll."""
 
@@ -613,25 +589,6 @@ class Adjudication:
     rule_references: tuple[RuleReference, ...] = field(default_factory=tuple)
 
 
-class NpcPresenceResult(BaseModel):
-    """Structured NPC declaration from the scene opening LLM response.
-
-    stat_source controls how ActorState is populated at encounter creation:
-    - 'monster_compendium': look up monster_name in the monster index and parse
-      combat stats from the SRD markdown via MonsterLoader.
-    - 'simple_npc': create a minimal ActorState with placeholder combat stats
-      (HP=1, AC=10, no attacks). Use for social NPCs not expected to fight.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    display_name: str
-    description: str
-    name_known: bool
-    stat_source: Literal["monster_compendium", "simple_npc"]
-    monster_name: str | None = None
-
-
 class DivergenceAssessment(BaseModel):
     """Output of EncounterPlannerAgent._assess_agent."""
 
@@ -692,7 +649,6 @@ class SceneOpeningResponse(BaseModel):
 
     text: str
     scene_tone: str
-    introduced_npcs: list[NpcPresenceResult] = []
 
 
 class CombatIntent(BaseModel):
@@ -759,7 +715,6 @@ __all__ = [
     "CombatOutcome",
     "CombatResult",
     "CombatStatus",
-    "CritReview",
     "DivergenceAssessment",
     "EncounterNpc",
     "EncounterPhase",
@@ -778,9 +733,7 @@ __all__ = [
     "ModuleState",
     "Narration",
     "NarrationFrame",
-    "NextEncounterPlan",
     "NpcPresence",
-    "NpcPresenceResult",
     "PlayerIO",
     "PlayerInput",
     "PlayerIntent",

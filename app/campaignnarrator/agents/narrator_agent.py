@@ -14,16 +14,12 @@ from campaignnarrator.agents.prompts import (
     SCENE_OPENING_INSTRUCTIONS,
 )
 from campaignnarrator.domain.models import (
-    ActorState,
     CampaignState,
     CombatAssessment,
-    CritReview,
     EncounterState,
-    Milestone,
     ModuleState,
     Narration,
     NarrationFrame,
-    NextEncounterPlan,
     NpcPresence,
     SceneOpeningResponse,
 )
@@ -41,15 +37,6 @@ _ASSESS_COMBAT_INSTRUCTIONS = (
     "(compact, for logs) and a full_description (rich prose shown to player)."
 )
 
-_CRIT_REVIEW_INSTRUCTIONS = (
-    "You are the Narrator for a D&D 5e encounter. "
-    "An NPC has rolled a natural 20 against a player. "
-    "Decide whether to approve the critical hit or downgrade it to a normal hit. "
-    "Approve if the scene calls for dramatic tension. "
-    "Downgrade if it would be anti-climactic or unfair. "
-    "When downgrading, provide a reason."
-)
-
 _SUMMARIZE_INSTRUCTIONS = (
     "You are a dungeon master writing session notes after an encounter. "
     "Write in rich prose, not bullet points. Your notes must include: "
@@ -60,18 +47,6 @@ _SUMMARIZE_INSTRUCTIONS = (
     "and the encounter outcome in one sentence. "
     "Write as if reminding yourself before the next session — be specific enough "
     "that you could describe the same NPC, location, or event consistently next time."
-)
-
-_PLAN_NEXT_INSTRUCTIONS = (
-    "You are a dungeon master planning the next encounter for a campaign. "
-    "Given the campaign setting, module context, completed encounter summaries, "
-    "and current player state, decide: "
-    "(1) Has the guiding milestone been narratively achieved? "
-    "(2) What is the opening scene description for the next encounter? "
-    "Set milestone_achieved=True only when the milestone's narrative goal is clearly "
-    "demonstrated by the completed encounters. "
-    "The seed is a 2-3 sentence scene description used verbatim as the encounter "
-    "opening."
 )
 
 
@@ -101,8 +76,6 @@ class NarratorAgent:
         memory_repository: MemoryRepository | None = None,
         _scene_agent: object | None = None,
         _assess_agent: object | None = None,
-        _crit_agent: object | None = None,
-        plan_agent: object | None = None,
     ) -> None:
         self._adapter = adapter
         self._personality = personality
@@ -124,24 +97,6 @@ class NarratorAgent:
                 adapter.model,
                 output_type=CombatAssessment,
                 instructions=_ASSESS_COMBAT_INSTRUCTIONS,
-            )
-        )
-        self._crit_agent = (
-            _crit_agent
-            if _crit_agent is not None
-            else Agent(
-                adapter.model,
-                output_type=CritReview,
-                instructions=_CRIT_REVIEW_INSTRUCTIONS,
-            )
-        )
-        self._plan_agent = (
-            plan_agent
-            if plan_agent is not None
-            else Agent(
-                adapter.model,
-                output_type=NextEncounterPlan,
-                instructions=_PLAN_NEXT_INSTRUCTIONS,
             )
         )
 
@@ -200,8 +155,7 @@ class NarratorAgent:
     def open_scene(self, frame: NarrationFrame) -> SceneOpeningResponse:
         """Return the raw SceneOpeningResponse for a scene opening frame.
 
-        Unlike narrate(), returns the structured response directly so callers
-        can inspect introduced_npcs before the encounter loop begins.
+        Unlike narrate(), returns the structured response directly.
         Raises ValueError if the narration text is blank.
         """
         if not frame.prior_narrative_context:
@@ -257,14 +211,6 @@ class NarratorAgent:
             raise ValueError("combat_active=False but no outcome provided")  # noqa: TRY003
         return assessment
 
-    def review_crit_from_json(self, context_json: str) -> CritReview:
-        """Decide whether to approve or downgrade an NPC critical hit against a PC.
-
-        Uses self._crit_agent (Agent[CritReview]). Schema validation is handled
-        by pydantic-ai.
-        """
-        return self._crit_agent.run_sync(context_json).output
-
     def retrieve_memory(self, query: str) -> str:
         """Return relevant prior narrative entries for the given query.
 
@@ -319,40 +265,3 @@ class NarratorAgent:
             instructions=self._instructions(_SUMMARIZE_INSTRUCTIONS),
             input_text=json.dumps(context, indent=2, sort_keys=True),
         )
-
-    def plan_next_encounter(
-        self,
-        campaign: CampaignState,
-        module: ModuleState,
-        milestone: Milestone,
-        player: ActorState,
-        last_outcome: str,
-    ) -> NextEncounterPlan:
-        """Plan the next encounter after archiving the completed one.
-
-        The guiding Milestone is narrator-internal context for planning judgment.
-        It must not be emitted verbatim in player-facing output.
-        """
-        context = {
-            "campaign_setting": campaign.setting,
-            "narrator_personality": campaign.narrator_personality,
-            "module_title": module.title,
-            "module_summary": module.summary,
-            "guiding_milestone": {
-                "title": milestone.title,
-                "description": milestone.description,
-            },
-            "completed_encounter_summaries": list(module.completed_encounter_summaries),
-            "player_name": player.name,
-            "player_race": player.race,
-            "player_hp_current": player.hp_current,
-            "player_hp_max": player.hp_max,
-            "last_outcome": last_outcome,
-            "prior_narrative_context": self.retrieve_memory(
-                f"{module.title} {milestone.title}"
-            ),
-        }
-        result = self._plan_agent.run_sync(  # type: ignore[union-attr]
-            json.dumps(context, indent=2, sort_keys=True)
-        )
-        return result.output

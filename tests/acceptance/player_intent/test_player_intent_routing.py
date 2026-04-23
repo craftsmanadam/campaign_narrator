@@ -13,7 +13,6 @@ from campaignnarrator.domain.models import (
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
-    CritReview,
     EncounterPhase,
     EncounterState,
     GameState,
@@ -112,9 +111,6 @@ class FakeNarratorAgent:
                 full_description="The enemy has been defeated.",
             ),
         )
-
-    def review_crit_from_json(self, context_json: str) -> CritReview:
-        return CritReview(approved=False, reason="Downgraded for fairness.")
 
     def summarize_encounter_partial(self, encounter: object) -> str:
         return "Partial summary of the interrupted encounter."

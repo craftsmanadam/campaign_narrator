@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
 from unittest.mock import MagicMock
 
 from campaignnarrator.agents.module_generator_agent import (
@@ -13,15 +12,16 @@ from campaignnarrator.agents.module_generator_agent import (
 from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.domain.models import (
     ActorState,
-    ActorType,
     CampaignState,
     EncounterPhase,
+    EncounterReady,
     EncounterState,
     Milestone,
+    MilestoneAchieved,
     ModuleState,
-    NextEncounterPlan,
-    NpcPresenceResult,
-    SceneOpeningResponse,
+)
+from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
+    EncounterPlannerOrchestrator,
 )
 from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestrator,
@@ -67,9 +67,9 @@ def _make_campaign(current_module_id: str = "module-001") -> CampaignState:
 
 def _make_module(
     *,
-    next_encounter_seed: str | None = None,
     completed_encounter_ids: tuple[str, ...] = (),
     completed_encounter_summaries: tuple[str, ...] = (),
+    next_encounter_index: int = 0,
 ) -> ModuleState:
     return ModuleState(
         module_id="module-001",
@@ -79,16 +79,17 @@ def _make_module(
         guiding_milestone_id="m1",
         completed_encounter_ids=completed_encounter_ids,
         completed_encounter_summaries=completed_encounter_summaries,
-        next_encounter_seed=next_encounter_seed,
+        next_encounter_index=next_encounter_index,
     )
 
 
 def _make_active_encounter(
     phase: EncounterPhase = EncounterPhase.SCENE_OPENING,
+    encounter_id: str = "module-001-enc-001",
     outcome: str | None = None,
 ) -> EncounterState:
     return EncounterState(
-        encounter_id="module-001-enc-001",
+        encounter_id=encounter_id,
         phase=phase,
         setting="The docks at dusk.",
         actors={"pc:player": _make_player()},
@@ -96,11 +97,21 @@ def _make_active_encounter(
     )
 
 
+def _make_planner_encounter() -> EncounterState:
+    """Return an encounter the planner would create (different id to avoid loops)."""
+    return EncounterState(
+        encounter_id="module-001-enc-new",
+        phase=EncounterPhase.SCENE_OPENING,
+        setting="A new scene.",
+        actors={},
+    )
+
+
 def _make_orchestrator(
     *,
     module: ModuleState | None = None,
     active_encounter: EncounterState | None = None,
-    plan: NextEncounterPlan | None = None,
+    encounter_ready: EncounterReady | MilestoneAchieved | None = None,
     summarize_returns: str = "Rich encounter summary.",
 ) -> tuple[
     ModuleOrchestrator,
@@ -118,31 +129,24 @@ def _make_orchestrator(
     mock_actor_repo = MagicMock(spec=ActorRepository)
     mock_memory_repo = MagicMock(spec=MemoryRepository)
     mock_compendium_repo = MagicMock(spec=CompendiumRepository)
-    mock_compendium_repo.monster_index_path.return_value = MagicMock(
-        exists=lambda: False
-    )
 
-    mock_module_repo.load.return_value = module or _make_module(
-        next_encounter_seed="The docks at midnight."
-    )
+    resolved_module = module or _make_module()
+    mock_module_repo.load.return_value = resolved_module
     mock_encounter_repo.load_active.return_value = active_encounter
 
-    # After run_encounter, simulate a non-complete encounter (player quit)
     mock_narrator = MagicMock(spec=NarratorAgent)
     mock_narrator.summarize_encounter.return_value = summarize_returns
-    mock_narrator.plan_next_encounter.return_value = plan or NextEncounterPlan(
-        seed="The warehouse at midnight.", milestone_achieved=False
+
+    mock_encounter_planner = MagicMock(spec=EncounterPlannerOrchestrator)
+    default_ready = EncounterReady(
+        encounter_state=_make_planner_encounter(),
+        module=resolved_module,
     )
-    mock_narrator.open_scene.return_value = SceneOpeningResponse(
-        text="The docks loom ahead.",
-        scene_tone="tense and foreboding",
-        introduced_npcs=[],
-    )
+    mock_encounter_planner.prepare.return_value = encounter_ready or default_ready
+
     mock_module_gen = MagicMock(spec=ModuleGeneratorAgent)
     mock_encounter_orch = MagicMock()
-    mock_encounter_orch.run_encounter.return_value = MagicMock(
-        output_text="Scene narration."
-    )
+    mock_encounter_orch.run_encounter.return_value = None
     mock_actor_repo.load_player.return_value = _make_player()
 
     repos = ModuleOrchestratorRepositories(
@@ -156,6 +160,7 @@ def _make_orchestrator(
     agents = ModuleOrchestratorAgents(
         narrator=mock_narrator,
         module_generator=mock_module_gen,
+        encounter_planner=mock_encounter_planner,
     )
     orch = ModuleOrchestrator(
         io=io,
@@ -192,15 +197,20 @@ def test_run_with_in_progress_encounter_calls_run_encounter() -> None:
     )
 
 
-def test_run_with_no_active_encounter_does_not_call_run_encounter_immediately() -> None:
-    """Step 2a: no active encounter → skip to plan next (implemented in Task 3)."""
-    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(
-        active_encounter=None,
-        module=_make_module(next_encounter_seed="The docks at midnight."),
-    )
+def test_run_with_no_active_encounter_calls_encounter_planner() -> None:
+    """No active encounter → encounter_planner.prepare() is called."""
+    orch, _, _, _, _, _ = _make_orchestrator(active_encounter=None)
     orch.run(campaign=_make_campaign(), player=_make_player())
-    # run_encounter IS called (step 6 creates and runs a new encounter)
-    mock_enc_orch.run_encounter.assert_called_once()
+    orch._agents.encounter_planner.prepare.assert_called_once()
+
+
+def test_run_with_no_active_encounter_calls_run_encounter() -> None:
+    """No active encounter → run_encounter is called with planner's encounter_id."""
+    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(active_encounter=None)
+    orch.run(campaign=_make_campaign(), player=_make_player())
+    mock_enc_orch.run_encounter.assert_called_once_with(
+        encounter_id="module-001-enc-new"
+    )
 
 
 def test_run_does_not_forward_encounter_output_to_io() -> None:
@@ -277,47 +287,53 @@ def test_run_with_completed_encounter_saves_updated_module() -> None:
     )
     mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign(), player=_make_player())
-    # Module save called at least once (archive + after plan)
+    # Module save called at least once (archive)
     assert mock_module_repo.save.call_count >= 1
-    last_saved = mock_module_repo.save.call_args[0][0]
-    assert "module-001-enc-001" in last_saved.completed_encounter_ids
-
-
-def test_run_creates_encounter_id_from_log_length() -> None:
-    """Encounter ID is {module_id}-enc-{len(completed)+1:03d}."""
-    orch, _, mock_enc_repo, _, mock_enc_orch, _ = _make_orchestrator(
-        active_encounter=None,
-        module=_make_module(
-            next_encounter_seed="The docks at midnight.",
-            completed_encounter_ids=("module-001-enc-001", "module-001-enc-002"),
-        ),
+    # The archived module carries the completed encounter id
+    all_saved = [call[0][0] for call in mock_module_repo.save.call_args_list]
+    archived = next(
+        m for m in all_saved if "module-001-enc-001" in m.completed_encounter_ids
     )
-    mock_enc_repo.load_active.return_value = None  # after creation, player quit
+    assert archived is not None
+
+
+def test_run_archive_increments_next_encounter_index() -> None:
+    """_archive_encounter must bump next_encounter_index by 1."""
+    _initial_index = 2
+    active = _make_active_encounter(
+        phase=EncounterPhase.ENCOUNTER_COMPLETE,
+        outcome="Done.",
+    )
+    orch, mock_module_repo, mock_enc_repo, _, _, _ = _make_orchestrator(
+        active_encounter=active,
+        module=_make_module(next_encounter_index=_initial_index),
+    )
+    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign(), player=_make_player())
-    call_kwargs = mock_enc_orch.run_encounter.call_args[1]
-    assert call_kwargs["encounter_id"] == "module-001-enc-003"
+    all_saved = [call[0][0] for call in mock_module_repo.save.call_args_list]
+    archived = next(
+        m for m in all_saved if "module-001-enc-001" in m.completed_encounter_ids
+    )
+    assert archived.next_encounter_index == _initial_index + 1
 
 
 def test_run_milestone_achieved_saves_new_module() -> None:
-    """milestone_achieved=True → new module is generated and saved."""
+    """MilestoneAchieved from planner → new module is generated and saved."""
     active = _make_active_encounter(
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Malachar defeated.",
     )
-    plan = NextEncounterPlan(seed="", milestone_achieved=True)
-    orch, mock_module_repo, mock_enc_repo, mock_narrator, _, _ = _make_orchestrator(
+    orch, mock_module_repo, mock_enc_repo, _, _, _ = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
-        plan=plan,
+        encounter_ready=MilestoneAchieved(),
     )
     mock_enc_repo.load_active.return_value = active
-    mock_narrator.plan_next_encounter.return_value = plan
 
     module_result = ModuleGenerationResult(
         title="The Cult Revealed",
         summary="The sea cult unmasked.",
         guiding_milestone_id="m2",
-        opening_encounter_seed="A candlelit cellar beneath the tavern.",
     )
     orch._agents.module_generator.generate.return_value = module_result
 
@@ -337,7 +353,7 @@ def test_run_returns_early_when_module_not_found() -> None:
 
 
 def test_run_displays_end_of_campaign_when_milestones_exhausted() -> None:
-    """When milestone_achieved and no more milestones exist, display end-of-campaign."""
+    """MilestoneAchieved with no further milestones → display end-of-campaign."""
     active = _make_active_encounter(
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Final confrontation.",
@@ -361,196 +377,84 @@ def test_run_displays_end_of_campaign_when_milestones_exhausted() -> None:
         player_actor_id="pc:player",
         current_module_id="module-001",
     )
-    plan = NextEncounterPlan(seed="", milestone_achieved=True)
-    orch, _, mock_enc_repo, mock_narrator, _, _ = _make_orchestrator(
+    orch, _, mock_enc_repo, _, _, _ = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
-        plan=plan,
+        encounter_ready=MilestoneAchieved(),
     )
     mock_enc_repo.load_active.return_value = active
-    mock_narrator.plan_next_encounter.return_value = plan
     orch.run(campaign=campaign, player=_make_player())
     orch._io.display.assert_any_call(
         "\nThe campaign is complete. Your legend will be remembered.\n"
     )
 
 
-def test_create_encounter_seeds_simple_npc(tmp_path: Path) -> None:
-    """NPCs declared by narrator are seeded into EncounterState."""
-    tmp = tmp_path
-    (tmp / "state" / "actors").mkdir(parents=True)
-    (tmp / "state" / "encounters").mkdir(parents=True)
-    (tmp / "compendium" / "monsters").mkdir(parents=True)
-    (tmp / "compendium" / "monsters" / "index.json").write_text("[]")
-
-    actor_repo = ActorRepository(tmp / "state")
-    encounter_repo = EncounterRepository(tmp / "state")
-    campaign_repo = MagicMock(spec=CampaignRepository)
-    module_repo = MagicMock(spec=ModuleRepository)
-    memory_repo = MagicMock(spec=MemoryRepository)
-    memory_repo.store_narrative = MagicMock()
-    memory_repo.retrieve_relevant = MagicMock(return_value=[])
-    compendium_repo = CompendiumRepository(tmp / "compendium")
-
-    mock_narrator = MagicMock()
-    mock_narrator.open_scene.return_value = SceneOpeningResponse(
-        text="The tavern hums with life.",
-        scene_tone="warm and welcoming",
-        introduced_npcs=[
-            NpcPresenceResult(
-                display_name="Mira",
-                description="the innkeeper",
-                name_known=False,
-                stat_source="simple_npc",
-            )
-        ],
+def test_run_with_completed_encounter_passes_updated_module_to_planner() -> None:
+    """After archiving, the planner receives the updated module (next_encounter_index+1)."""
+    active = _make_active_encounter(
+        phase=EncounterPhase.ENCOUNTER_COMPLETE,
+        outcome="Cultist subdued.",
     )
-    mock_module_gen = MagicMock()
-    mock_encounter_orchestrator = MagicMock()
-    mock_encounter_orchestrator.run_encounter.return_value = None
+    _initial_index = 1
+    orch, _, mock_enc_repo, _, _, _ = _make_orchestrator(
+        active_encounter=active,
+        module=_make_module(next_encounter_index=_initial_index),
+    )
+    mock_enc_repo.load_active.return_value = active
+    orch.run(campaign=_make_campaign(), player=_make_player())
+    prepare_call = orch._agents.encounter_planner.prepare.call_args
+    passed_module = prepare_call[1]["module"]
+    assert passed_module.next_encounter_index == _initial_index + 1
 
-    io = ScriptedIO(["exit"])
 
-    orchestrator = ModuleOrchestrator(
+def test_run_planner_receive_correct_campaign_and_player() -> None:
+    """prepare() must be called with the correct campaign and player."""
+    orch, _, _, _, _, _ = _make_orchestrator(active_encounter=None)
+    campaign = _make_campaign()
+    player = _make_player()
+    orch.run(campaign=campaign, player=player)
+    prepare_call = orch._agents.encounter_planner.prepare.call_args
+    assert prepare_call[1]["campaign"] is campaign
+    assert prepare_call[1]["player"] is player
+
+
+def test_run_with_scripted_io_module_not_found_no_crash() -> None:
+    """ModuleOrchestrator must not crash when module is absent."""
+    io = ScriptedIO([])
+    mock_module_repo = MagicMock(spec=ModuleRepository)
+    mock_module_repo.load.return_value = None
+    mock_encounter_planner = MagicMock(spec=EncounterPlannerOrchestrator)
+    repos = ModuleOrchestratorRepositories(
+        campaign=MagicMock(spec=CampaignRepository),
+        module=mock_module_repo,
+        encounter=MagicMock(spec=EncounterRepository),
+        actor=MagicMock(spec=ActorRepository),
+        memory=MagicMock(spec=MemoryRepository),
+        compendium=MagicMock(spec=CompendiumRepository),
+    )
+    agents = ModuleOrchestratorAgents(
+        narrator=MagicMock(spec=NarratorAgent),
+        module_generator=MagicMock(spec=ModuleGeneratorAgent),
+        encounter_planner=mock_encounter_planner,
+    )
+    orch = ModuleOrchestrator(
         io=io,
-        repositories=ModuleOrchestratorRepositories(
-            campaign=campaign_repo,
-            module=module_repo,
-            encounter=encounter_repo,
-            actor=actor_repo,
-            memory=memory_repo,
-            compendium=compendium_repo,
-        ),
-        agents=ModuleOrchestratorAgents(
-            narrator=mock_narrator,
-            module_generator=mock_module_gen,
-        ),
-        encounter_orchestrator=mock_encounter_orchestrator,
-    )
-
-    player = ActorState(
-        actor_id="pc:fighter",
-        name="Fighter",
-        actor_type=ActorType.PC,
-        hp_max=12,
-        hp_current=12,
-        armor_class=16,
-        strength=16,
-        dexterity=12,
-        constitution=14,
-        intelligence=10,
-        wisdom=10,
-        charisma=10,
-        proficiency_bonus=2,
-        initiative_bonus=1,
-        speed=30,
-        attacks_per_action=1,
-        action_options=("Attack",),
-        ac_breakdown=("chain mail",),
-    )
-    module = ModuleState(
-        module_id="module-001",
-        campaign_id="camp-001",
-        title="Test Module",
-        summary="A test module",
-        guiding_milestone_id="m-001",
-        next_encounter_seed="A dimly lit tavern.",
-    )
-
-    orchestrator._create_and_run_encounter(
-        campaign=MagicMock(),
-        player=player,
-        module=module,
-    )
-
-    saved = encounter_repo.load_active()
-    assert saved is not None
-    npc_ids = [aid for aid in saved.actors if aid != "pc:fighter"]
-    assert len(npc_ids) == 1
-    assert "mira" in npc_ids[0]
-    assert len(saved.npc_presences) == 1
-    assert saved.npc_presences[0].description == "the innkeeper"
-    assert saved.phase == EncounterPhase.SOCIAL
-
-
-def test_create_encounter_simple_npc_gets_ally_actor_type(tmp_path: Path) -> None:
-    """Simple NPCs (social, non-combat) must be seeded as ActorType.ALLY."""
-    tmp = tmp_path
-    (tmp / "state" / "actors").mkdir(parents=True)
-    (tmp / "state" / "encounters").mkdir(parents=True)
-    (tmp / "compendium" / "monsters").mkdir(parents=True)
-    (tmp / "compendium" / "monsters" / "index.json").write_text("[]")
-
-    actor_repo = ActorRepository(tmp / "state")
-    encounter_repo = EncounterRepository(tmp / "state")
-    compendium_repo = CompendiumRepository(tmp / "compendium")
-
-    mock_narrator = MagicMock()
-    mock_narrator.open_scene.return_value = SceneOpeningResponse(
-        text="The tavern hums with life.",
-        scene_tone="warm and welcoming",
-        introduced_npcs=[
-            NpcPresenceResult(
-                display_name="Mira",
-                description="the innkeeper",
-                name_known=False,
-                stat_source="simple_npc",
-            )
-        ],
-    )
-
-    player = ActorState(
-        actor_id="pc:fighter",
-        name="Fighter",
-        actor_type=ActorType.PC,
-        hp_max=12,
-        hp_current=12,
-        armor_class=16,
-        strength=16,
-        dexterity=12,
-        constitution=14,
-        intelligence=10,
-        wisdom=10,
-        charisma=10,
-        proficiency_bonus=2,
-        initiative_bonus=1,
-        speed=30,
-        attacks_per_action=1,
-        action_options=("Attack",),
-        ac_breakdown=("chain mail",),
-    )
-    module = ModuleState(
-        module_id="module-001",
-        campaign_id="camp-001",
-        title="Test Module",
-        summary="A test module",
-        guiding_milestone_id="m-001",
-        next_encounter_seed="A dimly lit tavern.",
-    )
-
-    orchestrator = ModuleOrchestrator(
-        io=ScriptedIO(["exit"]),
-        repositories=ModuleOrchestratorRepositories(
-            campaign=MagicMock(spec=CampaignRepository),
-            module=MagicMock(spec=ModuleRepository),
-            encounter=encounter_repo,
-            actor=actor_repo,
-            memory=MagicMock(spec=MemoryRepository),
-            compendium=compendium_repo,
-        ),
-        agents=ModuleOrchestratorAgents(
-            narrator=mock_narrator,
-            module_generator=MagicMock(),
-        ),
+        repositories=repos,
+        agents=agents,
         encounter_orchestrator=MagicMock(),
     )
-    orchestrator._create_and_run_encounter(
-        campaign=MagicMock(),
-        player=player,
-        module=module,
-    )
+    orch.run(campaign=_make_campaign(), player=_make_player())
+    mock_encounter_planner.prepare.assert_not_called()
 
-    saved = encounter_repo.load_active()
-    assert saved is not None
-    npc_id = next(aid for aid in saved.actors if aid != "pc:fighter")
-    assert saved.actors[npc_id].actor_type == ActorType.ALLY
+
+def test_run_player_quits_mid_encounter_does_not_archive() -> None:
+    """If player quits (encounter not complete after run), no archiving occurs."""
+    active = _make_active_encounter(phase=EncounterPhase.COMBAT)
+    orch, _, mock_enc_repo, mock_narrator, _mock_enc_orch, _ = _make_orchestrator(
+        active_encounter=active
+    )
+    # After run_encounter, encounter is still in COMBAT (player quit)
+    mock_enc_repo.load_active.side_effect = [active, active]
+    orch.run(campaign=_make_campaign(), player=_make_player())
+    mock_narrator.summarize_encounter.assert_not_called()
+    mock_enc_repo.clear.assert_not_called()

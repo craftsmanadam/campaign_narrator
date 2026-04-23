@@ -14,16 +14,13 @@ from campaignnarrator.agents.prompts import (
     SCENE_OPENING_INSTRUCTIONS,
 )
 from campaignnarrator.domain.models import (
-    ActorState,
     CampaignState,
     CombatAssessment,
-    CritReview,
     EncounterPhase,
     EncounterState,
     Milestone,
     ModuleState,
     NarrationFrame,
-    NextEncounterPlan,
     NpcPresence,
     SceneOpeningResponse,
 )
@@ -32,20 +29,9 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from tests.fixtures.fighter_talia import TALIA
-
 
 def _make_assess_model(data: dict) -> FunctionModel:
     """FunctionModel that returns a CombatAssessment tool call."""
-
-    def fn(messages, info: AgentInfo) -> ModelResponse:
-        return ModelResponse(parts=[ToolCallPart("final_result", json.dumps(data))])
-
-    return FunctionModel(fn)
-
-
-def _make_crit_model(data: dict) -> FunctionModel:
-    """FunctionModel that returns a CritReview tool call."""
 
     def fn(messages, info: AgentInfo) -> ModelResponse:
         return ModelResponse(parts=[ToolCallPart("final_result", json.dumps(data))])
@@ -82,8 +68,6 @@ def _make_narrator(
         personality="Test narrator.",
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     return narrator, mock_adapter, mock_scene_agent
 
@@ -169,8 +153,6 @@ def test_narrate_scene_opening_prepends_personality_to_scene_instructions() -> N
         personality="Gothic style.",
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     assert "Gothic style." in narrator._scene_instructions
     assert "opening a new encounter scene" in narrator._scene_instructions
@@ -191,8 +173,6 @@ def test_declare_npc_intent_from_json_returns_prose_string() -> None:
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     context_json = json.dumps(
         {"actor_id": "npc:goblin-1", "name": "Goblin Scout", "hp_current": 7}
@@ -212,8 +192,6 @@ def test_declare_npc_intent_from_json_raises_value_error_on_blank_response() -> 
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     with pytest.raises(ValueError, match="empty npc intent"):
         narrator.declare_npc_intent_from_json(json.dumps({"actor_id": "npc:goblin-1"}))
@@ -238,8 +216,6 @@ def test_assess_combat_from_json_returns_active_assessment_when_combat_continues
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     assessment = narrator.assess_combat_from_json(
         json.dumps({"actors": [], "recent_events": []})
@@ -271,8 +247,6 @@ def test_assess_combat_from_json_returns_inactive_assessment_with_outcome() -> N
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     assessment = narrator.assess_combat_from_json(
         json.dumps({"actors": [], "recent_events": []})
@@ -297,8 +271,6 @@ def test_assess_combat_from_json_raises_value_error_when_inactive_but_no_outcome
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     with pytest.raises(ValueError, match="combat_active=False but no outcome"):
         narrator.assess_combat_from_json(
@@ -307,62 +279,7 @@ def test_assess_combat_from_json_raises_value_error_when_inactive_but_no_outcome
 
 
 # ---------------------------------------------------------------------------
-# review_crit_from_json
-# ---------------------------------------------------------------------------
-
-
-def test_review_crit_from_json_returns_approved_review() -> None:
-    """Approved critical hit should return CritReview(approved=True)."""
-    crit_agent = Agent(
-        _make_crit_model({"approved": True, "reason": None}),
-        output_type=CritReview,
-        instructions="review crit",
-    )
-    adapter = MagicMock(spec=PydanticAIAdapter)
-    narrator = NarratorAgent(
-        adapter=adapter,
-        _scene_agent=MagicMock(),
-        _assess_agent=MagicMock(),
-        _crit_agent=crit_agent,
-        plan_agent=MagicMock(),
-    )
-    review = narrator.review_crit_from_json(
-        json.dumps({"attacker": "npc:goblin-1", "target": "pc:talia", "damage": 8})
-    )
-    assert isinstance(review, CritReview)
-    assert review.approved is True
-    assert review.reason is None
-
-
-def test_review_crit_from_json_returns_downgraded_review_with_reason() -> None:
-    """Downgraded critical hit should return CritReview(approved=False, reason=...)."""
-    crit_agent = Agent(
-        _make_crit_model(
-            {
-                "approved": False,
-                "reason": "Would be unfair this early in the encounter.",
-            }
-        ),
-        output_type=CritReview,
-        instructions="review crit",
-    )
-    adapter = MagicMock(spec=PydanticAIAdapter)
-    narrator = NarratorAgent(
-        adapter=adapter,
-        _scene_agent=MagicMock(),
-        _assess_agent=MagicMock(),
-        _crit_agent=crit_agent,
-        plan_agent=MagicMock(),
-    )
-    review = narrator.review_crit_from_json(
-        json.dumps({"attacker": "npc:goblin-1", "target": "pc:talia", "damage": 8})
-    )
-    assert review.approved is False
-    assert review.reason == "Would be unfair this early in the encounter."
-
-
-# ---------------------------------------------------------------------------
-# retrieve_memory, summarize_encounter, plan_next_encounter
+# retrieve_memory, summarize_encounter
 # ---------------------------------------------------------------------------
 
 
@@ -379,8 +296,6 @@ def _make_narrator_with_memory(
         memory_repository=mock_memory_repo,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     return narrator, mock_memory_repo
 
@@ -453,8 +368,6 @@ def test_retrieve_memory_no_repo_returns_sentinel() -> None:
         adapter=mock_adapter,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     result = narrator.retrieve_memory("anything")
     assert result == "No prior records found."
@@ -539,60 +452,6 @@ def test_summarize_encounter_partial_marks_outcome_as_in_progress() -> None:
     assert "in_progress" in call_kwargs["input_text"]
 
 
-# --- plan_next_encounter tests ---
-
-
-def _make_plan_model(seed: str, milestone_achieved: bool) -> FunctionModel:
-    data = {"seed": seed, "milestone_achieved": milestone_achieved}
-
-    def fn(messages: object, info: AgentInfo) -> ModelResponse:
-        return ModelResponse(parts=[ToolCallPart("final_result", json.dumps(data))])
-
-    return FunctionModel(fn)
-
-
-def _make_player_actor() -> ActorState:
-    return replace(TALIA, actor_id="pc:player", name="Aldric", race="Human")
-
-
-def test_plan_next_encounter_returns_next_encounter_plan() -> None:
-    narrator, _ = _make_narrator_with_memory()
-    plan_model = _make_plan_model(
-        seed="The warehouse district at midnight.",
-        milestone_achieved=False,
-    )
-    narrator._plan_agent = Agent(plan_model, output_type=NextEncounterPlan)
-    _milestone = Milestone(
-        milestone_id="m1", title="First Blood", description="Survive."
-    )
-    result = narrator.plan_next_encounter(
-        campaign=_make_campaign_for_narrator(),
-        module=_make_module_for_narrator(),
-        milestone=_milestone,
-        player=_make_player_actor(),
-        last_outcome="Cultist subdued.",
-    )
-    assert result.seed == "The warehouse district at midnight."
-    assert result.milestone_achieved is False
-
-
-def test_plan_next_encounter_milestone_achieved_true() -> None:
-    narrator, _ = _make_narrator_with_memory()
-    plan_model = _make_plan_model(seed="", milestone_achieved=True)
-    narrator._plan_agent = Agent(plan_model, output_type=NextEncounterPlan)
-    _milestone = Milestone(
-        milestone_id="m1", title="First Blood", description="Survive."
-    )
-    result = narrator.plan_next_encounter(
-        campaign=_make_campaign_for_narrator(),
-        module=_make_module_for_narrator(),
-        milestone=_milestone,
-        player=_make_player_actor(),
-        last_outcome="Malachar defeated.",
-    )
-    assert result.milestone_achieved is True
-
-
 def _make_scene_response_model(
     text: str = "You arrive at the docks.",
     scene_tone: str = "tense and foreboding",
@@ -644,8 +503,6 @@ def _make_scene_narrator(
         memory_repository=mock_repo,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     return narrator, mock_repo, mock_scene_agent
 
@@ -684,40 +541,12 @@ def test_scene_opening_injects_sentinel_when_no_repository() -> None:
         memory_repository=None,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
 
     narrator.narrate(_make_scene_frame("The docks."))
 
     call_args = mock_scene_agent.run_sync.call_args[0][0]
     assert "No prior records found." in call_args
-
-
-def test_plan_next_encounter_includes_prior_narrative_context() -> None:
-    """plan_next_encounter pre-fetches memory and injects it into the plan agent."""
-    narrator, _ = _make_narrator_with_memory(
-        memory_returns=["Aldric fought the cultist."]
-    )
-    mock_plan_agent = MagicMock()
-    mock_plan_agent.run_sync.return_value.output = NextEncounterPlan(
-        seed="The warehouse.", milestone_achieved=False
-    )
-    narrator._plan_agent = mock_plan_agent
-
-    _milestone = Milestone(
-        milestone_id="m1", title="First Blood", description="Survive."
-    )
-    narrator.plan_next_encounter(
-        campaign=_make_campaign_for_narrator(),
-        module=_make_module_for_narrator(),
-        milestone=_milestone,
-        player=_make_player_actor(),
-        last_outcome="Cultist subdued.",
-    )
-
-    call_args = mock_plan_agent.run_sync.call_args[0][0]
-    assert "Aldric fought the cultist." in call_args
 
 
 # ---------------------------------------------------------------------------
@@ -733,8 +562,6 @@ def narrator_with_mock_scene_agent() -> tuple[NarratorAgent, MagicMock]:
         adapter=MagicMock(),
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
-        _crit_agent=MagicMock(),
-        plan_agent=MagicMock(),
     )
     return narrator, mock_scene_agent
 
@@ -747,7 +574,6 @@ def test_open_scene_returns_scene_opening_response(
     fake_response = SceneOpeningResponse(
         text="A flickering torch lights the room.",
         scene_tone="tense and foreboding",
-        introduced_npcs=[],
     )
     mock_scene_agent.run_sync.return_value.output = fake_response
 
@@ -763,7 +589,6 @@ def test_open_scene_returns_scene_opening_response(
     result = narrator.open_scene(frame)
     assert result.text == "A flickering torch lights the room."
     assert result.scene_tone == "tense and foreboding"
-    assert result.introduced_npcs == []
 
 
 def test_open_scene_raises_on_empty_text(
@@ -774,7 +599,6 @@ def test_open_scene_raises_on_empty_text(
     mock_scene_agent.run_sync.return_value.output = SceneOpeningResponse(
         text="   ",
         scene_tone="quiet",
-        introduced_npcs=[],
     )
 
     frame = NarrationFrame(

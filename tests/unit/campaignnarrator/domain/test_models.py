@@ -18,7 +18,6 @@ from campaignnarrator.domain.models import (
     CombatOutcome,
     CombatResult,
     CombatStatus,
-    CritReview,
     DivergenceAssessment,
     EncounterNpc,
     EncounterPhase,
@@ -37,9 +36,7 @@ from campaignnarrator.domain.models import (
     ModuleState,
     Narration,
     NarrationFrame,
-    NextEncounterPlan,
     NpcPresence,
-    NpcPresenceResult,
     PlayerInput,
     PlayerIntent,
     PlayerIO,
@@ -1097,7 +1094,7 @@ def test_scene_opening_response_stores_text_and_tone() -> None:
 
 
 # ---------------------------------------------------------------------------
-# CombatOutcome, CombatAssessment, CritReview
+# CombatOutcome, CombatAssessment
 # ---------------------------------------------------------------------------
 
 
@@ -1129,18 +1126,6 @@ def test_combat_assessment_inactive_has_populated_outcome() -> None:
     assert assessment.combat_active is False
     assert assessment.outcome is not None
     assert assessment.outcome.short_description == "Victory"
-
-
-def test_crit_review_defaults_reason_to_none() -> None:
-    review = CritReview(approved=True)
-    assert review.approved is True
-    assert review.reason is None
-
-
-def test_crit_review_stores_approved_and_reason() -> None:
-    review = CritReview(approved=False, reason="Would be anti-climactic here.")
-    assert review.approved is False
-    assert review.reason == "Would be anti-climactic here."
 
 
 # ---------------------------------------------------------------------------
@@ -1366,17 +1351,14 @@ def test_module_state_default_log_fields_are_empty() -> None:
     module = _make_module()
     assert module.completed_encounter_ids == ()
     assert module.completed_encounter_summaries == ()
-    assert module.next_encounter_seed is None
 
 
 def test_module_state_accepts_completed_encounters() -> None:
     module = _make_module(
         completed_encounter_ids=("module-001-enc-001",),
         completed_encounter_summaries=("The player fought a goblin at the docks.",),
-        next_encounter_seed="A shadowy figure waits near the warehouse.",
     )
     assert len(module.completed_encounter_ids) == 1
-    assert module.next_encounter_seed == "A shadowy figure waits near the warehouse."
 
 
 def test_module_state_has_no_encounters_field() -> None:
@@ -1389,7 +1371,6 @@ def test_module_repository_round_trips_new_fields() -> None:
     module = _make_module(
         completed_encounter_ids=("module-001-enc-001",),
         completed_encounter_summaries=("The goblin fell at the docks.",),
-        next_encounter_seed="Shadows move near the warehouse.",
         completed=False,
     )
     with tempfile.TemporaryDirectory() as tmp:
@@ -1399,8 +1380,6 @@ def test_module_repository_round_trips_new_fields() -> None:
     assert loaded is not None
     assert loaded.completed_encounter_ids == ("module-001-enc-001",)
     assert loaded.completed_encounter_summaries == ("The goblin fell at the docks.",)
-    # next_encounter_seed is deprecated; _module_from_seed pops it, so loaded value is None
-    assert loaded.next_encounter_seed is None
 
 
 def test_module_repository_round_trips_empty_log() -> None:
@@ -1411,18 +1390,6 @@ def test_module_repository_round_trips_empty_log() -> None:
         loaded = repo.load("module-001")
     assert loaded is not None
     assert loaded.completed_encounter_ids == ()
-    assert loaded.next_encounter_seed is None
-
-
-def test_next_encounter_plan_fields() -> None:
-    plan = NextEncounterPlan(seed="The docks at midnight.", milestone_achieved=False)
-    assert plan.seed == "The docks at midnight."
-    assert plan.milestone_achieved is False
-
-
-def test_next_encounter_plan_milestone_achieved() -> None:
-    plan = NextEncounterPlan(seed="", milestone_achieved=True)
-    assert plan.milestone_achieved is True
 
 
 # ---------------------------------------------------------------------------
@@ -1512,54 +1479,6 @@ def test_encounter_state_accepts_npc_presences() -> None:
     enc_with_npc = replace(enc, npc_presences=(presence,))
     assert len(enc_with_npc.npc_presences) == 1
     assert enc_with_npc.npc_presences[0].display_name == "Mira"
-
-
-# ---------------------------------------------------------------------------
-# NpcPresenceResult
-# ---------------------------------------------------------------------------
-
-
-def test_npc_presence_result_stores_fields() -> None:
-    result = NpcPresenceResult(
-        display_name="Mira",
-        description="the innkeeper",
-        name_known=True,
-        stat_source="simple_npc",
-    )
-    assert result.display_name == "Mira"
-    assert result.monster_name is None
-
-
-def test_npc_presence_result_with_monster() -> None:
-    result = NpcPresenceResult(
-        display_name="Grax",
-        description="a snarling goblin",
-        name_known=False,
-        stat_source="monster_compendium",
-        monster_name="Goblin",
-    )
-    assert result.monster_name == "Goblin"
-
-
-def test_scene_opening_response_introduced_npcs_defaults_empty() -> None:
-    response = SceneOpeningResponse(text="The tavern is dimly lit.", scene_tone="tense")
-    assert response.introduced_npcs == []
-
-
-def test_scene_opening_response_accepts_npcs() -> None:
-    npc = NpcPresenceResult(
-        display_name="Mira",
-        description="the innkeeper",
-        name_known=False,
-        stat_source="simple_npc",
-    )
-    response = SceneOpeningResponse(
-        text="The tavern is dimly lit.",
-        scene_tone="tense",
-        introduced_npcs=[npc],
-    )
-    assert len(response.introduced_npcs) == 1
-    assert response.introduced_npcs[0].display_name == "Mira"
 
 
 def test_actor_state_has_level_field() -> None:
