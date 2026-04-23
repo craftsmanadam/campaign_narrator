@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import lancedb
+import pytest
 from campaignnarrator.adapters.embedding_adapter import StubEmbeddingAdapter
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 
@@ -406,3 +407,157 @@ def test_log_combat_round_does_not_write_disk(tmp_path: Path) -> None:
     repo = MemoryRepository(str(tmp_path), state_repo=MagicMock())
     repo.log_combat_round("Talia strikes the goblin.")
     assert not (tmp_path / "combat_log.jsonl").exists()
+
+
+# ---------------------------------------------------------------------------
+# persist()
+# ---------------------------------------------------------------------------
+
+
+class TestPersist:
+    def test_persist_saves_game_state_via_state_repo(self, tmp_path: Path) -> None:
+        """persist() flushes staged game_state to state_repo.save()."""
+        state_repo = MagicMock()
+        repo = MemoryRepository(tmp_path, state_repo=state_repo)
+        gs = MagicMock()
+        repo.update_game_state(gs)
+        repo.persist()
+        state_repo.save.assert_called_once_with(gs)
+
+    def test_persist_skips_state_repo_when_no_game_state(self, tmp_path: Path) -> None:
+        """persist() must not call state_repo.save() when game_state was never updated."""
+        state_repo = MagicMock()
+        repo = MemoryRepository(tmp_path, state_repo=state_repo)
+        repo.persist()
+        state_repo.save.assert_not_called()
+
+    def test_persist_stores_staged_narrations(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """persist() must call store_narrative for each staged narration."""
+        expected_calls = [
+            ("Hello world", {"source": "narrator"}),
+            ("Second narration", {"source": "narrator"}),
+        ]
+        repo = MemoryRepository(tmp_path, state_repo=MagicMock())
+        calls: list[tuple[str, dict[str, str]]] = []
+        monkeypatch.setattr(
+            repo, "store_narrative", lambda text, meta: calls.append((text, meta))
+        )
+        repo.stage_narration("Hello world", {"source": "narrator"})
+        repo.stage_narration("Second narration", {"source": "narrator"})
+        repo.persist()
+        assert calls == expected_calls
+        # Second persist should not re-flush (cache was reset)
+        repo.persist()
+        assert len(calls) == len(expected_calls)
+
+    def test_persist_writes_exchange_buffer_to_disk(self, tmp_path: Path) -> None:
+        """persist() must write exchange_buffer to exchange_buffer.json."""
+        repo = MemoryRepository(tmp_path, state_repo=MagicMock())
+        repo.update_exchange("player says hi", "narrator replies")
+        repo.persist()
+        exchange_path = tmp_path / "exchange_buffer.json"
+        assert exchange_path.exists()
+        data = json.loads(exchange_path.read_text(encoding="utf-8"))
+        assert data == ["player says hi", "narrator replies"]
+
+    def test_persist_resets_cache_except_exchange_buffer(self, tmp_path: Path) -> None:
+        """After persist(), game_state and staged_narrations are cleared; exchange_buffer persists."""
+        state_repo = MagicMock()
+        repo = MemoryRepository(tmp_path, state_repo=state_repo)
+        gs = MagicMock()
+        repo.update_game_state(gs)
+        repo.stage_narration("text", {"source": "narrator"})
+        repo.update_exchange("p", "n")
+        repo.persist()
+        # Calling persist again must not re-save game_state
+        repo.persist()
+        assert state_repo.save.call_count == 1
+        # Exchange buffer survives reset
+        assert repo.get_exchange_buffer() == ("p", "n")
+
+
+# ---------------------------------------------------------------------------
+# clear_combat_memory() / clear_encounter_memory()
+# ---------------------------------------------------------------------------
+
+
+class TestClearCombatMemory:
+    def test_clear_combat_memory_removes_combat_round_logs(
+        self, tmp_path: Path
+    ) -> None:
+        """clear_combat_memory() must clear combat_round_logs while preserving other cache fields."""
+        state_repo = MagicMock()
+        repo = MemoryRepository(tmp_path, state_repo=state_repo)
+        gs = MagicMock()
+        repo.update_game_state(gs)
+        repo.log_combat_round("round 1")
+        repo.update_exchange("a", "b")
+        repo.clear_combat_memory()
+        # Exchange buffer must be unaffected
+        assert repo.get_exchange_buffer() == ("a", "b")
+        # game_state must be unaffected — persist should still save it
+        repo.persist()
+        state_repo.save.assert_called_once_with(gs)
+        # Calling clear_combat_memory() again on an already-cleared cache must be idempotent
+        repo.log_combat_round("new round")
+        repo.clear_combat_memory()
+        repo.persist()
+        # game_state was reset by previous persist(), so save should not be called again
+        assert state_repo.save.call_count == 1
+
+
+class TestClearEncounterMemory:
+    def test_clear_encounter_memory_resets_cache_except_exchange_buffer(
+        self, tmp_path: Path
+    ) -> None:
+        """clear_encounter_memory() must reset game_state, staged_narrations, combat_round_logs
+        while preserving exchange_buffer."""
+        state_repo = MagicMock()
+        repo = MemoryRepository(tmp_path, state_repo=state_repo)
+        gs = MagicMock()
+        repo.update_game_state(gs)
+        repo.stage_narration("text", {"source": "narrator"})
+        repo.log_combat_round("round 1")
+        repo.update_exchange("p", "n")
+        repo.clear_encounter_memory()
+        # Exchange buffer preserved
+        assert repo.get_exchange_buffer() == ("p", "n")
+        # Game state cleared — persist() should not call save
+        repo.persist()
+        state_repo.save.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _restore_exchange_buffer()
+# ---------------------------------------------------------------------------
+
+
+class TestRestoreExchangeBuffer:
+    def test_restore_reads_exchange_buffer_from_disk_on_init(
+        self, tmp_path: Path
+    ) -> None:
+        """MemoryRepository reads existing exchange_buffer.json on __init__."""
+        exchange_path = tmp_path / "exchange_buffer.json"
+        exchange_path.write_text(
+            json.dumps(["prior player input", "prior narrator output"]),
+            encoding="utf-8",
+        )
+        repo = MemoryRepository(tmp_path, state_repo=MagicMock())
+        assert repo.get_exchange_buffer() == (
+            "prior player input",
+            "prior narrator output",
+        )
+
+    def test_restore_ignores_missing_exchange_buffer_file(self, tmp_path: Path) -> None:
+        """MemoryRepository starts with empty exchange_buffer if file does not exist."""
+        repo = MemoryRepository(tmp_path, state_repo=MagicMock())
+        assert repo.get_exchange_buffer() == ()
+
+    def test_restore_ignores_corrupt_exchange_buffer_file(self, tmp_path: Path) -> None:
+        """MemoryRepository starts with empty exchange_buffer if file is corrupt."""
+        exchange_path = tmp_path / "exchange_buffer.json"
+        exchange_path.write_text("not valid json", encoding="utf-8")
+        repo = MemoryRepository(tmp_path, state_repo=MagicMock())
+        assert repo.get_exchange_buffer() == ()

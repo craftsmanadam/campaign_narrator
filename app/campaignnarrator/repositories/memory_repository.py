@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import uuid
@@ -84,7 +85,14 @@ class MemoryRepository:
         self._restore_exchange_buffer()
 
     def _restore_exchange_buffer(self) -> None:
-        """Load exchange buffer from disk on startup. Implemented in Task 3."""
+        """Load exchange buffer from disk on startup."""
+        path = self._root / "exchange_buffer.json"
+        if path.exists():
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                self._cache = replace(
+                    self._cache,
+                    exchange_buffer=tuple(json.loads(path.read_text(encoding="utf-8"))),
+                )
 
     def _init_lancedb(
         self,
@@ -242,6 +250,33 @@ class MemoryRepository:
     def log_combat_round(self, entry: str) -> None:
         """Append an ephemeral combat round log. Never persisted to disk."""
         self._cache.combat_round_logs.append(entry)
+
+    def persist(self) -> None:
+        """Flush all staged session state to disk.
+
+        Only caller: _LazyGameOrchestrator.save_state().
+        """
+        if self._cache.game_state is not None:
+            self._state_repo.save(self._cache.game_state)
+        for text, metadata in self._cache.staged_narrations:
+            self.store_narrative(text, metadata)
+        exchange_path = self._root / "exchange_buffer.json"
+        exchange_path.parent.mkdir(parents=True, exist_ok=True)
+        exchange_path.write_text(
+            json.dumps(list(self._cache.exchange_buffer)), encoding="utf-8"
+        )
+        self._cache = _SessionCache(exchange_buffer=self._cache.exchange_buffer)
+
+    def clear_combat_memory(self) -> None:
+        """Clear only combat_round_logs from the session cache."""
+        self._cache = replace(self._cache, combat_round_logs=[])
+
+    def clear_encounter_memory(self) -> None:
+        """Reset game_state, staged_narrations, and combat_round_logs.
+
+        Preserves exchange_buffer.
+        """
+        self._cache = _SessionCache(exchange_buffer=self._cache.exchange_buffer)
 
     def _retrieve_from_lancedb(self, query: str, *, limit: int) -> list[str]:
         """Hybrid retrieval: FTS keyword search + vector similarity search, merged."""
