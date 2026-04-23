@@ -31,7 +31,6 @@ from campaignnarrator.domain.models import (
 from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.tools.dice_expression import (
     actor_modifiers,
     execute_roll,
@@ -54,8 +53,7 @@ class EncounterRunResult:
 class OrchestratorRepositories:
     """Repository dependencies for EncounterOrchestrator."""
 
-    state: StateRepository
-    memory: MemoryRepository | None = None
+    memory: MemoryRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,7 +85,6 @@ class EncounterOrchestrator:
         _player_intent_agent: object | None = None,
         _combat_intent_agent: object | None = None,
     ) -> None:
-        self._state_repository = repositories.state
         self._rules_agent = agents.rules
         self._narrator_agent = agents.narrator
         self._roll_dice = tools.roll_dice
@@ -108,7 +105,7 @@ class EncounterOrchestrator:
     def run_encounter(self, *, encounter_id: str) -> EncounterRunResult:
         """Run the encounter loop until an end condition is reached."""
 
-        game_state = self._state_repository.load()
+        game_state = self._memory_repository.load_game_state()
         if game_state.encounter is None:
             raise ValueError("no active encounter")  # noqa: TRY003
         player = game_state.player
@@ -177,20 +174,18 @@ class EncounterOrchestrator:
 
             match intent.category:
                 case IntentCategory.SAVE_EXIT:
-                    self._save_state(state, player)
-                    if self._memory_repository is not None:
-                        partial_summary = (
-                            self._narrator_agent.summarize_encounter_partial(state)
-                        )
-                        self._memory_repository.store_narrative(
-                            partial_summary,
-                            {
-                                "event_type": "encounter_partial_summary",
-                                "encounter_id": state.encounter_id,
-                                "campaign_id": "",
-                                "module_id": "",
-                            },
-                        )
+                    partial_summary = self._narrator_agent.summarize_encounter_partial(
+                        state
+                    )
+                    self._memory_repository.store_narrative(
+                        partial_summary,
+                        {
+                            "event_type": "encounter_partial_summary",
+                            "encounter_id": state.encounter_id,
+                            "campaign_id": "",
+                            "module_id": "",
+                        },
+                    )
                     msg = "Game saved. You can resume this encounter later."
                     self._io.display(msg)
                     output.append(msg)
@@ -249,10 +244,6 @@ class EncounterOrchestrator:
             player_input.raw_text,
         )
         return result
-
-    def _save_state(self, state: EncounterState, player: ActorState) -> None:
-        """Persist current encounter state for save-and-quit."""
-        self._state_repository.save(GameState(player=player, encounter=state))
 
     def _apply_action(
         self,
@@ -324,7 +315,7 @@ class EncounterOrchestrator:
     def current_state(self) -> EncounterState | None:
         """Return the current persisted encounter state."""
 
-        return self._state_repository.load().encounter
+        return self._memory_repository.load_game_state().encounter
 
     def _handle_non_combat_action(
         self,

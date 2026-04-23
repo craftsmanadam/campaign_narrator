@@ -231,7 +231,6 @@ class ApplicationFactory:
 
         encounter_orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(
-                state=repos.state,
                 memory=repos.memory,
             ),
             agents=OrchestratorAgents(

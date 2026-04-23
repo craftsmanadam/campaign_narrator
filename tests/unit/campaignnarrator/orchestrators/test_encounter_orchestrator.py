@@ -337,7 +337,6 @@ def _orchestrator(
     fake_memory = FakeMemoryRepository(game_state=initial_game_state)
     return EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=repo,
             memory=fake_memory,
         ),
         agents=OrchestratorAgents(
@@ -530,7 +529,6 @@ def test_social_check_with_outcome_emits_encounter_completed_event(
     )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_social_repository(tmp_path),
             memory=memory,
         ),
         agents=OrchestratorAgents(
@@ -570,7 +568,6 @@ def test_social_check_without_outcome_does_not_emit_encounter_completed_event(
     )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_social_repository(tmp_path),
             memory=memory,
         ),
         agents=OrchestratorAgents(
@@ -655,7 +652,6 @@ def test_enter_combat_emits_encounter_completed_event(tmp_path: Path) -> None:
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_social_repository(tmp_path, goblin_hp=0),
             memory=memory,
         ),
         agents=OrchestratorAgents(
@@ -727,7 +723,6 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=repository,
             memory=memory_repository,
         ),
         agents=OrchestratorAgents(
@@ -741,11 +736,8 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
 
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    state = repository.load().encounter
     assert result.completed is False
     assert "saved" in result.output_text.lower()
-    assert state is not None
-    assert state.phase is EncounterPhase.SOCIAL
     assert memory_repository.events == [
         {
             "type": "encounter_saved",
@@ -756,13 +748,14 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
     ]
 
 
-def test_save_and_quit_without_memory_repository_does_not_raise(
+def test_save_and_quit_completes_without_raising(
     tmp_path: Path,
 ) -> None:
-    repository = _social_repository(tmp_path)
+    initial_state = _social_repository(tmp_path).load()
+    memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=repository,
+            memory=memory_repository,
         ),
         agents=OrchestratorAgents(
             rules=FakeRulesAgent(),
@@ -807,7 +800,6 @@ def test_completed_encounter_records_durable_event(tmp_path: Path) -> None:
     )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_social_repository(tmp_path),
             memory=memory_repository,
         ),
         agents=OrchestratorAgents(
@@ -868,7 +860,6 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=repository,
             memory=memory_repository,
         ),
         agents=OrchestratorAgents(
@@ -883,9 +874,6 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
 
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    persisted = repository.load().encounter
-    assert persisted is not None
-    assert persisted.phase is EncounterPhase.COMBAT
     assert memory_repository.events == [
         {
             "type": "encounter_saved",
@@ -897,11 +885,12 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
 
 
 def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
-    """'exit' in combat must persist state — same as 'save and quit'."""
-    repository = _combat_repository(tmp_path, goblin_hp=7)
+    """'exit' in combat must persist state via memory repository."""
+    initial_state = _combat_repository(tmp_path, goblin_hp=7).load()
+    memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=repository,
+            memory=memory_repository,
         ),
         agents=OrchestratorAgents(
             rules=FakeRulesAgent(),
@@ -915,7 +904,7 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
 
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    state_after = repository.load().encounter
+    state_after = memory_repository.load_game_state().encounter
     assert state_after is not None
     assert state_after.phase is EncounterPhase.COMBAT
 
@@ -1036,9 +1025,10 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
                 actor_summaries=actor_summaries,
             )
 
+    initial_state = _social_repository(tmp_path).load()
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_social_repository(tmp_path),
+            memory=FakeMemoryRepository(game_state=initial_state),
         ),
         agents=OrchestratorAgents(
             rules=FakeRulesAgent(),
@@ -1176,10 +1166,11 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_player_intent_agen
     tmp_path: Path,
 ) -> None:
     """EncounterOrchestrator without adapter= or _player_intent_agent= must raise."""
+    initial_state = _scene_opening_repository(tmp_path).load()
     with pytest.raises(ValueError, match="EncounterOrchestrator requires adapter="):
         EncounterOrchestrator(
             repositories=OrchestratorRepositories(
-                state=_scene_opening_repository(tmp_path),
+                memory=FakeMemoryRepository(game_state=initial_state),
             ),
             agents=OrchestratorAgents(
                 rules=FakeRulesAgent(),
@@ -1285,7 +1276,6 @@ def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_social_repository(tmp_path),
             memory=memory,
         ),
         agents=OrchestratorAgents(
@@ -1311,7 +1301,6 @@ def test_narration_stored_to_memory_during_encounter(tmp_path: Path) -> None:
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_scene_opening_repository(tmp_path),
             memory=memory,
         ),
         agents=OrchestratorAgents(
@@ -1342,7 +1331,6 @@ def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=_scene_opening_repository(tmp_path),
             memory=memory,
         ),
         agents=OrchestratorAgents(
@@ -1414,7 +1402,6 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
 ) -> None:
     """On resume, prior session context is retrieved from memory and passed to narrator."""
     prior_summary = "You searched the woods and found a mysterious mirror."
-    memory_repository = FakeMemoryRepository(prior_context=[prior_summary])
     narrator_agent = FakeNarratorAgent()
 
     encounter_repo = EncounterRepository(tmp_path)
@@ -1429,9 +1416,13 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
             public_events=("Roll: Investigation = 15.",),  # triggers recap path
         )
     )
+    state_repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
+    memory_repository = FakeMemoryRepository(
+        prior_context=[prior_summary],
+        game_state=state_repo.load(),
+    )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
-            state=StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo),
             memory=memory_repository,
         ),
         agents=OrchestratorAgents(
@@ -1458,7 +1449,7 @@ class TestSaveExitPath:
         initial_state = state_repo.load()
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
-            repositories=OrchestratorRepositories(state=state_repo, memory=fake_memory),
+            repositories=OrchestratorRepositories(memory=fake_memory),
             agents=OrchestratorAgents(
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
@@ -1481,7 +1472,7 @@ class TestSaveExitPath:
         initial_state = state_repo.load()
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
-            repositories=OrchestratorRepositories(state=state_repo, memory=fake_memory),
+            repositories=OrchestratorRepositories(memory=fake_memory),
             agents=OrchestratorAgents(
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
@@ -1503,7 +1494,7 @@ class TestApplyAction:
         initial_state = state_repo.load()
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
-            repositories=OrchestratorRepositories(state=state_repo, memory=fake_memory),
+            repositories=OrchestratorRepositories(memory=fake_memory),
             agents=OrchestratorAgents(
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
@@ -1526,7 +1517,7 @@ class TestApplyAction:
         initial_state = state_repo.load()
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
-            repositories=OrchestratorRepositories(state=state_repo, memory=fake_memory),
+            repositories=OrchestratorRepositories(memory=fake_memory),
             agents=OrchestratorAgents(
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
