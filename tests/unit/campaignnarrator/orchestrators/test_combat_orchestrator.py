@@ -160,6 +160,9 @@ def _mock_intent_agent(intents: list[str] | None = None) -> MagicMock:
     return mock
 
 
+_SENTINEL = object()
+
+
 def _orchestrator(
     inputs: list[str],
     adjudications: list[RulesAdjudication],
@@ -168,6 +171,7 @@ def _orchestrator(
     roll_dice: Callable[[str], int] | None = None,
     npc_intents: list[str] | None = None,
     assessments: list[CombatAssessment] | None = None,
+    memory_repository: object | None = _SENTINEL,
 ) -> tuple[CombatOrchestrator, ScriptedIO, ScriptedRulesAgent, ScriptedNarratorAgent]:
     io = ScriptedIO(inputs, on_exhaust="end turn")
     rules = ScriptedRulesAgent(adjudications)
@@ -176,13 +180,16 @@ def _orchestrator(
         npc_intents=npc_intents,
         assessments=assessments,
     )
-    orchestrator = CombatOrchestrator(
-        rules_agent=rules,
-        narrator_agent=narrator,
-        io=io,
-        roll_dice=roll_dice or (lambda _expr: 10),
-        _intent_agent=_mock_intent_agent(intents or []),
-    )
+    kwargs: dict = {
+        "rules_agent": rules,
+        "narrator_agent": narrator,
+        "io": io,
+        "roll_dice": roll_dice or (lambda _expr: 10),
+        "_intent_agent": _mock_intent_agent(intents or []),
+    }
+    if memory_repository is not _SENTINEL:
+        kwargs["memory_repository"] = memory_repository
+    orchestrator = CombatOrchestrator(**kwargs)
     return orchestrator, io, rules, narrator
 
 
@@ -1564,3 +1571,100 @@ def test_rules_request_includes_visible_actors_context() -> None:
     assert "pc:talia" in ctx
     assert "npc:goblin-1" in ctx
     assert "AC" in ctx
+
+
+# ---------------------------------------------------------------------------
+# Memory repository integration
+# ---------------------------------------------------------------------------
+
+
+class TestCombatOrchestratorMemoryCalls:
+    def test_run_calls_update_game_state_after_player_turn(self) -> None:
+        """update_game_state() must be called each time through the loop."""
+        memory = MagicMock()
+        state = _make_combat_state(goblin_hp=0)
+        orc, _, _, _ = _orchestrator(
+            inputs=["end turn"],
+            intents=["end_turn"],
+            adjudications=[],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            memory_repository=memory,
+        )
+        orc.run(state)
+        memory.update_game_state.assert_called()
+
+    def test_run_calls_log_combat_round_when_narration_produced(self) -> None:
+        """log_combat_round() is called with the narrator's text."""
+        memory = MagicMock()
+        state = _make_combat_state(goblin_hp=7)
+        orc, _, _, _ = _orchestrator(
+            inputs=["attack goblin", "end turn"],
+            intents=["combat_action", "end_turn"],
+            adjudications=[_legal_attack()],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            memory_repository=memory,
+        )
+        orc.run(state)
+        memory.log_combat_round.assert_called()
+
+    def test_run_calls_update_exchange_with_player_input(self) -> None:
+        """update_exchange() receives the combat action text, not 'end_turn'."""
+        memory = MagicMock()
+        state = _make_combat_state(goblin_hp=7)
+        orc, _, _, _ = _orchestrator(
+            inputs=["attack goblin", "end turn"],
+            intents=["combat_action", "end_turn"],
+            adjudications=[_legal_attack()],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            memory_repository=memory,
+        )
+        orc.run(state)
+        calls = memory.update_exchange.call_args_list
+        # At least one call where player_input is "attack goblin"
+        assert any(c.args[0] == "attack goblin" for c in calls)
+
+    def test_run_calls_clear_combat_memory_at_end(self) -> None:
+        """clear_combat_memory() is called regardless of how combat ends."""
+        memory = MagicMock()
+        state = _make_combat_state(goblin_hp=0)
+        orc, _, _, _ = _orchestrator(
+            inputs=["end turn"],
+            intents=["end_turn"],
+            adjudications=[],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            memory_repository=memory,
+        )
+        orc.run(state)
+        memory.clear_combat_memory.assert_called_once()
