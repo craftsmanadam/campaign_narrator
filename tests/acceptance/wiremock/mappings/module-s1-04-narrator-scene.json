@@ -1,6 +1,6 @@
 {
   "scenarioName": "module-s1",
-  "requiredScenarioState": "S1-03",
+  "requiredScenarioState": "S1-04",
   "newScenarioState": "S1-Done",
   "priority": 10,
   "request": {

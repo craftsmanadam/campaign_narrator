@@ -1,0 +1,23 @@
+{
+  "id": "resp_s1_05",
+  "object": "chat.completion",
+  "created": 1710000005,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_s1_05",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"encounters\":[{\"template_id\":\"enc-001\",\"order\":0,\"setting\":\"The fog-shrouded docks of Darkholm at dusk. A sailor's corpse bobs in the black water near the pier.\",\"purpose\":\"The player arrives at the docks and discovers the first murder victim.\",\"scene_tone\":\"dark and foreboding\",\"npcs\":[{\"template_npc_id\":\"dockside-informant\",\"display_name\":\"Hooded Figure\",\"role\":\"antagonist\",\"description\":\"A cloaked cultist observing from the shadows near the waterfront.\",\"monster_name\":null,\"stat_source\":\"simple_npc\",\"cr\":0.25,\"name_known\":false}],\"prerequisites\":[],\"expected_outcomes\":[\"Player learns of the Drowned Lady cult\"],\"downstream_dependencies\":[]}]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 150, "completion_tokens": 100, "total_tokens": 250}
+}

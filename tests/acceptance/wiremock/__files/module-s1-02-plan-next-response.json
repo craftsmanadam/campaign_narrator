@@ -13,11 +13,11 @@
         "type": "function",
         "function": {
           "name": "final_result",
-          "arguments": "{\"seed\":\"The docks at midnight — a hooded figure descends toward the harbormaster's office.\",\"milestone_achieved\":false}"
+          "arguments": "{\"encounters\":[{\"template_id\":\"enc-001\",\"order\":0,\"setting\":\"The fog-shrouded docks of Darkholm at midnight. A lantern bobs near the harbormaster's office.\",\"purpose\":\"Investigate the waterfront murders and encounter a cultist suspect.\",\"scene_tone\":\"dark and foreboding\",\"npcs\":[{\"template_npc_id\":\"harbormaster-aide\",\"display_name\":\"Nervous Aide\",\"role\":\"informant\",\"description\":\"A frightened harbormaster's aide who knows more than he lets on.\",\"monster_name\":null,\"stat_source\":\"simple_npc\",\"cr\":0.0,\"name_known\":false}],\"prerequisites\":[],\"expected_outcomes\":[\"Player learns of the cult activities\"],\"downstream_dependencies\":[]}]}"
         }
       }]
     },
     "finish_reason": "tool_calls"
   }],
-  "usage": {"prompt_tokens": 120, "completion_tokens": 50, "total_tokens": 170}
+  "usage": {"prompt_tokens": 120, "completion_tokens": 80, "total_tokens": 200}
 }

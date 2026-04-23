@@ -1,7 +1,7 @@
 {
   "scenarioName": "startup-s1",
-  "requiredScenarioState": "S1-06",
-  "newScenarioState": "S1-Done",
+  "requiredScenarioState": "S1-05",
+  "newScenarioState": "S1-06",
   "priority": 10,
   "request": {
     "method": "POST",
@@ -10,7 +10,7 @@
       {
         "matchesJsonPath": {
           "expression": "$.messages[1].content",
-          "contains": "scene_opening"
+          "contains": "next_template"
         }
       }
     ]
@@ -18,6 +18,6 @@
   "response": {
     "status": 200,
     "headers": {"Content-Type": "application/json"},
-    "bodyFileName": "startup-s1-04-narrator-scene-response.json"
+    "bodyFileName": "startup-s1-06-assess-divergence-response.json"
   }
 }
