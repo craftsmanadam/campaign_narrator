@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -213,6 +213,35 @@ class MemoryRepository:
                 if len(matches) >= limit:
                     break
         return matches
+
+    # ── Session cache ──────────────────────────────────────────────────────────
+
+    def update_game_state(self, game_state: GameState) -> None:
+        """Stage game state. No disk write — only persist() flushes."""
+        self._cache = replace(self._cache, game_state=game_state)
+
+    def load_game_state(self) -> GameState:
+        """Read game state from disk via private StateRepository."""
+        return self._state_repo.load()
+
+    def update_exchange(self, player_input: str, narrator_output: str) -> None:
+        """Append player + narrator pair to rolling exchange buffer."""
+        new_buffer = (*self._cache.exchange_buffer, player_input, narrator_output)
+        if len(new_buffer) > _MAX_EXCHANGES:
+            new_buffer = new_buffer[-_MAX_EXCHANGES:]
+        self._cache = replace(self._cache, exchange_buffer=new_buffer)
+
+    def get_exchange_buffer(self) -> tuple[str, ...]:
+        """Return the current in-memory exchange buffer."""
+        return self._cache.exchange_buffer
+
+    def stage_narration(self, text: str, metadata: dict[str, str]) -> None:
+        """Queue a narration entry for the next persist() call."""
+        self._cache.staged_narrations.append((text, metadata))
+
+    def log_combat_round(self, entry: str) -> None:
+        """Append an ephemeral combat round log. Never persisted to disk."""
+        self._cache.combat_round_logs.append(entry)
 
     def _retrieve_from_lancedb(self, query: str, *, limit: int) -> list[str]:
         """Hybrid retrieval: FTS keyword search + vector similarity search, merged."""

@@ -356,3 +356,53 @@ def test_migration_migrated_records_are_retrievable(tmp_path: Path) -> None:
     results = repo.retrieve_relevant("Malachar")
     assert len(results) >= 1
     assert any("Malachar" in r for r in results)
+
+
+def test_update_game_state_does_not_write_disk(tmp_path: Path) -> None:
+    """update_game_state() caches only — no file written immediately."""
+    mock_state_repo = MagicMock()
+    repo = MemoryRepository(str(tmp_path), state_repo=mock_state_repo)
+    repo.update_game_state(MagicMock())
+    mock_state_repo.save.assert_not_called()
+
+
+def test_load_game_state_delegates_to_state_repo(tmp_path: Path) -> None:
+    """load_game_state() reads from StateRepository — not from cache."""
+    mock_state_repo = MagicMock()
+    repo = MemoryRepository(str(tmp_path), state_repo=mock_state_repo)
+    result = repo.load_game_state()
+    mock_state_repo.load.assert_called_once()
+    assert result is mock_state_repo.load.return_value
+
+
+def test_update_exchange_appends_two_items(tmp_path: Path) -> None:
+    """update_exchange() adds player input + narrator output to the buffer."""
+    repo = MemoryRepository(str(tmp_path), state_repo=MagicMock())
+    repo.update_exchange("Hello", "Welcome to the docks.")
+    assert repo.get_exchange_buffer() == ("Hello", "Welcome to the docks.")
+
+
+def test_update_exchange_caps_at_max_exchanges(tmp_path: Path) -> None:
+    """After 6 calls (12 items), buffer holds only the last 10 items."""
+    call_count = 6
+    expected_buffer_size = 10
+    repo = MemoryRepository(str(tmp_path), state_repo=MagicMock())
+    for i in range(call_count):
+        repo.update_exchange(f"in{i}", f"out{i}")
+    buf = repo.get_exchange_buffer()
+    assert len(buf) == expected_buffer_size
+    assert buf[0] == "in1"  # first two items (in0, out0) dropped
+
+
+def test_stage_narration_does_not_write_disk(tmp_path: Path) -> None:
+    """stage_narration() queues the entry — no JSONL write yet."""
+    repo = MemoryRepository(str(tmp_path), state_repo=MagicMock())
+    repo.stage_narration("A summary.", {"event_type": "encounter_partial_summary"})
+    assert not (tmp_path / "narrative_memory.jsonl").exists()
+
+
+def test_log_combat_round_does_not_write_disk(tmp_path: Path) -> None:
+    """log_combat_round() is ephemeral — no file written."""
+    repo = MemoryRepository(str(tmp_path), state_repo=MagicMock())
+    repo.log_combat_round("Talia strikes the goblin.")
+    assert not (tmp_path / "combat_log.jsonl").exists()
