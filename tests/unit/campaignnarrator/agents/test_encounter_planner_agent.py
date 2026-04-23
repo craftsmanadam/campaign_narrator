@@ -181,6 +181,7 @@ class TestAssessDivergence:
             module=_make_module(),
             milestone=milestone,
             narrative_context="No prior events.",
+            player=_make_player(),
         )
 
         assert mock_assess_agent.run_sync.called
@@ -216,11 +217,39 @@ class TestAssessDivergence:
             module=_make_module(),
             milestone=milestone,
             narrative_context="Milestone narrative complete.",
+            player=_make_player(),
         )
 
         assert result.milestone_achieved is True
         call_json = mock_assess_agent.run_sync.call_args[0][0]
         assert "next_template" in call_json or "null" in call_json
+
+    def test_assess_divergence_includes_player_state_in_context(self) -> None:
+        """assess_divergence() must include hp and conditions so the LLM can judge viability."""
+        mock_assess_agent = MagicMock()
+        mock_assess_agent.run_sync.return_value.output = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+        agent = EncounterPlannerAgent(
+            adapter=MagicMock(),
+            _plan_agent=MagicMock(),
+            _assess_agent=mock_assess_agent,
+            _recovery_agent=MagicMock(),
+        )
+        milestone = Milestone(milestone_id="m1", title="T", description="D")
+
+        agent.assess_divergence(
+            template=_make_template(),
+            module=_make_module(),
+            milestone=milestone,
+            narrative_context="ctx",
+            player=_make_player(),
+        )
+
+        call_json = mock_assess_agent.run_sync.call_args[0][0]
+        assert "hp_current" in call_json
+        assert "conditions" in call_json
+        assert "proficiency_bonus" in call_json
 
 
 class TestRecoverEncounters:
@@ -249,8 +278,40 @@ class TestRecoverEncounters:
             module=_make_module(),
             campaign=_make_campaign(),
             narrative_context="Grizznak is dead.",
+            player=_make_player(),
         )
 
         assert mock_recovery_agent.run_sync.called
         assert result.recovery_type == "bridge_inserted"
         assert result.updated_templates[0].template_id == "enc-bridge"
+
+    def test_recover_encounters_includes_player_state_in_context(self) -> None:
+        """recover_encounters() must include player hp so the LLM can calibrate recovery difficulty."""
+        new_template = _make_template("enc-bridge")
+        mock_recovery_agent = MagicMock()
+        mock_recovery_agent.run_sync.return_value.output = EncounterRecoveryResult(
+            updated_templates=(new_template,),
+            recovery_type="bridge_inserted",
+        )
+        agent = EncounterPlannerAgent(
+            adapter=MagicMock(),
+            _plan_agent=MagicMock(),
+            _assess_agent=MagicMock(),
+            _recovery_agent=mock_recovery_agent,
+        )
+
+        agent.recover_encounters(
+            divergence_reason="NPC dead.",
+            recovery_type="bridge_inserted",
+            current_index=0,
+            remaining_templates=(_make_template(),),
+            module=_make_module(),
+            campaign=_make_campaign(),
+            narrative_context="ctx",
+            player=_make_player(),
+        )
+
+        call_json = mock_recovery_agent.run_sync.call_args[0][0]
+        assert "hp_current" in call_json
+        assert "conditions" in call_json
+        assert "proficiency_bonus" in call_json

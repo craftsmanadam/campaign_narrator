@@ -223,6 +223,7 @@ class EncounterPlannerOrchestrator:
             module=module,
             milestone=milestone,
             narrative_context=narrative_context,
+            player=player,
         )
 
         if assessment.milestone_achieved:
@@ -234,6 +235,7 @@ class EncounterPlannerOrchestrator:
             module=module,
             campaign=campaign,
             narrative_context=narrative_context,
+            player=player,
         )
 
         # Fetch template again after potential recovery.
@@ -254,6 +256,7 @@ class EncounterPlannerOrchestrator:
         module: ModuleState,
         campaign: CampaignState,
         narrative_context: str,
+        player: ActorState,
     ) -> ModuleState:
         """Apply recovery if assessment is not viable.
 
@@ -280,6 +283,7 @@ class EncounterPlannerOrchestrator:
             module=module,
             campaign=campaign,
             narrative_context=narrative_context,
+            player=player,
         )
 
         if not recovery.updated_templates:
@@ -298,6 +302,7 @@ class EncounterPlannerOrchestrator:
                 module=module,
                 campaign=campaign,
                 narrative_context=narrative_context,
+                player=player,
             )
 
         completed = module.planned_encounters[:current_index]
@@ -335,9 +340,7 @@ class EncounterPlannerOrchestrator:
                 )
             )
 
-        encounter_id = (
-            f"{module.module_id}-enc-{len(module.completed_encounter_ids) + 1:03d}"
-        )
+        encounter_id = f"{module.module_id}-enc-{module.next_encounter_index + 1:03d}"
         encounter = EncounterState(
             encounter_id=encounter_id,
             phase=EncounterPhase.SCENE_OPENING,

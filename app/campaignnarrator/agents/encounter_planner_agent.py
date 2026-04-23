@@ -45,7 +45,10 @@ _PLAN_INSTRUCTIONS = (
 _ASSESS_INSTRUCTIONS = (
     "You are evaluating whether a planned D&D 5e encounter is still viable. "
     "Given the encounter template (or null for milestone-only check), "
-    "narrative memory, and guiding milestone, return a DivergenceAssessment. "
+    "narrative memory, guiding milestone, and current player state, return a "
+    "DivergenceAssessment. "
+    "Use player_state (hp, conditions) to judge viability — a player at low HP or "
+    "under severe conditions may need a recovery encounter before a hard fight. "
     "status must be one of: viable, needs_bridge, needs_rebuild, "
     "needs_full_replan, milestone_achieved. "
     "milestone_achieved: set to true whenever the module milestone goal is "
@@ -62,8 +65,10 @@ _ASSESS_INSTRUCTIONS = (
 
 _RECOVERY_INSTRUCTIONS = (
     "You are a dungeon master recovering a diverged D&D 5e encounter plan. "
-    "Given the recovery type and current narrative state, return updated encounter "
-    "templates. "
+    "Given the recovery type, current narrative state, and player state, return "
+    "updated encounter templates. "
+    "Use player_state (hp, conditions) to calibrate recovery encounters — do not "
+    "send a depleted player into a hard fight without a rest or lighter bridge first. "
     "bridge_inserted: insert 1-2 new encounters at the front of the remaining list. "
     "template_replaced: return a single replacement for the broken encounter. "
     "full_replan: return 3-5 new encounters that complete the module from this point. "
@@ -163,6 +168,7 @@ class EncounterPlannerAgent:
         module: ModuleState,
         milestone: Milestone,
         narrative_context: str,
+        player: ActorState,
     ) -> DivergenceAssessment:
         """Check whether the next planned encounter is still viable.
 
@@ -184,6 +190,13 @@ class EncounterPlannerAgent:
                     module.completed_encounter_summaries
                 ),
                 "narrative_context": narrative_context,
+                "player_state": {
+                    "name": player.name,
+                    "hp_current": player.hp_current,
+                    "hp_max": player.hp_max,
+                    "conditions": list(player.conditions),
+                    "proficiency_bonus": player.proficiency_bonus,
+                },
             },
             indent=2,
             sort_keys=True,
@@ -205,6 +218,7 @@ class EncounterPlannerAgent:
         module: ModuleState,
         campaign: CampaignState,
         narrative_context: str,
+        player: ActorState,
     ) -> EncounterRecoveryResult:
         """Generate recovery templates for a diverged encounter plan."""
         context = json.dumps(
@@ -222,6 +236,13 @@ class EncounterPlannerAgent:
                     module.completed_encounter_summaries
                 ),
                 "narrative_context": narrative_context,
+                "player_state": {
+                    "name": player.name,
+                    "hp_current": player.hp_current,
+                    "hp_max": player.hp_max,
+                    "conditions": list(player.conditions),
+                    "proficiency_bonus": player.proficiency_bonus,
+                },
             },
             indent=2,
             sort_keys=True,
