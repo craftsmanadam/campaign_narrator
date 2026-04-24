@@ -34,7 +34,6 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     OrchestratorAgents,
     OrchestratorRepositories,
-    OrchestratorTools,
 )
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
@@ -51,6 +50,7 @@ class FakeMemoryRepository:
         prior_context: list[str] | None = None,
         *,
         game_state: object | None = None,
+        exchange_buffer: tuple[str, ...] = (),
     ) -> None:
         self.events: list[dict[str, object]] = []
         self.narratives: list[tuple[str, dict[str, str]]] = []
@@ -62,7 +62,7 @@ class FakeMemoryRepository:
         self.staged_narrations: list[tuple[str, dict]] = []
         self.combat_round_logs: list[str] = []
         self.encounter_memory_cleared: bool = False
-        self._exchange_buffer: tuple[str, ...] = ()
+        self._exchange_buffer: tuple[str, ...] = exchange_buffer
 
     def append_event(self, event: Mapping[str, object]) -> None:
         self.events.append(dict(event))
@@ -154,16 +154,6 @@ class FakeNarratorAgent:
                 full_description="Combat concluded.",
             ),
         )
-
-
-class FakeDice:
-    def __init__(self, totals: list[int]) -> None:
-        self.totals = list(totals)
-        self.expressions: list[str] = []
-
-    def __call__(self, expression: str) -> int:
-        self.expressions.append(expression)
-        return self.totals.pop(0)
 
 
 class FakePlayerIntentAgent:
@@ -328,7 +318,6 @@ def _orchestrator(
     intents: list[PlayerIntent] | None = None,
     rules_agent: FakeRulesAgent | None = None,
     narrator_agent: FakeNarratorAgent | None = None,
-    roll_dice: FakeDice | None = None,
     io: ScriptedIO | None = None,
     combat_intents: list[str] | None = None,
 ) -> EncounterOrchestrator:
@@ -343,7 +332,6 @@ def _orchestrator(
             rules=rules_agent or FakeRulesAgent(),
             narrator=narrator_agent or FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=roll_dice or FakeDice([])),
         io=io or ScriptedIO([], on_exhaust="exit"),
         _player_intent_agent=FakePlayerIntentAgent(intents),
         _combat_intent_agent=_mock_combat_intent_agent(combat_intents),
@@ -445,7 +433,9 @@ def test_empty_input_is_ignored_and_look_around_routes_to_visible_scene(
     )
 
 
-def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> None:
+def test_social_check_uses_rules_agent_and_applies_effects(
+    tmp_path: Path, mocker: object
+) -> None:
     rules_agent = FakeRulesAgent(
         [
             RulesAdjudication(
@@ -471,7 +461,9 @@ def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> No
             ),
         ]
     )
-    roll_dice = FakeDice([16])
+    mock_roll = mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", side_effect=[16]
+    )
     narrator_agent = FakeNarratorAgent()
     orchestrator = _orchestrator(
         tmp_path,
@@ -481,7 +473,6 @@ def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> No
         ],
         rules_agent=rules_agent,
         narrator_agent=narrator_agent,
-        roll_dice=roll_dice,
         io=ScriptedIO(["I try to calm them down.", "exit"]),
     )
 
@@ -496,10 +487,10 @@ def test_social_check_uses_rules_agent_and_applies_effects(tmp_path: Path) -> No
         "peaceful",
     )
     assert request.check_hints == ("Persuasion",)
-    assert roll_dice.expressions == ["1d20+1"]
+    assert [c.args[0] for c in mock_roll.call_args_list] == ["1d20+1"]
     assert state is not None
     assert state.outcome == "de-escalated"
-    assert "Roll: calm goblins = 16." in narrator_agent.frames[-1].resolved_outcomes
+    assert "Roll: calm goblins = 16" in narrator_agent.frames[-1].resolved_outcomes
     assert narrator_agent.frames[-1].player_action == "I try to calm them down."
     assert "social_resolution:" in result.output_text
 
@@ -535,7 +526,7 @@ def test_social_check_with_outcome_emits_encounter_completed_event(
             rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["I try to calm them down.", "exit"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")]
@@ -574,7 +565,7 @@ def test_social_check_without_outcome_does_not_emit_encounter_completed_event(
             rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["I try to calm them down.", "exit"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")]
@@ -614,7 +605,7 @@ def test_non_combat_narrative_decisions_route_to_narrator(
 
 
 def test_aggressive_input_rolls_initiative_then_enters_combat(
-    tmp_path: Path,
+    tmp_path: Path, mocker: object
 ) -> None:
     """Entering combat transitions phase and delegates to CombatOrchestrator.
 
@@ -622,7 +613,9 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
     """
     # Actors are rolled in sorted(actor_id) order: "npc:goblin-scout" before "pc:talia".
     # Give goblin a lower roll (12) so Talia (18) wins initiative and goes first.
-    roll_dice = FakeDice([12, 18])
+    mock_roll = mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.encounter_orchestrator.roll", side_effect=[12, 18]
+    )
     narrator_agent = FakeNarratorAgent()
     # io provides the social input that triggers combat, then "end turn" for Talia's
     # first (and only) combat turn so the CombatOrchestrator pass-phrase terminates.
@@ -631,7 +624,6 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
         state_repository=_social_repository(tmp_path, goblin_hp=0),
         intents=[_intent(IntentCategory.HOSTILE_ACTION)],
         narrator_agent=narrator_agent,
-        roll_dice=roll_dice,
         io=ScriptedIO(["I draw steel and rush the goblin.", "end turn"]),
     )
 
@@ -642,14 +634,22 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
     assert state is not None
     assert state.phase is EncounterPhase.COMBAT
     assert state.outcome == "combat"
-    assert roll_dice.expressions == ["1d20+2", "1d20+5"]
+    assert [c.args[0] for c in mock_roll.call_args_list] == ["1d20+2", "1d20+5"]
     assert narrator_agent.frames[-1].purpose == "combat_start"
 
 
-def test_enter_combat_emits_encounter_completed_event(tmp_path: Path) -> None:
+def test_enter_combat_emits_encounter_completed_event(
+    tmp_path: Path, mocker: object
+) -> None:
     # goblin_hp=0 so combat ends after Talia passes, event fires before that.
     initial_state = _social_repository(tmp_path, goblin_hp=0).load()
     memory = FakeMemoryRepository(game_state=initial_state)
+    # Actors rolled in sorted(actor_id) order: goblin first, Talia second.
+    # Goblin gets 12, Talia gets 18 → Talia wins initiative and goes first.
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.encounter_orchestrator.roll",
+        side_effect=[12, 18],
+    )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
             memory=memory,
@@ -658,9 +658,6 @@ def test_enter_combat_emits_encounter_completed_event(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        # Actors rolled in sorted(actor_id) order: goblin first, Talia second.
-        # Goblin gets 12, Talia gets 18 → Talia wins initiative and goes first.
-        tools=OrchestratorTools(roll_dice=FakeDice([12, 18])),
         io=ScriptedIO(["I draw steel and rush the goblin.", "end turn"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.HOSTILE_ACTION)]
@@ -729,7 +726,7 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -761,7 +758,7 @@ def test_save_and_quit_completes_without_raising(
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -806,7 +803,7 @@ def test_completed_encounter_records_durable_event(tmp_path: Path) -> None:
             rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["I offer peace."]),
         _player_intent_agent=FakePlayerIntentAgent(
             [
@@ -866,7 +863,7 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
         _combat_intent_agent=_mock_combat_intent_agent(["exit_session"]),
@@ -896,7 +893,7 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["exit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
         _combat_intent_agent=_mock_combat_intent_agent(["exit_session"]),
@@ -1034,7 +1031,7 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["Hello.", "exit"]),
         _player_intent_agent=CapturingIntentAgent(
             [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1175,7 +1172,7 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_player_intent_agen
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-            tools=OrchestratorTools(roll_dice=FakeDice([])),
+    
             io=ScriptedIO([], on_exhaust="exit"),
         )
 
@@ -1238,38 +1235,6 @@ def test_fresh_encounter_does_not_show_recap(tmp_path: Path) -> None:
     assert "recap_response" not in result.output_text
 
 
-def test_open_scene_failure_emits_fallback_message_and_continues(
-    tmp_path: Path,
-) -> None:
-    """When _open_scene raises, run_encounter emits a fallback notice and continues.
-
-    The narrator agent is forced to raise on the first call (scene_opening), which
-    exercises the _open_scene_safe failure path. Execution must not crash; the
-    fallback message must appear in output, and the encounter must continue into
-    the social loop (where 'exit' terminates it cleanly).
-    """
-
-    class RaisingNarratorAgent(FakeNarratorAgent):
-        def narrate(self, frame: NarrationFrame) -> Narration:
-            if frame.purpose == "scene_opening":
-                raise RuntimeError("unavailable")
-            return super().narrate(frame)
-
-    io = ScriptedIO(["exit"])
-    orchestrator = _orchestrator(
-        tmp_path,
-        state_repository=_scene_opening_repository(tmp_path),
-        narrator_agent=RaisingNarratorAgent(),
-        io=io,
-    )
-
-    result = orchestrator.run_encounter(encounter_id="goblin-camp")
-
-    assert "Scene narration unavailable" in result.output_text
-    assert "Continuing" in result.output_text
-    assert result.completed is False
-
-
 def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
     initial_state = _social_repository(tmp_path).load()
     memory = FakeMemoryRepository(game_state=initial_state)
@@ -1281,7 +1246,7 @@ def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["save and exit the game"]),
         _player_intent_agent=FakePlayerIntentAgent([_intent(IntentCategory.SAVE_EXIT)]),
     )
@@ -1306,7 +1271,7 @@ def test_narration_stored_to_memory_during_encounter(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["Hello there.", "exit"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1336,7 +1301,7 @@ def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent([_intent(IntentCategory.SAVE_EXIT)]),
     )
@@ -1353,7 +1318,7 @@ def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
 
 
 def test_public_roll_event_is_displayed_to_player_in_social_path(
-    tmp_path: Path,
+    tmp_path: Path, mocker: object
 ) -> None:
     """A PUBLIC roll_request from rules adjudication must be displayed to the player."""
     rules_agent = FakeRulesAgent(
@@ -1381,13 +1346,15 @@ def test_public_roll_event_is_displayed_to_player_in_social_path(
             ),
         ]
     )
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.encounter_orchestrator.roll", return_value=15
+    )
     io = ScriptedIO(["I appeal to their sense of reason.", "exit"])
     orchestrator = _orchestrator(
         tmp_path,
         state_repository=_social_repository(tmp_path),
         intents=[_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")],
         rules_agent=rules_agent,
-        roll_dice=FakeDice([15]),
         io=io,
     )
 
@@ -1428,7 +1395,7 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
             rules=FakeRulesAgent(),
             narrator=narrator_agent,
         ),
-        tools=OrchestratorTools(roll_dice=FakeDice([])),
+
         io=ScriptedIO(["exit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -1439,6 +1406,45 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
     recap_frames = [f for f in narrator_agent.frames if f.purpose == "recap_response"]
     assert recap_frames, "Expected at least one recap_response frame"
     assert prior_summary in recap_frames[0].prior_narrative_context
+
+
+def test_resume_recap_includes_exchange_buffer_in_prior_context(
+    tmp_path: Path,
+) -> None:
+    """On resume, exchange buffer entries appear in the prior_narrative_context."""
+    narrator_agent = FakeNarratorAgent()
+
+    encounter_repo = EncounterRepository(tmp_path)
+    actor_repo = ActorRepository(tmp_path)
+    actor_repo.save(_default_player())
+    encounter_repo.save(
+        EncounterState(
+            encounter_id="goblin-camp",
+            phase=EncounterPhase.SOCIAL,
+            setting="A ruined roadside camp.",
+            actors={"pc:talia": _default_player()},
+            public_events=("Roll: Investigation = 15.",),
+        )
+    )
+    state_repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
+    memory_repository = FakeMemoryRepository(
+        game_state=state_repo.load(),
+        exchange_buffer=("I search the camp.", "You find charred goblin bones."),
+    )
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=memory_repository),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator_agent),
+
+        io=ScriptedIO(["exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(),
+    )
+
+    orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    recap_frames = [f for f in narrator_agent.frames if f.purpose == "recap_response"]
+    assert recap_frames, "Expected at least one recap_response frame"
+    assert "I search the camp." in recap_frames[0].prior_narrative_context
+    assert "You find charred goblin bones." in recap_frames[0].prior_narrative_context
 
 
 class TestSaveExitPath:
@@ -1453,7 +1459,7 @@ class TestSaveExitPath:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-            tools=OrchestratorTools(roll_dice=FakeDice([])),
+    
             io=ScriptedIO(["save and quit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.SAVE_EXIT)]
@@ -1476,7 +1482,7 @@ class TestSaveExitPath:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-            tools=OrchestratorTools(roll_dice=FakeDice([])),
+    
             io=ScriptedIO(["save and quit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.SAVE_EXIT)]
@@ -1498,7 +1504,7 @@ class TestApplyAction:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-            tools=OrchestratorTools(roll_dice=FakeDice([])),
+    
             io=ScriptedIO(["I ask what they want.", "exit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1521,7 +1527,7 @@ class TestApplyAction:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-            tools=OrchestratorTools(roll_dice=FakeDice([])),
+    
             io=ScriptedIO([], on_exhaust="exit"),
             _player_intent_agent=FakePlayerIntentAgent([]),
         )

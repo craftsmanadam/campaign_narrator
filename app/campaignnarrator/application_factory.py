@@ -36,7 +36,6 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     OrchestratorAgents,
     OrchestratorRepositories,
-    OrchestratorTools,
 )
 from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     EncounterPlannerOrchestrator,
@@ -62,8 +61,6 @@ from campaignnarrator.repositories.rules_repository import RulesRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.settings import Settings
 from campaignnarrator.terminal_io import TerminalIO
-from campaignnarrator.tools.dice import roll as roll_dice
-
 
 @dataclass(frozen=True)
 class ApplicationGraph:
@@ -238,7 +235,6 @@ class ApplicationFactory:
                 rules=agents.rules,
                 narrator=agents.narrator,
             ),
-            tools=OrchestratorTools(roll_dice=roll_dice),
             io=io,
             adapter=agents.narrator.adapter,
         )

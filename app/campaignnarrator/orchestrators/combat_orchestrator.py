@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import Protocol
 
@@ -33,9 +32,12 @@ from campaignnarrator.domain.models import (
     TurnResources,
     WeaponState,
 )
-from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
+from campaignnarrator.orchestrators.actor_summaries import (
+    actor_modifiers,
+    actor_narrative_summary,
+)
 from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.tools.dice_expression import actor_modifiers, execute_roll
+from campaignnarrator.tools.dice import roll
 from campaignnarrator.tools.state_updates import apply_state_effects, require_int
 
 _logger = logging.getLogger(__name__)
@@ -133,7 +135,6 @@ class CombatOrchestrator:
         rules_agent: _RulesAgentProtocol,
         narrator_agent: _NarratorAgentProtocol,
         io: PlayerIO,
-        roll_dice: Callable[[str], int],
         adapter: object | None = None,
         _intent_agent: object | None = None,
         memory_repository: MemoryRepository | None = None,
@@ -141,7 +142,6 @@ class CombatOrchestrator:
         self._rules_agent = rules_agent
         self._narrator_agent = narrator_agent
         self._io = io
-        self._roll_dice = roll_dice
         self._memory_repository = memory_repository
         if _intent_agent is not None:
             self._intent_agent = _intent_agent
@@ -305,10 +305,11 @@ class CombatOrchestrator:
         roll_totals_by_purpose: dict[str, int] = {}
         for rr in adjudication.roll_requests:
             if rr.visibility is RollVisibility.PUBLIC:
-                event_str, total = execute_roll(rr, actor, self._roll_dice)
-                roll_event_strings.append(event_str)
-                if rr.purpose:
-                    roll_totals_by_purpose[rr.purpose] = total
+                result = rr.roll(actor)
+                _logger.info("%s", result)
+                roll_event_strings.append(str(result))
+                if result.purpose:
+                    roll_totals_by_purpose[result.purpose] = result.roll_total
         roll_events = tuple(roll_event_strings)
         for event in roll_events:
             self._io.display(event)
@@ -503,7 +504,7 @@ class CombatOrchestrator:
                 die_size = int(match.group(2))
                 modifier = int(match.group(3) or "0")
                 total = (
-                    sum(self._roll_dice(f"1d{die_size}") for _ in range(num_dice))
+                    sum(roll(f"1d{die_size}") for _ in range(num_dice))
                     + modifier
                 )
                 materialized.append(
@@ -557,9 +558,10 @@ class CombatOrchestrator:
 
         roll_totals_by_purpose: dict[str, int] = {}
         for rr in adjudication.roll_requests:
-            _, total = execute_roll(rr, actor, self._roll_dice)
-            if rr.purpose:
-                roll_totals_by_purpose[rr.purpose] = total
+            result = rr.roll(actor)
+            _logger.info("%s", result)
+            if result.purpose:
+                roll_totals_by_purpose[result.purpose] = result.roll_total
 
         resolved_effects = self._resolve_attack_effects(
             state, adjudication.state_effects, roll_totals_by_purpose
@@ -663,15 +665,15 @@ class CombatOrchestrator:
     def _auto_death_save(
         self, state: EncounterState, actor: ActorState
     ) -> EncounterState:
-        roll = self._roll_dice("1d20")
+        roll_result = roll("1d20")
         successes = actor.death_save_successes
         failures = actor.death_save_failures
 
-        if roll == 1:
+        if roll_result == 1:
             failures += 2
-        elif roll == 20:  # noqa: PLR2004
+        elif roll_result == 20:  # noqa: PLR2004
             successes += 2
-        elif roll >= 10:  # noqa: PLR2004
+        elif roll_result >= 10:  # noqa: PLR2004
             successes += 1
         else:
             failures += 1
@@ -704,9 +706,11 @@ class CombatOrchestrator:
                 death_save_successes=successes,
                 death_save_failures=failures,
             )
-            outcome = "success" if (roll == 20 or roll >= 10) else "failure"  # noqa: PLR2004
+            is_success = roll_result == 20 or roll_result >= 10  # noqa: PLR2004
+            outcome = "success" if is_success else "failure"
             self._io.display(
-                f"{actor.name} makes a death saving throw... {outcome} (rolled {roll})."
+                f"{actor.name} makes a death saving throw..."
+                f" {outcome} (rolled {roll_result})."
             )
 
         updated_actors = dict(state.actors)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import lancedb
 import pytest
@@ -78,64 +78,6 @@ def test_store_narrative_appends_multiple_records() -> None:
         ]
         assert len(lines) == expected_record_count
 
-
-def test_retrieve_relevant_returns_matching_text() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = _make_repo(tmp)
-        repo.store_narrative(
-            "Aldric saw Malachar at the docks.",
-            {"event_type": "encounter_summary"},
-        )
-        repo.store_narrative(
-            "The barmaid served ale.",
-            {"event_type": "encounter_summary"},
-        )
-        results = repo.retrieve_relevant("Malachar")
-        assert len(results) == 1
-        assert "Malachar" in results[0]
-
-
-def test_retrieve_relevant_is_case_insensitive() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = _make_repo(tmp)
-        repo.store_narrative(
-            "The fog-shrouded DOCKS loomed ahead.",
-            {"event_type": "encounter_summary"},
-        )
-        results = repo.retrieve_relevant("docks")
-        assert len(results) == 1
-
-
-def test_retrieve_relevant_respects_limit() -> None:
-    entry_count = 10
-    result_limit = 3
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = _make_repo(tmp)
-        for i in range(entry_count):
-            repo.store_narrative(
-                f"Entry {i} mentions docks.",
-                {"event_type": "encounter_summary"},
-            )
-        results = repo.retrieve_relevant("docks", limit=result_limit)
-        assert len(results) == result_limit
-
-
-def test_retrieve_relevant_empty_store_returns_empty_list() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = _make_repo(tmp)
-        results = repo.retrieve_relevant("anything")
-        assert results == []
-
-
-def test_retrieve_relevant_no_match_returns_empty_list() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = _make_repo(tmp)
-        repo.store_narrative(
-            "A goblin lurked near the bridge.",
-            {"event_type": "encounter_summary"},
-        )
-        results = repo.retrieve_relevant("dragon")
-        assert results == []
 
 
 def _make_lancedb_repo(tmp: str) -> MemoryRepository:
@@ -290,17 +232,6 @@ def test_retrieve_relevant_lancedb_empty_store_returns_empty(tmp_path: Path) -> 
     repo = _make_lancedb_repo(str(tmp_path))
     assert repo.retrieve_relevant("anything") == []
 
-
-def test_retrieve_relevant_delegates_to_lancedb_when_adapter_configured(
-    tmp_path: Path,
-) -> None:
-    """Proves retrieve_relevant calls _retrieve_from_lancedb, not the JSONL fallback."""
-    repo = _make_lancedb_repo(str(tmp_path))
-    sentinel = ["__lancedb_was_called__"]
-    with patch.object(repo, "_retrieve_from_lancedb", return_value=sentinel) as mock:
-        result = repo.retrieve_relevant("anything")
-    mock.assert_called_once_with("anything", limit=5)
-    assert result is sentinel
 
 
 _MALACHAR_JSONL = (

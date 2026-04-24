@@ -212,15 +212,17 @@ class NarratorAgent:
         return assessment
 
     def retrieve_memory(self, query: str) -> str:
-        """Return relevant prior narrative entries for the given query.
+        """Return relevant prior narrative entries and recent exchanges for the given query.
 
         Designed for future pydantic-ai tool registration; call signature is stable.
         Returns a sentinel string when no records match so callers never receive None.
         """
-        if self._memory_repository is None:
-            return "No prior records found."
         results = self._memory_repository.retrieve_relevant(query, limit=5)
-        return "\n---\n".join(results) if results else "No prior records found."
+        exchange = self._memory_repository.get_exchange_buffer()
+        parts = list(results)
+        if exchange:
+            parts.append("Recent exchanges:\n" + "\n".join(exchange))
+        return "\n---\n".join(parts) if parts else "No prior records found."
 
     def summarize_encounter_partial(self, encounter: EncounterState) -> str:
         """Write brief session notes for an interrupted encounter.

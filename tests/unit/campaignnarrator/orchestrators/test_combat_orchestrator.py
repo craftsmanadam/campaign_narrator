@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from dataclasses import replace
 from unittest.mock import MagicMock
 
@@ -168,7 +167,6 @@ def _orchestrator(
     adjudications: list[RulesAdjudication],
     intents: list[str] | None = None,
     narrator_text: str = "Talia strikes!",
-    roll_dice: Callable[[str], int] | None = None,
     npc_intents: list[str] | None = None,
     assessments: list[CombatAssessment] | None = None,
     memory_repository: object | None = _SENTINEL,
@@ -184,7 +182,6 @@ def _orchestrator(
         "rules_agent": rules,
         "narrator_agent": narrator,
         "io": io,
-        "roll_dice": roll_dice or (lambda _expr: 10),
         "_intent_agent": _mock_intent_agent(intents or []),
     }
     if memory_repository is not _SENTINEL:
@@ -416,7 +413,10 @@ def test_dead_actor_turn_is_skipped() -> None:
     assert len(rules.requests_seen) == 0
 
 
-def test_unconscious_actor_triggers_death_save() -> None:
+def test_unconscious_actor_triggers_death_save(mocker: object) -> None:
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=15
+    )
     talia_unconscious = replace(TALIA, hp_current=0, conditions=("unconscious",))
     state = EncounterState(
         encounter_id="test",
@@ -437,16 +437,18 @@ def test_unconscious_actor_triggers_death_save() -> None:
         inputs=[],
         intents=[],
         adjudications=[_npc_attack_adjudication()],
-        roll_dice=lambda _: 15,
     )
     result = orc.run(state)
     talia = result.final_state.actors["pc:talia"]
     assert talia.death_save_successes == 1
 
 
-def test_player_down_no_allies_returns_correct_status() -> None:
+def test_player_down_no_allies_returns_correct_status(mocker: object) -> None:
     # Talia is unconscious. After her death save, goblin takes its turn, then
     # _check_player_down_no_allies fires (Talia still unconscious, no conscious allies).
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=10
+    )
     talia_down = replace(TALIA, hp_current=0, conditions=("unconscious",))
     goblin = make_goblin_scout("npc:goblin-1", "G1")
     state = EncounterState(
@@ -464,7 +466,6 @@ def test_player_down_no_allies_returns_correct_status() -> None:
         inputs=[],
         intents=[],
         adjudications=[_npc_attack_adjudication()],
-        roll_dice=lambda _: 10,
     )
     result = orc.run(state)
     assert result.status == CombatStatus.PLAYER_DOWN_NO_ALLIES
@@ -492,7 +493,10 @@ def test_all_enemies_dead_ends_combat_as_complete() -> None:
     assert result.status == CombatStatus.COMPLETE
 
 
-def test_natural_1_on_death_save_counts_as_two_failures() -> None:
+def test_natural_1_on_death_save_counts_as_two_failures(mocker: object) -> None:
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=1
+    )
     talia_unconscious = replace(TALIA, hp_current=0, conditions=("unconscious",))
     state = EncounterState(
         encounter_id="test",
@@ -512,7 +516,6 @@ def test_natural_1_on_death_save_counts_as_two_failures() -> None:
         inputs=[],
         intents=[],
         adjudications=[_npc_attack_adjudication()],
-        roll_dice=lambda _: 1,
     )
     result = orc.run(state)
     talia = result.final_state.actors["pc:talia"]
@@ -604,8 +607,11 @@ def test_save_and_quit_preserves_final_state() -> None:
     assert result.final_state.encounter_id == state.encounter_id
 
 
-def test_narrator_payload_includes_tone_guidance() -> None:
+def test_narrator_payload_includes_tone_guidance(mocker: object) -> None:
     """scene_tone should appear as tone_guidance in the combat narrator frame."""
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=10
+    )
     state = replace(_make_combat_state(), scene_tone="tense and foreboding")
     io = ScriptedIO(["I attack the goblin", "end turn"], on_exhaust="end turn")
     rules = ScriptedRulesAgent([_legal_attack(damage_hp=-100, target="npc:goblin-1")])
@@ -623,7 +629,6 @@ def test_narrator_payload_includes_tone_guidance() -> None:
         rules_agent=rules,
         narrator_agent=narrator,
         io=io,
-        roll_dice=lambda _: 10,
         _intent_agent=_mock_intent_agent(["combat_action", "end_turn"]),
     )
 
@@ -634,7 +639,10 @@ def test_narrator_payload_includes_tone_guidance() -> None:
     assert frame.tone_guidance == "tense and foreboding"
 
 
-def test_three_death_save_failures_kills_actor() -> None:
+def test_three_death_save_failures_kills_actor(mocker: object) -> None:
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=5
+    )
     talia_near_dead = replace(
         TALIA, hp_current=0, conditions=("unconscious",), death_save_failures=2
     )
@@ -657,7 +665,6 @@ def test_three_death_save_failures_kills_actor() -> None:
         inputs=[],
         intents=[],
         adjudications=[_npc_attack_adjudication(damage_hp=0)],
-        roll_dice=lambda _: 5,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -674,8 +681,11 @@ def test_three_death_save_failures_kills_actor() -> None:
     assert any("died" in msg for msg in io.displayed)
 
 
-def test_combat_intent_end_turn_ends_turn_without_rules_call() -> None:
+def test_combat_intent_end_turn_ends_turn_without_rules_call(mocker: object) -> None:
     """end_turn intent must break the turn loop without calling the rules agent."""
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=10
+    )
     state = _make_combat_state(goblin_hp=0)
     io = ScriptedIO(["I'm done"], on_exhaust="end turn")
     rules = ScriptedRulesAgent([])
@@ -693,15 +703,17 @@ def test_combat_intent_end_turn_ends_turn_without_rules_call() -> None:
         rules_agent=rules,
         narrator_agent=narrator,
         io=io,
-        roll_dice=lambda _: 10,
         _intent_agent=_mock_intent_agent(["end_turn"]),
     )
     orc.run(state)
     assert len(rules.requests_seen) == 0
 
 
-def test_combat_intent_exit_session_returns_saved_and_quit() -> None:
+def test_combat_intent_exit_session_returns_saved_and_quit(mocker: object) -> None:
     """exit_session intent must return SAVED_AND_QUIT."""
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=10
+    )
     state = _make_combat_state(goblin_hp=7)
     io = ScriptedIO(["I want to stop"], on_exhaust="end turn")
     rules = ScriptedRulesAgent([])
@@ -710,7 +722,6 @@ def test_combat_intent_exit_session_returns_saved_and_quit() -> None:
         rules_agent=rules,
         narrator_agent=narrator,
         io=io,
-        roll_dice=lambda _: 10,
         _intent_agent=_mock_intent_agent(["exit_session"]),
     )
     result = orc.run(state)
@@ -836,7 +847,12 @@ def test_npc_turn_rules_request_includes_intent_field() -> None:
     assert rules.requests_seen[0].intent == scripted_intent
 
 
-def test_materialize_effects_converts_heal_to_change_hp_using_roll() -> None:
+def test_materialize_effects_converts_heal_to_change_hp_using_roll(
+    mocker: object,
+) -> None:
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=7
+    )
     heal_effect = RulesAdjudication(
         is_legal=True,
         action_type="bonus_action",
@@ -864,7 +880,6 @@ def test_materialize_effects_converts_heal_to_change_hp_using_roll() -> None:
         inputs=["I use Second Wind", "end turn"],
         adjudications=[heal_effect],
         intents=["combat_action", "end_turn"],
-        roll_dice=lambda _expr: 7,  # 7+3 = 10 HP
         # Assessment fires after Talia's turn; return combat_active=False to end
         # before the goblin's turn so no extra adjudication is needed.
         assessments=[
@@ -1042,7 +1057,10 @@ def test_assess_combat_payload_includes_actor_summaries_and_recent_events() -> N
         assert event in payload["recent_events"]
 
 
-def test_natural_20_on_death_save_counts_as_two_successes() -> None:
+def test_natural_20_on_death_save_counts_as_two_successes(mocker: object) -> None:
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=20
+    )
     talia_unconscious = replace(TALIA, hp_current=0, conditions=("unconscious",))
     goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
     state = EncounterState(
@@ -1059,7 +1077,6 @@ def test_natural_20_on_death_save_counts_as_two_successes() -> None:
     orc, _, _, _ = _orchestrator(
         inputs=[],
         adjudications=[_npc_attack_adjudication(damage_hp=0)],
-        roll_dice=lambda _: 20,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1072,7 +1089,10 @@ def test_natural_20_on_death_save_counts_as_two_successes() -> None:
     assert talia.death_save_successes == 2  # noqa: PLR2004
 
 
-def test_three_death_save_successes_stabilizes_pc() -> None:
+def test_three_death_save_successes_stabilizes_pc(mocker: object) -> None:
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.combat_orchestrator.roll", return_value=15
+    )
     talia_near_stable = replace(
         TALIA, hp_current=0, conditions=("unconscious",), death_save_successes=2
     )
@@ -1091,7 +1111,6 @@ def test_three_death_save_successes_stabilizes_pc() -> None:
     orc, io, _, _ = _orchestrator(
         inputs=[],
         adjudications=[_npc_attack_adjudication(damage_hp=0)],
-        roll_dice=lambda _: 15,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1222,15 +1241,17 @@ def _npc_attack_adj_with_placeholder(
     )
 
 
-def test_attack_hit_applies_damage_to_target() -> None:
+def test_attack_hit_applies_damage_to_target(mocker: object) -> None:
     """Player attack that hits (roll >= AC) applies damage and kills the goblin."""
     # Goblin AC=15, HP=7. roll_dice=20 → attack total=20 ≥ 15 → hit → damage=20 → dead
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=20
+    )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_attack_adj_with_placeholder()],
-        roll_dice=lambda _: 20,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1247,16 +1268,18 @@ def test_attack_hit_applies_damage_to_target() -> None:
     assert "dead" in goblin.conditions
 
 
-def test_attack_miss_does_not_apply_damage() -> None:
+def test_attack_miss_does_not_apply_damage(mocker: object) -> None:
     """Player attack that misses (roll < AC) leaves target HP unchanged."""
     # Goblin AC=15. roll_dice=1 → attack total=1 < 15 → miss → no damage
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=1
+    )
     initial_hp = make_goblin_scout("npc:goblin-1", "G").hp_max
     state = _make_combat_state(goblin_hp=initial_hp)
     orc, _, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_attack_adj_with_placeholder()],
-        roll_dice=lambda _: 1,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1272,15 +1295,19 @@ def test_attack_miss_does_not_apply_damage() -> None:
     assert goblin.hp_current == initial_hp
 
 
-def test_nonzero_change_hp_with_attack_hit_applies_direct_damage() -> None:
+def test_nonzero_change_hp_with_attack_hit_applies_direct_damage(
+    mocker: object,
+) -> None:
     """Non-zero change_hp is gated on AC: a hit applies the LLM-specified value."""
     # Goblin AC=15, HP=7. roll_dice=20 → attack total=20 ≥ 15 → hit → -5 applied
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=20
+    )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
-        roll_dice=lambda _: 20,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1296,15 +1323,17 @@ def test_nonzero_change_hp_with_attack_hit_applies_direct_damage() -> None:
     assert goblin.hp_current == 2  # 7 - 5
 
 
-def test_nonzero_change_hp_with_attack_miss_no_damage() -> None:
+def test_nonzero_change_hp_with_attack_miss_no_damage(mocker: object) -> None:
     """Non-zero change_hp is gated on AC: a miss drops the effect, HP unchanged."""
     # Goblin AC=15, HP=7. roll_dice=1 → attack total=1 < 15 → miss → no damage
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=1
+    )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
-        roll_dice=lambda _: 1,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1348,15 +1377,17 @@ def _attack_adj_with_lowercase_purposes(
     )
 
 
-def test_attack_purpose_matching_is_case_insensitive_hit() -> None:
+def test_attack_purpose_matching_is_case_insensitive_hit(mocker: object) -> None:
     """Lowercase 'attack roll' and 'damage' purposes are recognised on a hit."""
     # Goblin AC=15, HP=7. roll_dice=20 → 20 ≥ 15 → hit → damage_total=20 → hp=0
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=20
+    )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_attack_adj_with_lowercase_purposes()],
-        roll_dice=lambda _: 20,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1372,15 +1403,17 @@ def test_attack_purpose_matching_is_case_insensitive_hit() -> None:
     assert goblin.hp_current == 0
 
 
-def test_attack_purpose_matching_is_case_insensitive_miss() -> None:
+def test_attack_purpose_matching_is_case_insensitive_miss(mocker: object) -> None:
     """Lowercase 'attack roll' purpose is recognised on a miss — no damage applied."""
     # Goblin AC=15, HP=7. roll_dice=1 → 1 < 15 → miss → no damage
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=1
+    )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_attack_adj_with_lowercase_purposes()],
-        roll_dice=lambda _: 1,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1396,9 +1429,12 @@ def test_attack_purpose_matching_is_case_insensitive_miss() -> None:
     assert goblin.hp_current == 7
 
 
-def test_npc_attack_hit_applies_damage_to_player() -> None:
+def test_npc_attack_hit_applies_damage_to_player(mocker: object) -> None:
     """NPC attack that hits applies damage to the player via hidden dice rolls."""
     # Talia AC=20, HP=44. roll_dice=20 → attack total=20 ≥ 20 → hit → damage=20
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=20
+    )
     goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
     state = EncounterState(
         encounter_id="test-npc-hit",
@@ -1413,7 +1449,6 @@ def test_npc_attack_hit_applies_damage_to_player() -> None:
     orc, _, _, _ = _orchestrator(
         inputs=["end turn"],
         adjudications=[_npc_attack_adj_with_placeholder()],
-        roll_dice=lambda _: 20,
         assessments=[
             CombatAssessment(combat_active=True, outcome=None),
             CombatAssessment(
@@ -1430,9 +1465,12 @@ def test_npc_attack_hit_applies_damage_to_player() -> None:
     assert talia.hp_current == TALIA.hp_current - 20  # 44 - 20 = 24
 
 
-def test_npc_attack_miss_does_not_apply_damage() -> None:
+def test_npc_attack_miss_does_not_apply_damage(mocker: object) -> None:
     """NPC attack that misses leaves target HP unchanged."""
     # Talia AC=20. roll_dice=1 → attack total=1 < 20 → miss → no damage
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=1
+    )
     goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
     state = EncounterState(
         encounter_id="test-npc-miss",
@@ -1447,7 +1485,6 @@ def test_npc_attack_miss_does_not_apply_damage() -> None:
     orc, _, _, _ = _orchestrator(
         inputs=["end turn"],
         adjudications=[_npc_attack_adj_with_placeholder()],
-        roll_dice=lambda _: 1,
         assessments=[
             CombatAssessment(combat_active=True, outcome=None),
             CombatAssessment(
@@ -1523,14 +1560,16 @@ def _legal_attack_with_roll(
     )
 
 
-def test_public_roll_request_is_displayed_to_player() -> None:
+def test_public_roll_request_is_displayed_to_player(mocker: object) -> None:
     """A PUBLIC roll_request must produce a 'Roll:' line in io output."""
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=12
+    )
     state = _make_combat_state(goblin_hp=5)
     orc, io, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
-        roll_dice=lambda _: 12,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1545,14 +1584,18 @@ def test_public_roll_request_is_displayed_to_player() -> None:
     assert any("Roll:" in msg for msg in io.displayed)
 
 
-def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes() -> None:
+def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes(
+    mocker: object,
+) -> None:
     """Roll events from PUBLIC roll_requests must appear in the narrator frame."""
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=12
+    )
     state = _make_combat_state(goblin_hp=5)
     orc, _, _, narrator = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
-        roll_dice=lambda _: 12,
         assessments=[
             CombatAssessment(
                 combat_active=False,
@@ -1569,14 +1612,16 @@ def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes() -> 
     assert any("Roll:" in outcome for outcome in combat_frame.resolved_outcomes)
 
 
-def test_hidden_roll_request_is_not_displayed_to_player() -> None:
+def test_hidden_roll_request_is_not_displayed_to_player(mocker: object) -> None:
     """A HIDDEN roll_request must not produce any 'Roll:' output to the player."""
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.domain.models._roll", return_value=12
+    )
     state = _make_combat_state(goblin_hp=5)
     orc, io, _, _ = _orchestrator(
         inputs=["I attack the goblin", "end turn"],
         intents=["combat_action", "end_turn"],
         adjudications=[_legal_attack_with_roll(RollVisibility.HIDDEN, damage_hp=-5)],
-        roll_dice=lambda _: 12,
         assessments=[
             CombatAssessment(
                 combat_active=False,

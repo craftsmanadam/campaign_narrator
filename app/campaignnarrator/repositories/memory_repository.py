@@ -197,30 +197,37 @@ class MemoryRepository:
     def retrieve_relevant(self, query: str, *, limit: int = 5) -> list[str]:
         """Return up to `limit` text entries whose content matches `query`.
 
-        LanceDB mode: runs FTS (keyword) search and vector (semantic) search
-        separately, merges results deduped by id — FTS hits prioritised first
+        Runs FTS (keyword) search and vector (semantic) search separately,
+        merges results deduped by id — FTS hits prioritised first
         (exact name/entity matches), then vector hits fill remaining slots.
-
-        JSONL fallback: case-insensitive substring scan (original behaviour),
-        used when no embedding_adapter or lancedb_path was provided.
         """
-        if self._lancedb_table is not None and self._embedding_adapter is not None:
-            return self._retrieve_from_lancedb(query, limit=limit)
+        fetch = limit * 3
 
-        if not self._narrative_path.exists():
-            return []
-        query_lower = query.lower()
-        matches: list[str] = []
-        for line in self._narrative_path.read_text().splitlines():
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            text: str = record.get("text", "")
-            if query_lower in text.lower():
-                matches.append(text)
-                if len(matches) >= limit:
-                    break
-        return matches
+        try:
+            fts_rows = (
+                self._lancedb_table.search(query, query_type="fts")  # type: ignore[union-attr]
+                .limit(fetch)
+                .to_list()
+            )
+        except Exception as exc:
+            _logger.warning("FTS search failed, falling back to vector-only: %s", exc)
+            fts_rows = []
+
+        query_vector = self._embedding_adapter.embed(query)  # type: ignore[union-attr]
+        vector_rows = (
+            self._lancedb_table.search(query_vector)  # type: ignore[union-attr]
+            .limit(fetch)
+            .to_list()
+        )
+
+        seen_ids: set[str] = set()
+        merged: list[str] = []
+        for row in fts_rows + vector_rows:
+            row_id: str = row["id"]
+            if row_id not in seen_ids and len(merged) < limit:
+                seen_ids.add(row_id)
+                merged.append(row["text"])
+        return merged
 
     # ── Session cache ──────────────────────────────────────────────────────────
 
@@ -280,32 +287,3 @@ class MemoryRepository:
         """
         self._cache = _SessionCache(exchange_buffer=self._cache.exchange_buffer)
 
-    def _retrieve_from_lancedb(self, query: str, *, limit: int) -> list[str]:
-        """Hybrid retrieval: FTS keyword search + vector similarity search, merged."""
-        fetch = limit * 3
-
-        try:
-            fts_rows = (
-                self._lancedb_table.search(query, query_type="fts")  # type: ignore[union-attr]
-                .limit(fetch)
-                .to_list()
-            )
-        except Exception as exc:  # LanceDB FTS may fail if no index exists yet
-            _logger.warning("FTS search failed, falling back to vector-only: %s", exc)
-            fts_rows = []
-
-        query_vector = self._embedding_adapter.embed(query)  # type: ignore[union-attr]
-        vector_rows = (
-            self._lancedb_table.search(query_vector)  # type: ignore[union-attr]
-            .limit(fetch)
-            .to_list()
-        )
-
-        seen_ids: set[str] = set()
-        merged: list[str] = []
-        for row in fts_rows + vector_rows:
-            row_id: str = row["id"]
-            if row_id not in seen_ids and len(merged) < limit:
-                seen_ids.add(row_id)
-                merged.append(row["text"])
-        return merged

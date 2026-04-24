@@ -63,9 +63,14 @@ def _make_narrator(
     if scene_response is not None:
         mock_scene_agent.run_sync.return_value.output = scene_response
 
+    mock_memory_repo = MagicMock()
+    mock_memory_repo.retrieve_relevant.return_value = []
+    mock_memory_repo.get_exchange_buffer.return_value = ()
+
     narrator = NarratorAgent(
         adapter=mock_adapter,
         personality="Test narrator.",
+        memory_repository=mock_memory_repo,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
     )
@@ -285,11 +290,13 @@ def test_assess_combat_from_json_raises_value_error_when_inactive_but_no_outcome
 
 def _make_narrator_with_memory(
     memory_returns: list[str] | None = None,
+    exchange_buffer: tuple[str, ...] = (),
 ) -> tuple[NarratorAgent, MagicMock]:
     mock_adapter = MagicMock()
     mock_adapter.generate_text.return_value = "Some narration."
     mock_memory_repo = MagicMock(spec=MemoryRepository)
     mock_memory_repo.retrieve_relevant.return_value = memory_returns or []
+    mock_memory_repo.get_exchange_buffer.return_value = exchange_buffer
     narrator = NarratorAgent(
         adapter=mock_adapter,
         personality="Grim narrator.",
@@ -357,20 +364,30 @@ def test_retrieve_memory_returns_joined_results() -> None:
 
 
 def test_retrieve_memory_no_results_returns_sentinel() -> None:
-    narrator, _ = _make_narrator_with_memory(memory_returns=[])
+    narrator, _ = _make_narrator_with_memory(memory_returns=[], exchange_buffer=())
     result = narrator.retrieve_memory("nothing")
     assert result == "No prior records found."
 
 
-def test_retrieve_memory_no_repo_returns_sentinel() -> None:
-    mock_adapter = MagicMock()
-    narrator = NarratorAgent(
-        adapter=mock_adapter,
-        _scene_agent=MagicMock(),
-        _assess_agent=MagicMock(),
+def test_retrieve_memory_includes_exchange_buffer_entries() -> None:
+    narrator, _ = _make_narrator_with_memory(
+        memory_returns=[],
+        exchange_buffer=("I search the room.", "You find a hidden lever."),
     )
-    result = narrator.retrieve_memory("anything")
-    assert result == "No prior records found."
+    result = narrator.retrieve_memory("room")
+    assert "I search the room." in result
+    assert "You find a hidden lever." in result
+
+
+def test_retrieve_memory_combines_lancedb_and_exchange_buffer() -> None:
+    narrator, _ = _make_narrator_with_memory(
+        memory_returns=["Malachar was seen at the docks."],
+        exchange_buffer=("I follow Malachar.", "He disappears into the fog."),
+    )
+    result = narrator.retrieve_memory("Malachar")
+    assert "Malachar was seen at the docks." in result
+    assert "I follow Malachar." in result
+    assert "He disappears into the fog." in result
 
 
 # --- summarize_encounter tests ---
@@ -486,6 +503,7 @@ def _make_scene_frame(setting: str = "The docks at midnight.") -> NarrationFrame
 def _make_scene_narrator(
     memory_returns: list[str] | None = None,
     mock_repo: MagicMock | None = None,
+    exchange_buffer: tuple[str, ...] = (),
 ) -> tuple[NarratorAgent, MagicMock, MagicMock]:
     """Build a narrator with a mock scene agent and optional memory repo."""
     scene_response = SceneOpeningResponse(
@@ -497,6 +515,7 @@ def _make_scene_narrator(
     if mock_repo is None:
         mock_repo = MagicMock(spec=MemoryRepository)
         mock_repo.retrieve_relevant.return_value = memory_returns or []
+        mock_repo.get_exchange_buffer.return_value = exchange_buffer
 
     narrator = NarratorAgent(
         adapter=MagicMock(),
@@ -530,24 +549,6 @@ def test_scene_opening_injects_sentinel_when_no_memory_matches() -> None:
     assert "No prior records found." in call_args
 
 
-def test_scene_opening_injects_sentinel_when_no_repository() -> None:
-    """When memory_repository is None, sentinel appears in the scene agent input."""
-    scene_response = SceneOpeningResponse(text="The forest.", scene_tone="quiet")
-    mock_scene_agent = MagicMock()
-    mock_scene_agent.run_sync.return_value.output = scene_response
-
-    narrator = NarratorAgent(
-        adapter=MagicMock(),
-        memory_repository=None,
-        _scene_agent=mock_scene_agent,
-        _assess_agent=MagicMock(),
-    )
-
-    narrator.narrate(_make_scene_frame("The docks."))
-
-    call_args = mock_scene_agent.run_sync.call_args[0][0]
-    assert "No prior records found." in call_args
-
 
 # ---------------------------------------------------------------------------
 # open_scene
@@ -558,8 +559,12 @@ def test_scene_opening_injects_sentinel_when_no_repository() -> None:
 def narrator_with_mock_scene_agent() -> tuple[NarratorAgent, MagicMock]:
     """Return (narrator, mock_scene_agent) for open_scene tests."""
     mock_scene_agent = MagicMock()
+    mock_memory_repo = MagicMock()
+    mock_memory_repo.retrieve_relevant.return_value = []
+    mock_memory_repo.get_exchange_buffer.return_value = ()
     narrator = NarratorAgent(
         adapter=MagicMock(),
+        memory_repository=mock_memory_repo,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
     )

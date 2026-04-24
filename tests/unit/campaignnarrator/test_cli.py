@@ -123,13 +123,11 @@ class _FakeEncounterOrchestrator:
         *,
         repositories: object,
         agents: object,
-        tools: object,
         io: object,
         adapter: object | None = None,
     ) -> None:
         self.repositories = repositories
         self.agents = agents
-        self.tools = tools
         self.io = io
         self.adapter = adapter
 

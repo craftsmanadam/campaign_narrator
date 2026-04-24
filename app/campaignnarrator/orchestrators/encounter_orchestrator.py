@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from campaignnarrator.agents.narrator_agent import NarratorAgent
@@ -28,13 +27,13 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
 )
-from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
+from campaignnarrator.orchestrators.actor_summaries import (
+    actor_modifiers,
+    actor_narrative_summary,
+)
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.tools.dice_expression import (
-    actor_modifiers,
-    execute_roll,
-)
+from campaignnarrator.tools.dice import roll
 from campaignnarrator.tools.state_updates import apply_state_effects
 
 _log = logging.getLogger(__name__)
@@ -64,13 +63,6 @@ class OrchestratorAgents:
     narrator: NarratorAgent
 
 
-@dataclass(frozen=True, slots=True)
-class OrchestratorTools:
-    """Tool dependencies for EncounterOrchestrator."""
-
-    roll_dice: Callable[[str], int]
-
-
 class EncounterOrchestrator:
     """Coordinate player input, rules adjudication, state, and narration."""
 
@@ -79,7 +71,6 @@ class EncounterOrchestrator:
         *,
         repositories: OrchestratorRepositories,
         agents: OrchestratorAgents,
-        tools: OrchestratorTools,
         io: PlayerIO,
         adapter: object | None = None,
         _player_intent_agent: object | None = None,
@@ -87,7 +78,6 @@ class EncounterOrchestrator:
     ) -> None:
         self._rules_agent = agents.rules
         self._narrator_agent = agents.narrator
-        self._roll_dice = tools.roll_dice
         self._io = io
         self._memory_repository = repositories.memory
         self._adapter = adapter
@@ -110,19 +100,18 @@ class EncounterOrchestrator:
             raise ValueError("no active encounter")  # noqa: TRY003
         player = game_state.player
         output: list[str] = []
+        state = game_state.encounter
 
-        state, scene_texts = self._open_scene_safe(game_state.encounter, output)
-        for text in scene_texts:
-            self._io.display(text)
-            output.append(text)
-
-        if scene_texts:
-            self._memory_repository.update_game_state(
-                GameState(player=player, encounter=state)
+        if state.phase is EncounterPhase.SCENE_OPENING:
+            opening = self._narrate(
+                _frame(state, "scene_opening"), encounter_id=state.encounter_id
             )
-            self._memory_repository.update_exchange("", scene_texts[0])
-
-        if not scene_texts and state.public_events:
+            state = replace(state, phase=EncounterPhase.SOCIAL, scene_tone=opening.scene_tone)
+            self._io.display(opening.text)
+            output.append(opening.text)
+            self._memory_repository.update_game_state(GameState(player=player, encounter=state))
+            self._memory_repository.update_exchange("", opening.text)
+        elif state.public_events:
             prior_context = self._retrieve_prior_context(state.setting)
             recap_frame = replace(
                 _recap_frame(state), prior_narrative_context=prior_context
@@ -146,18 +135,6 @@ class EncounterOrchestrator:
             output_text="\n".join(output),
             completed=state.phase is EncounterPhase.ENCOUNTER_COMPLETE,
         )
-
-    def _open_scene_safe(
-        self, encounter: EncounterState, output: list[str]
-    ) -> tuple[EncounterState, list[str]]:
-        """Call _open_scene; on failure fall back to SOCIAL phase with an error note."""
-        try:
-            return self._open_scene(encounter)
-        except Exception as exc:
-            msg = f"\n[Scene narration unavailable ({exc}). Continuing...]\n"
-            self._io.display(msg)
-            output.append(msg)
-            return replace(encounter, phase=EncounterPhase.SOCIAL), []
 
     def _run_loop(
         self, state: EncounterState, player: ActorState, output: list[str]
@@ -284,28 +261,12 @@ class EncounterOrchestrator:
         self._memory_repository.update_exchange(player_input.raw_text, narration.text)
         return state
 
-    def _open_scene(self, state: EncounterState) -> tuple[EncounterState, list[str]]:
-        """Narrate scene opening if needed; return updated state and initial output."""
-        output: list[str] = []
-        if state.phase is EncounterPhase.SCENE_OPENING:
-            opening = self._narrate(
-                _frame(state, "scene_opening"), encounter_id=state.encounter_id
-            )
-            output.append(opening.text)
-            state = replace(
-                state,
-                phase=EncounterPhase.SOCIAL,
-                scene_tone=opening.scene_tone,
-            )
-        return state, output
-
     def _run_combat(self, state: EncounterState, player: ActorState) -> CombatResult:
         """Delegate the combat turn loop to CombatOrchestrator."""
         orchestrator = CombatOrchestrator(
             rules_agent=self._rules_agent,
             narrator_agent=self._narrator_agent,
             io=self._io,
-            roll_dice=self._roll_dice,
             adapter=self._adapter,
             _intent_agent=self._combat_intent_agent,
             memory_repository=self._memory_repository,
@@ -428,7 +389,7 @@ class EncounterOrchestrator:
         self, state: EncounterState, player: ActorState
     ) -> tuple[EncounterState, Narration]:
         rolls = [
-            (actor_id, actor.name, self._roll_dice(f"1d20+{actor.initiative_bonus}"))
+            (actor_id, actor.name, roll(f"1d20+{actor.initiative_bonus}"))
             for actor_id, actor in sorted(state.actors.items())
         ]
         sorted_rolls = sorted(rolls, key=lambda entry: entry[2], reverse=True)
@@ -467,11 +428,12 @@ class EncounterOrchestrator:
         adjudication: RulesAdjudication,
         player: ActorState,
     ) -> tuple[EncounterState, tuple[str, ...]]:
-        roll_events = tuple(
-            execute_roll(roll_request, player, self._roll_dice)[0]
-            for roll_request in adjudication.roll_requests
-            if roll_request.visibility is RollVisibility.PUBLIC
-        )
+        roll_events: list[str] = []
+        for roll_request in adjudication.roll_requests:
+            if roll_request.visibility is RollVisibility.PUBLIC:
+                result = roll_request.roll(player)
+                _log.info("%s", result)
+                roll_events.append(str(result))
         roll_effects = tuple(
             StateEffect(
                 effect_type="append_public_event",
@@ -482,13 +444,16 @@ class EncounterOrchestrator:
         )
         return (
             apply_state_effects(state, (*roll_effects, *adjudication.state_effects)),
-            roll_events,
+            tuple(roll_events),
         )
 
     def _retrieve_prior_context(self, query: str) -> str:
-        """Query memory for prior session context."""
-        retrieved = self._memory_repository.retrieve_relevant(query, limit=3)
-        return "\n\n".join(retrieved) if retrieved else ""
+        """Query memory for prior session context including recent exchanges."""
+        parts: list[str] = self._memory_repository.retrieve_relevant(query, limit=3)
+        exchange = self._memory_repository.get_exchange_buffer()
+        if exchange:
+            parts.append("Recent exchanges:\n" + "\n".join(exchange))
+        return "\n\n".join(parts)
 
     def _narrate(self, frame: NarrationFrame, *, encounter_id: str) -> Narration:
         narration = self._narrator_agent.narrate(frame)
