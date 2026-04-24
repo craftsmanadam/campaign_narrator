@@ -1272,6 +1272,130 @@ def test_attack_miss_does_not_apply_damage() -> None:
     assert goblin.hp_current == initial_hp
 
 
+def test_nonzero_change_hp_with_attack_hit_applies_direct_damage() -> None:
+    """Non-zero change_hp is gated on AC: a hit applies the LLM-specified value."""
+    # Goblin AC=15, HP=7. roll_dice=20 → attack total=20 ≥ 15 → hit → -5 applied
+    state = _make_combat_state(goblin_hp=7)
+    orc, _, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
+        roll_dice=lambda _: 20,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    result = orc.run(state)
+    goblin = result.final_state.actors["npc:goblin-1"]
+    assert goblin.hp_current == 2  # 7 - 5
+
+
+def test_nonzero_change_hp_with_attack_miss_no_damage() -> None:
+    """Non-zero change_hp is gated on AC: a miss drops the effect, HP unchanged."""
+    # Goblin AC=15, HP=7. roll_dice=1 → attack total=1 < 15 → miss → no damage
+    state = _make_combat_state(goblin_hp=7)
+    orc, _, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_legal_attack_with_roll(RollVisibility.PUBLIC, damage_hp=-5)],
+        roll_dice=lambda _: 1,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    result = orc.run(state)
+    goblin = result.final_state.actors["npc:goblin-1"]
+    assert goblin.hp_current == 7
+
+
+def _attack_adj_with_lowercase_purposes(
+    target: str = "npc:goblin-1",
+) -> RulesAdjudication:
+    """Attack adjudication with lowercase purpose strings (LLM casing variant)."""
+    return RulesAdjudication(
+        is_legal=True,
+        action_type="attack",
+        summary="Talia strikes.",
+        roll_requests=(
+            RollRequest(
+                owner="player",
+                visibility=RollVisibility.PUBLIC,
+                expression="1d20+7",
+                purpose="attack roll vs goblin scout",
+            ),
+            RollRequest(
+                owner="player",
+                visibility=RollVisibility.PUBLIC,
+                expression="1d8+4",
+                purpose="damage: longsword",
+            ),
+        ),
+        state_effects=(StateEffect(effect_type="change_hp", target=target, value=0),),
+        rule_references=(),
+        reasoning_summary="Valid attack, lowercase purposes.",
+    )
+
+
+def test_attack_purpose_matching_is_case_insensitive_hit() -> None:
+    """Lowercase 'attack roll' and 'damage' purposes are recognised on a hit."""
+    # Goblin AC=15, HP=7. roll_dice=20 → 20 ≥ 15 → hit → damage_total=20 → hp=0
+    state = _make_combat_state(goblin_hp=7)
+    orc, _, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_attack_adj_with_lowercase_purposes()],
+        roll_dice=lambda _: 20,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    result = orc.run(state)
+    goblin = result.final_state.actors["npc:goblin-1"]
+    assert goblin.hp_current == 0
+
+
+def test_attack_purpose_matching_is_case_insensitive_miss() -> None:
+    """Lowercase 'attack roll' purpose is recognised on a miss — no damage applied."""
+    # Goblin AC=15, HP=7. roll_dice=1 → 1 < 15 → miss → no damage
+    state = _make_combat_state(goblin_hp=7)
+    orc, _, _, _ = _orchestrator(
+        inputs=["I attack the goblin", "end turn"],
+        intents=["combat_action", "end_turn"],
+        adjudications=[_attack_adj_with_lowercase_purposes()],
+        roll_dice=lambda _: 1,
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    result = orc.run(state)
+    goblin = result.final_state.actors["npc:goblin-1"]
+    assert goblin.hp_current == 7
+
+
 def test_npc_attack_hit_applies_damage_to_player() -> None:
     """NPC attack that hits applies damage to the player via hidden dice rolls."""
     # Talia AC=20, HP=44. roll_dice=20 → attack total=20 ≥ 20 → hit → damage=20

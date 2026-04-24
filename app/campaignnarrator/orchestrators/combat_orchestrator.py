@@ -355,29 +355,37 @@ class CombatOrchestrator:
         effects: tuple[StateEffect, ...],
         roll_totals_by_purpose: dict[str, int],
     ) -> tuple[StateEffect, ...]:
-        """Replace change_hp placeholder (value=0) with resolved damage.
+        """Resolve change_hp effects for attack actions against target AC.
 
-        The LLM generates change_hp(target, 0) as a placeholder for attacks.
-        This method checks the attack roll total against the target's AC and
-        substitutes the actual damage total on a hit, or drops the effect on a miss.
-        If no attack roll or damage roll is present, effects are returned unchanged.
+        When an attack roll is present (purpose case-insensitively starts with
+        "attack roll"), all change_hp effects are gated on the AC check:
+        - Hit (attack_total >= target AC): placeholder (value=0) is replaced
+          with -damage_total; non-zero change_hp is kept as-is.
+        - Miss (attack_total < target AC): all change_hp effects are dropped.
+        When no attack roll is present, effects pass through unchanged — this
+        covers non-attack damage such as ongoing conditions.
+        Purpose matching is case-insensitive.
         """
         attack_total: int | None = None
         damage_total: int | None = None
         for purpose, total in roll_totals_by_purpose.items():
-            if purpose.startswith("Attack roll"):
+            lower = purpose.lower()
+            if lower.startswith("attack roll"):
                 attack_total = total
-            elif purpose.startswith("Damage"):
+            elif lower.startswith("damage"):
                 damage_total = total
-        if attack_total is None or damage_total is None:
+        if attack_total is None:
             return effects
         resolved: list[StateEffect] = []
         for effect in effects:
-            if effect.effect_type == "change_hp" and effect.value == 0:
-                target_actor = state.actors.get(effect.target)
-                if target_actor is None:
-                    continue
-                if attack_total >= target_actor.armor_class:
+            if effect.effect_type != "change_hp":
+                resolved.append(effect)
+                continue
+            target_actor = state.actors.get(effect.target)
+            if target_actor is None:
+                continue
+            if attack_total >= target_actor.armor_class:
+                if effect.value == 0 and damage_total is not None:
                     resolved.append(
                         StateEffect(
                             effect_type="change_hp",
@@ -385,9 +393,10 @@ class CombatOrchestrator:
                             value=-damage_total,
                         )
                     )
-                # miss: drop the placeholder — no effect applied
-            else:
-                resolved.append(effect)
+                elif effect.value != 0:
+                    resolved.append(effect)
+                # value=0 but no damage_total: hit with no damage roll — skip
+            # miss: drop all change_hp for this target
         return tuple(resolved)
 
     def _classify_combat_intent(self, raw_input: str) -> str:
