@@ -140,6 +140,12 @@ class FakeMemoryRepository:
     def stage_narration(self, text: str, metadata: dict) -> None:
         self.staged_narrations.append((text, metadata))
 
+    def log_combat_round(self, entry: str) -> None:
+        pass
+
+    def clear_combat_memory(self) -> None:
+        pass
+
     def retrieve_relevant(self, query: str, limit: int = 5) -> list[str]:
         return []
 
