@@ -2163,5 +2163,5 @@ def test_roll_result_evaluate_raises_when_no_dc() -> None:
 
 def test_roll_result_is_frozen() -> None:
     result = _make_roll_result()
-    with pytest.raises(Exception):  # noqa: B017
+    with pytest.raises(ValidationError):
         result.roll_total = 99  # type: ignore[misc]

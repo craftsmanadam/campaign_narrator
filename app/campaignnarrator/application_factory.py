@@ -62,6 +62,7 @@ from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.settings import Settings
 from campaignnarrator.terminal_io import TerminalIO
 
+
 @dataclass(frozen=True)
 class ApplicationGraph:
     """Container for all wired-up application objects."""

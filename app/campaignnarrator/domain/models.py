@@ -534,8 +534,13 @@ class RollRequest(BaseModel):
 
     def __str__(self) -> str:
         purpose_part = f", purpose={self.purpose!r}" if self.purpose else ""
-        dc_part = f", dc={self.difficulty_class}" if self.difficulty_class is not None else ""
-        return f"RollRequest(owner={self.owner!r}, expression={self.expression!r}{purpose_part}{dc_part})"
+        dc_part = (
+            f", dc={self.difficulty_class}" if self.difficulty_class is not None else ""
+        )
+        return (
+            f"RollRequest(owner={self.owner!r}, expression={self.expression!r}"
+            f"{purpose_part}{dc_part})"
+        )
 
 
 class RollResult(BaseModel):
@@ -563,7 +568,9 @@ class RollResult(BaseModel):
         label = self.purpose or self.resolved_expression
         base = f"Roll: {label} = {self.roll_total}"
         if self.difficulty_class is not None:
-            outcome = "Succeeded" if self.roll_total >= self.difficulty_class else "Failed"
+            outcome = (
+                "Succeeded" if self.roll_total >= self.difficulty_class else "Failed"
+            )
             return f"{base} — {outcome} (DC {self.difficulty_class})"
         return base
 

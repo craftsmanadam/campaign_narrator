@@ -1172,7 +1172,7 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_player_intent_agen
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-    
+
             io=ScriptedIO([], on_exhaust="exit"),
         )
 
@@ -1459,7 +1459,7 @@ class TestSaveExitPath:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-    
+
             io=ScriptedIO(["save and quit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.SAVE_EXIT)]
@@ -1482,7 +1482,7 @@ class TestSaveExitPath:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-    
+
             io=ScriptedIO(["save and quit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.SAVE_EXIT)]
@@ -1504,7 +1504,7 @@ class TestApplyAction:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-    
+
             io=ScriptedIO(["I ask what they want.", "exit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1527,7 +1527,7 @@ class TestApplyAction:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-    
+
             io=ScriptedIO([], on_exhaust="exit"),
             _player_intent_agent=FakePlayerIntentAgent([]),
         )

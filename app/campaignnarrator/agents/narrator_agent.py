@@ -212,7 +212,8 @@ class NarratorAgent:
         return assessment
 
     def retrieve_memory(self, query: str) -> str:
-        """Return relevant prior narrative entries and recent exchanges for the given query.
+        """Return relevant prior narrative entries and recent exchanges for the given
+        query.
 
         Designed for future pydantic-ai tool registration; call signature is stable.
         Returns a sentinel string when no records match so callers never receive None.
