@@ -549,7 +549,6 @@ def test_scene_opening_injects_sentinel_when_no_memory_matches() -> None:
     assert "No prior records found." in call_args
 
 
-
 # ---------------------------------------------------------------------------
 # open_scene
 # ---------------------------------------------------------------------------

@@ -108,6 +108,42 @@ def _format_visible_actor(actor: ActorState) -> str:
     )
 
 
+def _extract_roll_totals(
+    roll_totals_by_purpose: dict[str, int],
+) -> tuple[int | None, int | None]:
+    """Return (attack_total, damage_total) from a purpose→total mapping."""
+    attack_total: int | None = None
+    damage_total: int | None = None
+    for purpose, total in roll_totals_by_purpose.items():
+        lower = purpose.lower()
+        if lower.startswith("attack roll"):
+            attack_total = total
+        elif lower.startswith("damage"):
+            damage_total = total
+    return attack_total, damage_total
+
+
+def _resolve_hp_effect(
+    state: EncounterState,
+    effect: StateEffect,
+    attack_total: int,
+    damage_total: int | None,
+) -> StateEffect | None:
+    """Resolve one change_hp effect against target AC; return None to drop it."""
+    target_actor = state.actors.get(effect.target)
+    if target_actor is None:
+        return None
+    if attack_total < target_actor.armor_class:
+        return None  # miss: drop
+    if effect.value == 0 and damage_total is not None:
+        return StateEffect(
+            effect_type="change_hp", target=effect.target, value=-damage_total
+        )
+    if effect.value != 0:
+        return effect
+    return None  # hit with no damage roll — skip
+
+
 class _RulesAgentProtocol(Protocol):
     def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication: ...
 
@@ -367,14 +403,7 @@ class CombatOrchestrator:
         covers non-attack damage such as ongoing conditions.
         Purpose matching is case-insensitive.
         """
-        attack_total: int | None = None
-        damage_total: int | None = None
-        for purpose, total in roll_totals_by_purpose.items():
-            lower = purpose.lower()
-            if lower.startswith("attack roll"):
-                attack_total = total
-            elif lower.startswith("damage"):
-                damage_total = total
+        attack_total, damage_total = _extract_roll_totals(roll_totals_by_purpose)
         if attack_total is None:
             return effects
         resolved: list[StateEffect] = []
@@ -382,22 +411,9 @@ class CombatOrchestrator:
             if effect.effect_type != "change_hp":
                 resolved.append(effect)
                 continue
-            target_actor = state.actors.get(effect.target)
-            if target_actor is None:
-                continue
-            if attack_total >= target_actor.armor_class:
-                if effect.value == 0 and damage_total is not None:
-                    resolved.append(
-                        StateEffect(
-                            effect_type="change_hp",
-                            target=effect.target,
-                            value=-damage_total,
-                        )
-                    )
-                elif effect.value != 0:
-                    resolved.append(effect)
-                # value=0 but no damage_total: hit with no damage roll — skip
-            # miss: drop all change_hp for this target
+            hp_effect = _resolve_hp_effect(state, effect, attack_total, damage_total)
+            if hp_effect is not None:
+                resolved.append(hp_effect)
         return tuple(resolved)
 
     def _classify_combat_intent(self, raw_input: str) -> str:
@@ -503,10 +519,7 @@ class CombatOrchestrator:
                 num_dice = int(match.group(1))
                 die_size = int(match.group(2))
                 modifier = int(match.group(3) or "0")
-                total = (
-                    sum(roll(f"1d{die_size}") for _ in range(num_dice))
-                    + modifier
-                )
+                total = sum(roll(f"1d{die_size}") for _ in range(num_dice)) + modifier
                 materialized.append(
                     StateEffect(
                         effect_type="change_hp", target=effect.target, value=total

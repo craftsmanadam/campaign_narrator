@@ -286,4 +286,3 @@ class MemoryRepository:
         Preserves exchange_buffer.
         """
         self._cache = _SessionCache(exchange_buffer=self._cache.exchange_buffer)
-

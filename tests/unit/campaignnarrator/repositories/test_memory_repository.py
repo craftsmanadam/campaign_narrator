@@ -79,7 +79,6 @@ def test_store_narrative_appends_multiple_records() -> None:
         assert len(lines) == expected_record_count
 
 
-
 def _make_lancedb_repo(tmp: str) -> MemoryRepository:
     """MemoryRepository in LanceDB mode using StubEmbeddingAdapter."""
     adapter = StubEmbeddingAdapter()
@@ -231,7 +230,6 @@ def test_retrieve_relevant_lancedb_respects_limit(tmp_path: Path) -> None:
 def test_retrieve_relevant_lancedb_empty_store_returns_empty(tmp_path: Path) -> None:
     repo = _make_lancedb_repo(str(tmp_path))
     assert repo.retrieve_relevant("anything") == []
-
 
 
 _MALACHAR_JSONL = (

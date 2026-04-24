@@ -1320,7 +1320,8 @@ def test_nonzero_change_hp_with_attack_hit_applies_direct_damage(
     )
     result = orc.run(state)
     goblin = result.final_state.actors["npc:goblin-1"]
-    assert goblin.hp_current == 2  # 7 - 5
+    expected_hp = 2  # 7 starting HP - 5 damage
+    assert goblin.hp_current == expected_hp
 
 
 def test_nonzero_change_hp_with_attack_miss_no_damage(mocker: object) -> None:
@@ -1346,7 +1347,8 @@ def test_nonzero_change_hp_with_attack_miss_no_damage(mocker: object) -> None:
     )
     result = orc.run(state)
     goblin = result.final_state.actors["npc:goblin-1"]
-    assert goblin.hp_current == 7
+    expected_hp = 7  # unchanged on miss
+    assert goblin.hp_current == expected_hp
 
 
 def _attack_adj_with_lowercase_purposes(
@@ -1426,7 +1428,8 @@ def test_attack_purpose_matching_is_case_insensitive_miss(mocker: object) -> Non
     )
     result = orc.run(state)
     goblin = result.final_state.actors["npc:goblin-1"]
-    assert goblin.hp_current == 7
+    expected_hp = 7  # unchanged on miss
+    assert goblin.hp_current == expected_hp
 
 
 def test_npc_attack_hit_applies_damage_to_player(mocker: object) -> None:

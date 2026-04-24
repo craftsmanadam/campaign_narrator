@@ -106,10 +106,14 @@ class EncounterOrchestrator:
             opening = self._narrate(
                 _frame(state, "scene_opening"), encounter_id=state.encounter_id
             )
-            state = replace(state, phase=EncounterPhase.SOCIAL, scene_tone=opening.scene_tone)
+            state = replace(
+                state, phase=EncounterPhase.SOCIAL, scene_tone=opening.scene_tone
+            )
             self._io.display(opening.text)
             output.append(opening.text)
-            self._memory_repository.update_game_state(GameState(player=player, encounter=state))
+            self._memory_repository.update_game_state(
+                GameState(player=player, encounter=state)
+            )
             self._memory_repository.update_exchange("", opening.text)
         elif state.public_events:
             prior_context = self._retrieve_prior_context(state.setting)

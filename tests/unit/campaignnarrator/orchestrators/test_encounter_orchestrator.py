@@ -526,7 +526,6 @@ def test_social_check_with_outcome_emits_encounter_completed_event(
             rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["I try to calm them down.", "exit"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")]
@@ -565,7 +564,6 @@ def test_social_check_without_outcome_does_not_emit_encounter_completed_event(
             rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["I try to calm them down.", "exit"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")]
@@ -614,7 +612,8 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
     # Actors are rolled in sorted(actor_id) order: "npc:goblin-scout" before "pc:talia".
     # Give goblin a lower roll (12) so Talia (18) wins initiative and goes first.
     mock_roll = mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.orchestrators.encounter_orchestrator.roll", side_effect=[12, 18]
+        "campaignnarrator.orchestrators.encounter_orchestrator.roll",
+        side_effect=[12, 18],
     )
     narrator_agent = FakeNarratorAgent()
     # io provides the social input that triggers combat, then "end turn" for Talia's
@@ -726,7 +725,6 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -758,7 +756,6 @@ def test_save_and_quit_completes_without_raising(
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -803,7 +800,6 @@ def test_completed_encounter_records_durable_event(tmp_path: Path) -> None:
             rules=rules_agent,
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["I offer peace."]),
         _player_intent_agent=FakePlayerIntentAgent(
             [
@@ -863,7 +859,6 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
         _combat_intent_agent=_mock_combat_intent_agent(["exit_session"]),
@@ -893,7 +888,6 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["exit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
         _combat_intent_agent=_mock_combat_intent_agent(["exit_session"]),
@@ -1031,7 +1025,6 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["Hello.", "exit"]),
         _player_intent_agent=CapturingIntentAgent(
             [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1172,7 +1165,6 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_player_intent_agen
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-
             io=ScriptedIO([], on_exhaust="exit"),
         )
 
@@ -1246,7 +1238,6 @@ def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["save and exit the game"]),
         _player_intent_agent=FakePlayerIntentAgent([_intent(IntentCategory.SAVE_EXIT)]),
     )
@@ -1271,7 +1262,6 @@ def test_narration_stored_to_memory_during_encounter(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["Hello there.", "exit"]),
         _player_intent_agent=FakePlayerIntentAgent(
             [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1301,7 +1291,6 @@ def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
             rules=FakeRulesAgent(),
             narrator=FakeNarratorAgent(),
         ),
-
         io=ScriptedIO(["save and quit"]),
         _player_intent_agent=FakePlayerIntentAgent([_intent(IntentCategory.SAVE_EXIT)]),
     )
@@ -1395,7 +1384,6 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
             rules=FakeRulesAgent(),
             narrator=narrator_agent,
         ),
-
         io=ScriptedIO(["exit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -1434,7 +1422,6 @@ def test_resume_recap_includes_exchange_buffer_in_prior_context(
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repository),
         agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator_agent),
-
         io=ScriptedIO(["exit"]),
         _player_intent_agent=FakePlayerIntentAgent(),
     )
@@ -1459,7 +1446,6 @@ class TestSaveExitPath:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-
             io=ScriptedIO(["save and quit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.SAVE_EXIT)]
@@ -1482,7 +1468,6 @@ class TestSaveExitPath:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-
             io=ScriptedIO(["save and quit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.SAVE_EXIT)]
@@ -1504,7 +1489,6 @@ class TestApplyAction:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-
             io=ScriptedIO(["I ask what they want.", "exit"]),
             _player_intent_agent=FakePlayerIntentAgent(
                 [_intent(IntentCategory.NPC_DIALOGUE)]
@@ -1527,7 +1511,6 @@ class TestApplyAction:
                 rules=FakeRulesAgent(),
                 narrator=FakeNarratorAgent(),
             ),
-
             io=ScriptedIO([], on_exhaust="exit"),
             _player_intent_agent=FakePlayerIntentAgent([]),
         )
