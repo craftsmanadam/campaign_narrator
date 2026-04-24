@@ -1,0 +1,15 @@
+{
+  "id": "resp_enc_summary",
+  "object": "chat.completion",
+  "created": 1710000101,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "The encounter concluded at the goblin camp. The goblins were defeated after a brief skirmish. The player emerged victorious."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 80, "completion_tokens": 40, "total_tokens": 120}
+}

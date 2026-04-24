@@ -217,6 +217,7 @@ def configure_openai_api_for_scenario_with_encounter(
     """Start the acceptance stack with a specific encounter ID."""
 
     request.node._encounter_scenario_name = scenario_name
+    _copy_fixture_tree(ENCOUNTER_FIXTURE_ROOT, runtime_data_root)
     named_encounter = EXAMPLES_ROOT / "state" / "encounters" / f"{encounter_id}.json"
     if named_encounter.exists():
         active_path = runtime_data_root / "state" / "encounters" / "active.json"
@@ -245,6 +246,7 @@ def configure_openai_api_for_scenario_with_encounter(
 def configure_openai_api_for_scenario(
     scenario_name: str,
     request: pytest.FixtureRequest,
+    runtime_data_root: Path,
     wiremock_stack: None,
 ) -> dict[str, str]:
     """Start the acceptance stack and deactivate all scenario-based WireMock stubs.
@@ -255,6 +257,7 @@ def configure_openai_api_for_scenario(
     decision-* stubs during the first player-intent classification call.
     """
     request.node._encounter_scenario_name = scenario_name
+    _copy_fixture_tree(ENCOUNTER_FIXTURE_ROOT, runtime_data_root)
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), "")
     return {"scenario_name": scenario_name, "encounter_id": "goblin-camp"}
@@ -274,7 +277,8 @@ def run_encounter_with_scripted_input(
     """Run the production CLI through Docker Compose with scripted stdin."""
 
     request.node._encounter_scenario_name = encounter_config["scenario_name"]
-    scripted_input = docstring
+    # Prepend "load\n" so the startup orchestrator routes to the existing encounter.
+    scripted_input = "load\n" + docstring
     completed_process = run(
         [
             "docker",
@@ -288,8 +292,6 @@ def run_encounter_with_scripted_input(
             "app",
             "--data-root",
             "/runtime/data",
-            "--encounter-id",
-            encounter_config["encounter_id"],
         ],
         input=scripted_input,
         text=True,
@@ -346,6 +348,7 @@ _STARTUP_FIXTURE_DIR: dict[str, str] = {
 
 STARTUP_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "startup"
 MODULE_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "module"
+ENCOUNTER_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "encounter_base"
 
 
 @given(

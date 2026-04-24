@@ -1,0 +1,23 @@
+{
+  "id": "resp_enc_plan",
+  "object": "chat.completion",
+  "created": 1710000102,
+  "model": "gpt-5.4",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "call_enc_plan",
+        "type": "function",
+        "function": {
+          "name": "final_result",
+          "arguments": "{\"encounters\":[{\"template_id\":\"enc-001\",\"order\":0,\"setting\":\"A clearing at the edge of the village where goblin scouts were spotted.\",\"purpose\":\"Confront and repel the goblin advance scouts.\",\"scene_tone\":\"tense\",\"npcs\":[{\"template_npc_id\":\"goblin-scout-a\",\"display_name\":\"Goblin Scout\",\"role\":\"enemy\",\"description\":\"A small, wiry goblin scout with beady eyes.\",\"monster_name\":null,\"stat_source\":\"simple_npc\",\"cr\":0.25,\"name_known\":false}],\"prerequisites\":[],\"expected_outcomes\":[\"Player drives off the scouts\"],\"downstream_dependencies\":[]}]}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }],
+  "usage": {"prompt_tokens": 120, "completion_tokens": 80, "total_tokens": 200}
+}

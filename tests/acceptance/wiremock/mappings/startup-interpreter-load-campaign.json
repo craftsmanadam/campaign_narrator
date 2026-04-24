@@ -1,0 +1,20 @@
+{
+  "priority": 50,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/chat/completions",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "has_campaign"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "bodyFileName": "startup-interpreter-load-campaign-response.json"
+  }
+}
