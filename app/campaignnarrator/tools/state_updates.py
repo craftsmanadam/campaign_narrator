@@ -104,11 +104,9 @@ def _apply_add_condition(
     value: object,
 ) -> EncounterState:
     actor = _require_actor(state, target)
-    condition = _require_string(value, "condition")
-    if condition in actor.conditions:
-        return state
-    updated = replace(actor, conditions=(*actor.conditions, condition))
-    return _replace_actor(state, updated)
+    return _replace_actor(
+        state, actor.with_condition(_require_string(value, "condition"))
+    )
 
 
 def _apply_remove_condition(
@@ -117,11 +115,9 @@ def _apply_remove_condition(
     value: object,
 ) -> EncounterState:
     actor = _require_actor(state, target)
-    condition = _require_string(value, "condition")
-    updated = tuple(c for c in actor.conditions if c != condition)
-    if updated == actor.conditions:
-        return state
-    return _replace_actor(state, replace(actor, conditions=updated))
+    return _replace_actor(
+        state, actor.without_condition(_require_string(value, "condition"))
+    )
 
 
 _EFFECT_HANDLERS = {

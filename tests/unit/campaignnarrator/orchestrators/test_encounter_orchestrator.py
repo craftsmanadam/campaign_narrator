@@ -1516,3 +1516,107 @@ class TestApplyAction:
         )
         orchestrator.run_encounter(encounter_id="goblin-camp")
         assert any(pair[0] == "" for pair in fake_memory.exchange_updates)
+
+
+class TestHiddenConditionClearing:
+    """hidden condition is cleared when the player speaks or takes a hostile action."""
+
+    def _repo_with_hidden_player(
+        self, tmp_path: Path
+    ) -> tuple[StateRepository, FakeMemoryRepository]:
+        actor_repo = ActorRepository(tmp_path)
+        hidden_player = replace(_default_player(), conditions=("hidden",))
+        actor_repo.save(hidden_player)
+        encounter_repo = EncounterRepository(tmp_path)
+        encounter_repo.save(
+            EncounterState(
+                encounter_id="goblin-camp",
+                phase=EncounterPhase.SOCIAL,
+                setting="A ruined roadside camp.",
+                actors={"pc:talia": hidden_player, "npc:goblin-scout": _default_npc()},
+            )
+        )
+        state_repo = StateRepository(
+            actor_repo=actor_repo, encounter_repo=encounter_repo
+        )
+        initial_state = state_repo.load()
+        return state_repo, FakeMemoryRepository(game_state=initial_state)
+
+    def test_npc_dialogue_clears_hidden_from_player(self, tmp_path: Path) -> None:
+        _, fake_memory = self._repo_with_hidden_player(tmp_path)
+        orchestrator = EncounterOrchestrator(
+            repositories=OrchestratorRepositories(memory=fake_memory),
+            agents=OrchestratorAgents(
+                rules=FakeRulesAgent(), narrator=FakeNarratorAgent()
+            ),
+            io=ScriptedIO(["Hello there.", "exit"]),
+            _player_intent_agent=FakePlayerIntentAgent(
+                [_intent(IntentCategory.NPC_DIALOGUE)]
+            ),
+        )
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+        state = fake_memory.staged_game_state.encounter  # type: ignore[union-attr]
+        player = state.actors["pc:talia"]
+        assert not player.has_condition("hidden")
+
+    def test_hostile_action_clears_hidden_from_player(
+        self, tmp_path: Path, mocker: object
+    ) -> None:
+        mocker.patch(  # type: ignore[attr-defined]
+            "campaignnarrator.orchestrators.encounter_orchestrator.roll",
+            side_effect=[12, 18],
+        )
+        goblin = replace(_default_npc(), hp_current=0)
+        actor_repo = ActorRepository(tmp_path)
+        hidden_player = replace(_default_player(), conditions=("hidden",))
+        actor_repo.save(hidden_player)
+        encounter_repo = EncounterRepository(tmp_path)
+        encounter_repo.save(
+            EncounterState(
+                encounter_id="goblin-camp",
+                phase=EncounterPhase.SOCIAL,
+                setting="A ruined roadside camp.",
+                actors={"pc:talia": hidden_player, "npc:goblin-scout": goblin},
+            )
+        )
+        state_repo = StateRepository(
+            actor_repo=actor_repo, encounter_repo=encounter_repo
+        )
+        initial_state = state_repo.load()
+        fake_memory = FakeMemoryRepository(game_state=initial_state)
+        orchestrator = EncounterOrchestrator(
+            repositories=OrchestratorRepositories(memory=fake_memory),
+            agents=OrchestratorAgents(
+                rules=FakeRulesAgent(), narrator=FakeNarratorAgent()
+            ),
+            io=ScriptedIO(["I attack!", "end turn"]),
+            _player_intent_agent=FakePlayerIntentAgent(
+                [_intent(IntentCategory.HOSTILE_ACTION)]
+            ),
+            _combat_intent_agent=_mock_combat_intent_agent(["end_turn"]),
+        )
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+        state = fake_memory.staged_game_state.encounter  # type: ignore[union-attr]
+        player = state.actors["pc:talia"]
+        assert not player.has_condition("hidden")
+
+    def test_npc_dialogue_without_hidden_leaves_state_unchanged(
+        self, tmp_path: Path
+    ) -> None:
+        state_repo = _social_repository(tmp_path)
+        initial_state = state_repo.load()
+        fake_memory = FakeMemoryRepository(game_state=initial_state)
+        orchestrator = EncounterOrchestrator(
+            repositories=OrchestratorRepositories(memory=fake_memory),
+            agents=OrchestratorAgents(
+                rules=FakeRulesAgent(), narrator=FakeNarratorAgent()
+            ),
+            io=ScriptedIO(["Hello.", "exit"]),
+            _player_intent_agent=FakePlayerIntentAgent(
+                [_intent(IntentCategory.NPC_DIALOGUE)]
+            ),
+        )
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+        state = fake_memory.staged_game_state.encounter  # type: ignore[union-attr]
+        player = state.actors["pc:talia"]
+        assert not player.has_condition("hidden")

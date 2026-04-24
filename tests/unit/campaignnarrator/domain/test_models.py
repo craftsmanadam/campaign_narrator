@@ -2364,7 +2364,9 @@ def test_encounter_state_round_trips_to_dict() -> None:
     assert result.public_events == state.public_events
     assert result.hidden_facts == dict(state.hidden_facts)
     assert result.combat_turns[0].actor_id == "pc:talia"
-    assert result.combat_turns[0].initiative_roll == 18
+    assert (
+        result.combat_turns[0].initiative_roll == state.combat_turns[0].initiative_roll
+    )
     assert result.npc_presences[0].display_name == "Mira"
     assert result.scene_tone == "warm and welcoming"
     assert result.outcome is None
@@ -2373,7 +2375,9 @@ def test_encounter_state_round_trips_to_dict() -> None:
 
 def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:
     """Fields missing from old encounter serialization (level, class_levels, xp) use defaults."""
-    actor = replace(TALIA, level=5, class_levels=(("Fighter", 5),), xp=6500)
+    _level = 5
+    _xp = 6500
+    actor = replace(TALIA, level=_level, class_levels=(("Fighter", _level),), xp=_xp)
     state = EncounterState(
         encounter_id="enc-level",
         phase=EncounterPhase.SOCIAL,
@@ -2382,6 +2386,76 @@ def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:
     )
     result = EncounterState.from_dict(state.to_dict())
     loaded_actor = result.actors["pc:talia"]
-    assert loaded_actor.level == 5
-    assert loaded_actor.class_levels == (("Fighter", 5),)
-    assert loaded_actor.xp == 6500
+    assert loaded_actor.level == _level
+    assert loaded_actor.class_levels == (("Fighter", _level),)
+    assert loaded_actor.xp == _xp
+
+
+# --- ActorState condition methods ---
+
+
+def test_has_condition_returns_true_when_present() -> None:
+    actor = replace(TALIA, conditions=("hidden", "poisoned"))
+    assert actor.has_condition("hidden") is True
+    assert actor.has_condition("poisoned") is True
+
+
+def test_has_condition_returns_false_when_absent() -> None:
+    actor = replace(TALIA, conditions=("poisoned",))
+    assert actor.has_condition("hidden") is False
+
+
+def test_has_condition_false_on_empty_conditions() -> None:
+    actor = replace(TALIA, conditions=())
+    assert actor.has_condition("hidden") is False
+
+
+def test_with_condition_adds_condition() -> None:
+    actor = replace(TALIA, conditions=())
+    result = actor.with_condition("hidden")
+    assert result.has_condition("hidden") is True
+    assert "hidden" in result.conditions
+
+
+def test_with_condition_is_idempotent() -> None:
+    actor = replace(TALIA, conditions=("hidden",))
+    result = actor.with_condition("hidden")
+    assert result is actor
+    assert result.conditions == ("hidden",)
+
+
+def test_with_condition_preserves_existing_conditions() -> None:
+    actor = replace(TALIA, conditions=("poisoned",))
+    result = actor.with_condition("hidden")
+    assert result.has_condition("poisoned") is True
+    assert result.has_condition("hidden") is True
+
+
+def test_without_condition_removes_condition() -> None:
+    actor = replace(TALIA, conditions=("hidden", "poisoned"))
+    result = actor.without_condition("hidden")
+    assert result.has_condition("hidden") is False
+    assert result.has_condition("poisoned") is True
+
+
+def test_without_condition_is_idempotent() -> None:
+    actor = replace(TALIA, conditions=("poisoned",))
+    result = actor.without_condition("hidden")
+    assert result is actor
+    assert result.conditions == ("poisoned",)
+
+
+def test_without_condition_on_empty_conditions_is_idempotent() -> None:
+    actor = replace(TALIA, conditions=())
+    result = actor.without_condition("hidden")
+    assert result is actor
+
+
+def test_condition_methods_compose_correctly() -> None:
+    actor = replace(TALIA, conditions=())
+    actor = actor.with_condition("hidden").with_condition("poisoned")
+    assert actor.has_condition("hidden") is True
+    assert actor.has_condition("poisoned") is True
+    actor = actor.without_condition("hidden")
+    assert actor.has_condition("hidden") is False
+    assert actor.has_condition("poisoned") is True

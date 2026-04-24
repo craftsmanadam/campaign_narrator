@@ -306,12 +306,13 @@ class EncounterOrchestrator:
         compendium_context = player.references
         match intent.category:
             case IntentCategory.HOSTILE_ACTION:
-                return self._enter_combat(state, player)
+                return self._enter_combat(_clear_player_hidden(state), player)
             case IntentCategory.SKILL_CHECK:
                 return self._handle_action(
                     state, player_input, intent, compendium_context, player
                 )
             case IntentCategory.NPC_DIALOGUE:
+                state = _clear_player_hidden(state)
                 narration = self._narrate(
                     replace(
                         _frame(state, "npc_dialogue"),
@@ -532,3 +533,14 @@ def _public_actor_summaries(state: EncounterState) -> tuple[str, ...]:
 
 def _non_empty_tuple(values: tuple[str | None, ...]) -> tuple[str, ...]:
     return tuple(value for value in values if value)
+
+
+def _clear_player_hidden(state: EncounterState) -> EncounterState:
+    """Clear the hidden condition from the player actor when they reveal themselves."""
+    player_id = state.player_actor_id
+    if not state.actors[player_id].has_condition("hidden"):
+        return state
+    effect = StateEffect(
+        effect_type="remove_condition", target=player_id, value="hidden"
+    )
+    return apply_state_effects(state, (effect,))

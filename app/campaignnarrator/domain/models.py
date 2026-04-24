@@ -506,6 +506,22 @@ class ActorState:
     # --- Compendium text (transient — populated at load time, not persisted) ---
     compendium_text: str | None = None
 
+    def has_condition(self, name: str) -> bool:
+        """Return True if the condition is currently active."""
+        return name in self.conditions
+
+    def with_condition(self, name: str) -> ActorState:
+        """Return a copy with condition added. No-op if already present."""
+        if name in self.conditions:
+            return self
+        return replace(self, conditions=(*self.conditions, name))
+
+    def without_condition(self, name: str) -> ActorState:
+        """Return a copy with condition removed. No-op if not present."""
+        if name not in self.conditions:
+            return self
+        return replace(self, conditions=tuple(c for c in self.conditions if c != name))
+
     def to_dict(self) -> dict[str, object]:
         """Serialize to a JSON-compatible dict. Excludes transient fields."""
         return {
