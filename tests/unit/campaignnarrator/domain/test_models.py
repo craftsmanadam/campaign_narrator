@@ -2165,3 +2165,223 @@ def test_roll_result_is_frozen() -> None:
     result = _make_roll_result()
     with pytest.raises(ValidationError):
         result.roll_total = 99  # type: ignore[misc]
+
+
+# ─── to_dict / from_dict round-trips ─────────────────────────────────────────
+
+
+def test_feat_state_round_trips_to_dict() -> None:
+    feat = FeatState(
+        name="Alert",
+        effect_summary="Add proficiency bonus to initiative.",
+        reference="DND.SRD/Feats.md#Alert",
+        per_turn_uses=None,
+    )
+    assert FeatState.from_dict(feat.to_dict()) == feat
+
+
+def test_feat_state_round_trips_with_per_turn_uses() -> None:
+    feat = FeatState(
+        name="Savage Attacker",
+        effect_summary="Reroll damage once per turn.",
+        reference=None,
+        per_turn_uses=1,
+    )
+    result = FeatState.from_dict(feat.to_dict())
+    assert result.per_turn_uses == 1
+    assert result.reference is None
+
+
+def test_weapon_state_round_trips_to_dict() -> None:
+    weapon = WeaponState(
+        name="Longsword",
+        attack_bonus=7,
+        damage_dice="1d8",
+        damage_bonus=4,
+        damage_type="slashing",
+        properties=("versatile (1d10)", "finesse"),
+    )
+    result = WeaponState.from_dict(weapon.to_dict())
+    assert result == weapon
+
+
+def test_initiative_turn_round_trips_to_dict() -> None:
+    turn = InitiativeTurn(actor_id="pc:talia", initiative_roll=18)
+    assert InitiativeTurn.from_dict(turn.to_dict()) == turn
+
+
+def test_initiative_turn_from_dict_raises_on_bad_actor_id() -> None:
+    with pytest.raises(TypeError):
+        InitiativeTurn.from_dict({"actor_id": 123, "initiative_roll": 10})
+
+
+def test_initiative_turn_from_dict_raises_on_bad_roll() -> None:
+    with pytest.raises(TypeError):
+        InitiativeTurn.from_dict({"actor_id": "pc:talia", "initiative_roll": "ten"})
+
+
+def test_npc_presence_round_trips_to_dict() -> None:
+    presence = NpcPresence(
+        actor_id="npc:innkeeper-001",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=True,
+        visible=True,
+    )
+    assert NpcPresence.from_dict(presence.to_dict()) == presence
+
+
+def test_npc_presence_from_dict_raises_on_missing_fields() -> None:
+    with pytest.raises(TypeError):
+        NpcPresence.from_dict({"actor_id": "npc:x"})
+
+
+def test_resource_state_round_trips_to_dict() -> None:
+    r = ResourceState(
+        resource="second_wind",
+        current=1,
+        max=1,
+        recovers_after=RecoveryPeriod.SHORT_REST,
+        reference="class_features.json#second-wind",
+    )
+    assert ResourceState.from_dict(r.to_dict()) == r
+
+
+def test_resource_state_round_trips_without_reference() -> None:
+    r = ResourceState(
+        resource="action_surge",
+        current=0,
+        max=1,
+        recovers_after=RecoveryPeriod.SHORT_REST,
+    )
+    result = ResourceState.from_dict(r.to_dict())
+    assert result.reference is None
+
+
+def test_inventory_item_round_trips_to_dict_minimal() -> None:
+    item = InventoryItem(item_id="potion-1", item="Potion of Healing", count=2)
+    assert InventoryItem.from_dict(item.to_dict()) == item
+
+
+def test_inventory_item_round_trips_to_dict_with_charges() -> None:
+    item = InventoryItem(
+        item_id="wand-1",
+        item="Wand of Magic Missiles",
+        count=1,
+        charges=5,
+        max_charges=7,
+        recovers_after=RecoveryPeriod.DAY,
+        reference="magic_items/wands.json#wand-of-magic-missiles",
+    )
+    result = InventoryItem.from_dict(item.to_dict())
+    assert result == item
+
+
+def test_actor_state_round_trips_talia_fixture() -> None:
+    result = ActorState.from_dict(TALIA.to_dict())
+    assert result.actor_id == TALIA.actor_id
+    assert result.name == TALIA.name
+    assert result.actor_type == TALIA.actor_type
+    assert result.hp_max == TALIA.hp_max
+    assert result.armor_class == TALIA.armor_class
+    assert result.level == TALIA.level
+    assert result.class_levels == TALIA.class_levels
+    assert result.saving_throws == TALIA.saving_throws
+    assert len(result.equipped_weapons) == len(TALIA.equipped_weapons)
+    assert result.equipped_weapons[0].name == TALIA.equipped_weapons[0].name
+    assert len(result.feats) == len(TALIA.feats)
+    assert result.feats[0].name == TALIA.feats[0].name
+    assert len(result.resources) == len(TALIA.resources)
+    assert result.resources[0].resource == TALIA.resources[0].resource
+    assert len(result.inventory) == len(TALIA.inventory)
+    assert result.inventory[0].item == TALIA.inventory[0].item
+
+
+def test_actor_state_to_dict_excludes_transient_fields() -> None:
+    actor = replace(TALIA, references=("some/ref.md",), compendium_text="## Stats")
+    d = actor.to_dict()
+    assert "references" not in d
+    assert "compendium_text" not in d
+
+
+def test_actor_state_from_dict_defaults_optional_fields_when_missing() -> None:
+    minimal = {
+        "actor_id": "pc:test",
+        "name": "Test",
+        "actor_type": "pc",
+        "hp_max": 10,
+        "hp_current": 10,
+        "armor_class": 12,
+        "strength": 10,
+        "dexterity": 10,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 10,
+        "charisma": 10,
+        "proficiency_bonus": 2,
+        "initiative_bonus": 0,
+        "speed": 30,
+        "attacks_per_action": 1,
+        "action_options": [],
+        "ac_breakdown": [],
+    }
+    actor = ActorState.from_dict(minimal)
+    assert actor.level == 1
+    assert actor.class_levels == ()
+    assert actor.xp == 0
+    assert actor.race is None
+    assert actor.description is None
+    assert actor.background is None
+    assert actor.conditions == ()
+    assert actor.is_visible is True
+
+
+def test_encounter_state_round_trips_to_dict() -> None:
+    state = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The Rusty Anchor tavern",
+        actors={"pc:talia": TALIA},
+        public_events=("Talia entered the tavern.",),
+        hidden_facts={"alarm_level": "low"},
+        combat_turns=(InitiativeTurn(actor_id="pc:talia", initiative_roll=18),),
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:innkeeper",
+                display_name="Mira",
+                description="the innkeeper",
+                name_known=True,
+                visible=True,
+            ),
+        ),
+        outcome=None,
+        scene_tone="warm and welcoming",
+    )
+    result = EncounterState.from_dict(state.to_dict())
+    assert result.encounter_id == state.encounter_id
+    assert result.phase is state.phase
+    assert result.setting == state.setting
+    assert result.public_events == state.public_events
+    assert result.hidden_facts == dict(state.hidden_facts)
+    assert result.combat_turns[0].actor_id == "pc:talia"
+    assert result.combat_turns[0].initiative_roll == 18
+    assert result.npc_presences[0].display_name == "Mira"
+    assert result.scene_tone == "warm and welcoming"
+    assert result.outcome is None
+    assert result.actors["pc:talia"].actor_id == "pc:talia"
+
+
+def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:
+    """Fields missing from old encounter serialization (level, class_levels, xp) use defaults."""
+    actor = replace(TALIA, level=5, class_levels=(("Fighter", 5),), xp=6500)
+    state = EncounterState(
+        encounter_id="enc-level",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": actor},
+    )
+    result = EncounterState.from_dict(state.to_dict())
+    loaded_actor = result.actors["pc:talia"]
+    assert loaded_actor.level == 5
+    assert loaded_actor.class_levels == (("Fighter", 5),)
+    assert loaded_actor.xp == 6500

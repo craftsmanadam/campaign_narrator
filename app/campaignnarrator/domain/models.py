@@ -124,6 +124,29 @@ class FeatState:
     reference: str | None  # e.g. "DND.SRD.Wiki-0.5.2/Feats.md#Alert"
     per_turn_uses: int | None  # None = passive; int = resource reset each turn
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "effect_summary": self.effect_summary,
+            "reference": self.reference,
+            "per_turn_uses": self.per_turn_uses,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> FeatState:
+        name = data.get("name", "")
+        effect_summary = data.get("effect_summary", "")
+        reference = data.get("reference")
+        per_turn_uses_raw = data.get("per_turn_uses")
+        return cls(
+            name=str(name),
+            effect_summary=str(effect_summary),
+            reference=reference if isinstance(reference, str) else None,
+            per_turn_uses=(
+                int(per_turn_uses_raw) if per_turn_uses_raw is not None else None
+            ),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class WeaponState:
@@ -136,6 +159,29 @@ class WeaponState:
     damage_type: str  # "slashing", "piercing", "bludgeoning", etc.
     properties: tuple[str, ...]  # e.g. ("versatile (1d10)", "finesse")
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "attack_bonus": self.attack_bonus,
+            "damage_dice": self.damage_dice,
+            "damage_bonus": self.damage_bonus,
+            "damage_type": self.damage_type,
+            "properties": list(self.properties),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> WeaponState:
+        return cls(
+            name=str(data.get("name", "")),
+            attack_bonus=int(data.get("attack_bonus", 0)),
+            damage_dice=str(data.get("damage_dice", "1d4")),
+            damage_bonus=int(data.get("damage_bonus", 0)),
+            damage_type=str(data.get("damage_type", "bludgeoning")),
+            properties=tuple(
+                str(p) for p in data.get("properties", ()) if isinstance(p, str)
+            ),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class InitiativeTurn:
@@ -143,6 +189,19 @@ class InitiativeTurn:
 
     actor_id: str
     initiative_roll: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {"actor_id": self.actor_id, "initiative_roll": self.initiative_roll}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> InitiativeTurn:
+        actor_id = data.get("actor_id")
+        roll = data.get("initiative_roll")
+        if not isinstance(actor_id, str):
+            raise TypeError("InitiativeTurn: actor_id must be str")  # noqa: TRY003
+        if type(roll) is not int:
+            raise TypeError("InitiativeTurn: initiative_roll must be int")  # noqa: TRY003
+        return cls(actor_id=actor_id, initiative_roll=roll)
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +218,38 @@ class NpcPresence:
     description: str  # Narrative label used when name_known=False ("the innkeeper")
     name_known: bool  # Has the player learned this NPC's name?
     visible: bool  # Is the NPC currently in the scene?
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "actor_id": self.actor_id,
+            "display_name": self.display_name,
+            "description": self.description,
+            "name_known": self.name_known,
+            "visible": self.visible,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> NpcPresence:
+        actor_id = data.get("actor_id")
+        display_name = data.get("display_name")
+        description = data.get("description")
+        name_known = data.get("name_known")
+        visible = data.get("visible")
+        if not (
+            isinstance(actor_id, str)
+            and isinstance(display_name, str)
+            and isinstance(description, str)
+            and isinstance(name_known, bool)
+            and isinstance(visible, bool)
+        ):
+            raise TypeError("NpcPresence: missing or invalid required fields")  # noqa: TRY003
+        return cls(
+            actor_id=actor_id,
+            display_name=display_name,
+            description=description,
+            name_known=name_known,
+            visible=visible,
+        )
 
 
 class EncounterNpc(BaseModel):
@@ -219,6 +310,30 @@ class ResourceState:
     recovers_after: RecoveryPeriod
     reference: str | None = None  # e.g. "class_features.json#second-wind"
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "resource": self.resource,
+            "current": self.current,
+            "max": self.max,
+            "recovers_after": self.recovers_after.value,
+            "reference": self.reference,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> ResourceState:
+        recovers_raw = data.get("recovers_after", "long_rest")
+        return cls(
+            resource=str(data.get("resource", "")),
+            current=int(data.get("current", 0)),
+            max=int(data.get("max", 0)),
+            recovers_after=RecoveryPeriod(recovers_raw),
+            reference=(
+                data.get("reference")
+                if isinstance(data.get("reference"), str)
+                else None
+            ),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class InventoryItem:
@@ -232,6 +347,40 @@ class InventoryItem:
     recovers_after: RecoveryPeriod | None = None  # None for consumables/mundane items
     reference: str | None = None  # None for narrative-only items
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "item_id": self.item_id,
+            "item": self.item,
+            "count": self.count,
+            "charges": self.charges,
+            "max_charges": self.max_charges,
+            "recovers_after": (
+                self.recovers_after.value if self.recovers_after is not None else None
+            ),
+            "reference": self.reference,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> InventoryItem:
+        recovers_raw = data.get("recovers_after")
+        charges_raw = data.get("charges")
+        max_charges_raw = data.get("max_charges")
+        return cls(
+            item_id=str(data.get("item_id", "")),
+            item=str(data.get("item", "")),
+            count=int(data.get("count", 0)),
+            charges=int(charges_raw) if charges_raw is not None else None,
+            max_charges=int(max_charges_raw) if max_charges_raw is not None else None,
+            recovers_after=(
+                RecoveryPeriod(recovers_raw) if isinstance(recovers_raw, str) else None
+            ),
+            reference=(
+                data.get("reference")
+                if isinstance(data.get("reference"), str)
+                else None
+            ),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class PlayerInput:
@@ -244,6 +393,22 @@ class PlayerInput:
         """Return lowercased text with collapsed internal whitespace."""
 
         return " ".join(self.raw_text.lower().split())
+
+
+def _int_pair_tuple_from_data(
+    data: Mapping[str, object], key: str
+) -> tuple[tuple[str, int], ...]:
+    """Extract a tuple of (str, int) pairs from a serialized mapping."""
+    v = data.get(key, ())
+    if not isinstance(v, list | tuple):
+        return ()
+    result = []
+    for item in v:
+        if isinstance(item, list | tuple) and len(item) == 2:  # noqa: PLR2004
+            k, val = item
+            if isinstance(k, str) and type(val) is int:
+                result.append((k, val))
+    return tuple(result)
 
 
 @dataclass(frozen=True, slots=True)
@@ -341,6 +506,154 @@ class ActorState:
     # --- Compendium text (transient — populated at load time, not persisted) ---
     compendium_text: str | None = None
 
+    def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict. Excludes transient fields."""
+        return {
+            "actor_id": self.actor_id,
+            "name": self.name,
+            "actor_type": self.actor_type.value,
+            "hp_max": self.hp_max,
+            "hp_current": self.hp_current,
+            "hp_temp": self.hp_temp,
+            "armor_class": self.armor_class,
+            "strength": self.strength,
+            "dexterity": self.dexterity,
+            "constitution": self.constitution,
+            "intelligence": self.intelligence,
+            "wisdom": self.wisdom,
+            "charisma": self.charisma,
+            "proficiency_bonus": self.proficiency_bonus,
+            "initiative_bonus": self.initiative_bonus,
+            "speed": self.speed,
+            "attacks_per_action": self.attacks_per_action,
+            "action_options": list(self.action_options),
+            "ac_breakdown": list(self.ac_breakdown),
+            "saving_throws": [list(pair) for pair in self.saving_throws],
+            "resources": [r.to_dict() for r in self.resources],
+            "inventory": [i.to_dict() for i in self.inventory],
+            "bonus_action_options": list(self.bonus_action_options),
+            "reaction_options": list(self.reaction_options),
+            "equipped_weapons": [w.to_dict() for w in self.equipped_weapons],
+            "feats": [f.to_dict() for f in self.feats],
+            "damage_resistances": list(self.damage_resistances),
+            "damage_vulnerabilities": list(self.damage_vulnerabilities),
+            "damage_immunities": list(self.damage_immunities),
+            "condition_immunities": list(self.condition_immunities),
+            "conditions": list(self.conditions),
+            "death_save_successes": self.death_save_successes,
+            "death_save_failures": self.death_save_failures,
+            "spell_slots": [list(pair) for pair in self.spell_slots],
+            "spell_slots_max": [list(pair) for pair in self.spell_slots_max],
+            "available_spells": list(self.available_spells),
+            "concentration": self.concentration,
+            "personality": self.personality,
+            "is_visible": self.is_visible,
+            "level": self.level,
+            "class_levels": [list(pair) for pair in self.class_levels],
+            "xp": self.xp,
+            "race": self.race,
+            "description": self.description,
+            "background": self.background,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> ActorState:
+        """Restore from to_dict(). Missing optional fields use defaults."""
+
+        def _req_str(key: str) -> str:
+            v = data.get(key)
+            if not isinstance(v, str):
+                raise TypeError(f"ActorState: {key} must be str")  # noqa: TRY003
+            return v
+
+        def _req_int(key: str) -> int:
+            v = data.get(key)
+            if type(v) is not int:
+                raise TypeError(f"ActorState: {key} must be int")  # noqa: TRY003
+            return v
+
+        def _opt_int(key: str, default: int = 0) -> int:
+            v = data.get(key, default)
+            return v if type(v) is int else default
+
+        def _opt_str(key: str) -> str | None:
+            v = data.get(key)
+            return v if isinstance(v, str) else None
+
+        def _str_tuple(key: str) -> tuple[str, ...]:
+            v = data.get(key, ())
+            if not isinstance(v, list | tuple):
+                return ()
+            return tuple(i for i in v if isinstance(i, str))
+
+        actor_type_raw = data.get("actor_type")
+        if not isinstance(actor_type_raw, str):
+            raise TypeError("ActorState: actor_type must be str")  # noqa: TRY003
+        is_visible_raw = data.get("is_visible", True)
+        return cls(
+            actor_id=_req_str("actor_id"),
+            name=_req_str("name"),
+            actor_type=ActorType(actor_type_raw),
+            hp_max=_req_int("hp_max"),
+            hp_current=_req_int("hp_current"),
+            armor_class=_req_int("armor_class"),
+            strength=_req_int("strength"),
+            dexterity=_req_int("dexterity"),
+            constitution=_req_int("constitution"),
+            intelligence=_req_int("intelligence"),
+            wisdom=_req_int("wisdom"),
+            charisma=_req_int("charisma"),
+            proficiency_bonus=_req_int("proficiency_bonus"),
+            initiative_bonus=_req_int("initiative_bonus"),
+            speed=_req_int("speed"),
+            attacks_per_action=_req_int("attacks_per_action"),
+            action_options=_str_tuple("action_options"),
+            ac_breakdown=_str_tuple("ac_breakdown"),
+            hp_temp=_opt_int("hp_temp", 0),
+            saving_throws=_int_pair_tuple_from_data(data, "saving_throws"),
+            resources=tuple(
+                ResourceState.from_dict(r)
+                for r in data.get("resources", ())
+                if isinstance(r, Mapping)
+            ),
+            inventory=tuple(
+                InventoryItem.from_dict(i)
+                for i in data.get("inventory", ())
+                if isinstance(i, Mapping)
+            ),
+            bonus_action_options=_str_tuple("bonus_action_options"),
+            reaction_options=_str_tuple("reaction_options"),
+            equipped_weapons=tuple(
+                WeaponState.from_dict(w)
+                for w in data.get("equipped_weapons", ())
+                if isinstance(w, Mapping)
+            ),
+            feats=tuple(
+                FeatState.from_dict(f)
+                for f in data.get("feats", ())
+                if isinstance(f, Mapping)
+            ),
+            damage_resistances=_str_tuple("damage_resistances"),
+            damage_vulnerabilities=_str_tuple("damage_vulnerabilities"),
+            damage_immunities=_str_tuple("damage_immunities"),
+            condition_immunities=_str_tuple("condition_immunities"),
+            conditions=_str_tuple("conditions"),
+            death_save_successes=_opt_int("death_save_successes", 0),
+            death_save_failures=_opt_int("death_save_failures", 0),
+            spell_slots=_int_pair_tuple_from_data(data, "spell_slots"),
+            spell_slots_max=_int_pair_tuple_from_data(data, "spell_slots_max"),
+            available_spells=_str_tuple("available_spells"),
+            concentration=_opt_str("concentration"),
+            personality=_opt_str("personality"),
+            is_visible=is_visible_raw if isinstance(is_visible_raw, bool) else True,
+            level=_opt_int("level", 1),
+            class_levels=_int_pair_tuple_from_data(data, "class_levels"),
+            xp=_opt_int("xp", 0),
+            race=_opt_str("race"),
+            description=_opt_str("description"),
+            background=_opt_str("background"),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class EncounterState:
@@ -383,6 +696,86 @@ class EncounterState:
         """Return a copy of the state with an updated phase."""
 
         return replace(self, phase=phase)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "encounter_id": self.encounter_id,
+            "phase": self.phase.value,
+            "setting": self.setting,
+            "public_events": list(self.public_events),
+            "hidden_facts": dict(self.hidden_facts),
+            "combat_turns": [t.to_dict() for t in self.combat_turns],
+            "outcome": self.outcome,
+            "scene_tone": self.scene_tone,
+            "npc_presences": [p.to_dict() for p in self.npc_presences],
+            "actors": {
+                actor_id: actor.to_dict() for actor_id, actor in self.actors.items()
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> EncounterState:
+        encounter_id = data.get("encounter_id")
+        if not isinstance(encounter_id, str):
+            raise TypeError("EncounterState: encounter_id must be str")  # noqa: TRY003
+        phase_raw = data.get("phase")
+        if not isinstance(phase_raw, str):
+            raise TypeError("EncounterState: phase must be str")  # noqa: TRY003
+        setting = data.get("setting")
+        if not isinstance(setting, str):
+            raise TypeError("EncounterState: setting must be str")  # noqa: TRY003
+        actors_raw = data.get("actors", {})
+        if not isinstance(actors_raw, Mapping):
+            raise TypeError("EncounterState: actors must be a mapping")  # noqa: TRY003
+        actors = {
+            str(k): ActorState.from_dict(v)
+            for k, v in actors_raw.items()
+            if isinstance(v, Mapping)
+        }
+        public_events_raw = data.get("public_events", ())
+        public_events: tuple[str, ...] = (
+            tuple(str(e) for e in public_events_raw if isinstance(e, str))
+            if isinstance(public_events_raw, list | tuple)
+            else ()
+        )
+        hidden_facts_raw = data.get("hidden_facts", {})
+        hidden_facts = (
+            dict(hidden_facts_raw) if isinstance(hidden_facts_raw, Mapping) else {}
+        )
+        combat_turns_raw = data.get("combat_turns", ())
+        combat_turns: tuple[InitiativeTurn, ...] = (
+            tuple(
+                InitiativeTurn.from_dict(t)
+                for t in combat_turns_raw
+                if isinstance(t, Mapping)
+            )
+            if isinstance(combat_turns_raw, list | tuple)
+            else ()
+        )
+        npc_presences_raw = data.get("npc_presences", ())
+        npc_presences: tuple[NpcPresence, ...] = (
+            tuple(
+                NpcPresence.from_dict(p)
+                for p in npc_presences_raw
+                if isinstance(p, Mapping)
+            )
+            if isinstance(npc_presences_raw, list | tuple)
+            else ()
+        )
+        outcome = data.get("outcome")
+        scene_tone = data.get("scene_tone")
+        return cls(
+            encounter_id=encounter_id,
+            phase=EncounterPhase(phase_raw),
+            setting=setting,
+            actors=actors,
+            public_events=public_events,
+            hidden_facts=hidden_facts,
+            combat_turns=combat_turns,
+            outcome=outcome if isinstance(outcome, str) else None,
+            scene_tone=scene_tone if isinstance(scene_tone, str) else None,
+            npc_presences=npc_presences,
+        )
 
 
 @dataclass(frozen=True, slots=True)
