@@ -7,6 +7,12 @@
       {
         "matchesJsonPath": {
           "expression": "$.messages[1].content",
+          "contains": "encounter_id"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
           "contains": "module_title"
         }
       }
