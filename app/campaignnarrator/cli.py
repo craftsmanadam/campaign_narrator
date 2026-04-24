@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import signal
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -48,11 +49,6 @@ def main(
 
     parser = argparse.ArgumentParser(prog="campaignnarrator")
     parser.add_argument("--data-root", type=Path, default=None)
-    parser.add_argument(
-        "--encounter-id",
-        default=None,
-        help="(Legacy) Run a named encounter directly, bypassing the startup flow.",
-    )
     args = parser.parse_args(argv)
 
     settings = Settings()
@@ -67,15 +63,16 @@ def main(
     )
     graph = _build_application_graph(data_root, stdin=stdin, stdout=stdout)
 
-    if args.encounter_id:
-        result = graph.application_orchestrator.run_encounter(
-            encounter_id=args.encounter_id
-        )
-        stdout.write(result.output_text)
-        if not result.output_text.endswith("\n"):
-            stdout.write("\n")
-    else:
+    def _sigterm_handler(signum: int, frame: object) -> None:
+        graph.game_orchestrator.save_state()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, _sigterm_handler)
+
+    try:
         graph.game_orchestrator.run()
+    except KeyboardInterrupt:
+        graph.game_orchestrator.save_state()
 
     return 0
 

@@ -22,9 +22,6 @@ from campaignnarrator.agents.prompts import NARRATOR_PERSONALITY
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.agents.startup_interpreter_agent import StartupInterpreterAgent
 from campaignnarrator.domain.models import ActorState
-from campaignnarrator.orchestrators.application_orchestrator import (
-    ApplicationOrchestrator,
-)
 from campaignnarrator.orchestrators.campaign_creation_orchestrator import (
     CampaignCreationAgents,
     CampaignCreationOrchestrator,
@@ -73,7 +70,6 @@ class ApplicationGraph:
     """Container for all wired-up application objects."""
 
     game_orchestrator: _LazyGameOrchestrator
-    application_orchestrator: ApplicationOrchestrator
 
 
 @dataclass(frozen=True)
@@ -88,7 +84,6 @@ class _Repositories:
     compendium: CompendiumRepository
     memory: MemoryRepository
     template: CharacterTemplateRepository
-    state: StateRepository
 
 
 @dataclass(frozen=True)
@@ -111,15 +106,21 @@ class _LazyGameOrchestrator:
         *,
         actor_repository: ActorRepository,
         campaign_repository: CampaignRepository,
+        memory_repository: MemoryRepository,
         character_creation_orchestrator: CharacterCreationOrchestrator,
         make_campaign_creation: Callable[[ActorState], CampaignCreationOrchestrator],
         make_startup: Callable[[ActorState], StartupOrchestrator],
     ) -> None:
         self._actor_repo = actor_repository
         self._campaign_repo = campaign_repository
+        self._memory_repo = memory_repository
         self._character_creation_orchestrator = character_creation_orchestrator
         self._make_campaign_creation = make_campaign_creation
         self._make_startup = make_startup
+
+    def save_state(self) -> None:
+        """Flush in-memory session state to disk."""
+        self._memory_repo.persist()
 
     def run(self) -> None:
         """Detect game state and route to the appropriate sub-orchestrator."""
@@ -184,17 +185,18 @@ class ApplicationFactory:
         module = ModuleRepository(self._data_root)
         rules = RulesRepository(self._data_root / "rules")
         compendium = CompendiumRepository(self._data_root / "compendium")
-        memory = MemoryRepository(
-            self._data_root / "memory",
-            embedding_adapter=embedding_adapter,
-            lancedb_path=lancedb_path,
-        )
-        template = CharacterTemplateRepository(self._data_root / "character_templates")
         state = StateRepository(
             actor_repo=actor,
             encounter_repo=encounter,
             compendium=compendium,
         )
+        memory = MemoryRepository(
+            self._data_root / "memory",
+            state_repo=state,
+            embedding_adapter=embedding_adapter,
+            lancedb_path=lancedb_path,
+        )
+        template = CharacterTemplateRepository(self._data_root / "character_templates")
         return _Repositories(
             actor=actor,
             encounter=encounter,
@@ -204,7 +206,6 @@ class ApplicationFactory:
             compendium=compendium,
             memory=memory,
             template=template,
-            state=state,
         )
 
     def _build_agents(self, repos: _Repositories) -> _Agents:
@@ -313,16 +314,10 @@ class ApplicationFactory:
         game_orchestrator = _LazyGameOrchestrator(
             actor_repository=repos.actor,
             campaign_repository=repos.campaign,
+            memory_repository=repos.memory,
             character_creation_orchestrator=char_creation,
             make_campaign_creation=_make_campaign_creation,
             make_startup=_make_startup,
         )
 
-        application_orchestrator = ApplicationOrchestrator(
-            encounter_orchestrator=encounter_orchestrator
-        )
-
-        return ApplicationGraph(
-            game_orchestrator=game_orchestrator,
-            application_orchestrator=application_orchestrator,
-        )
+        return ApplicationGraph(game_orchestrator=game_orchestrator)
