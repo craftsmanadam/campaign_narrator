@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import signal
 from io import StringIO
 from pathlib import Path
 from typing import ClassVar
@@ -12,7 +14,6 @@ from campaignnarrator.adapters.embedding_adapter import (
     OllamaEmbeddingAdapter,
     StubEmbeddingAdapter,
 )
-from campaignnarrator.agents.prompts import NARRATOR_PERSONALITY
 from campaignnarrator.application_factory import ApplicationFactory, ApplicationGraph
 from campaignnarrator.cli import (
     _build_embedding_adapter,
@@ -45,9 +46,13 @@ class _FakeApplicationOrchestrator:
 class _FakeGameOrchestrator:
     def __init__(self) -> None:
         self.run_called = False
+        self.save_state_called = False
 
     def run(self) -> None:
         self.run_called = True
+
+    def save_state(self) -> None:
+        self.save_state_called = True
 
 
 # ---------------------------------------------------------------------------
@@ -134,57 +139,18 @@ class _FakeEncounterOrchestrator:
 # ---------------------------------------------------------------------------
 
 
-def test_cli_uses_stdin_stdout_loop(monkeypatch, tmp_path: Path) -> None:
-    """The CLI should wire stdin/stdout through TerminalIO and call run_encounter."""
-
-    fake_app_orch = _FakeApplicationOrchestrator(encounter_orchestrator=object())
-    fake_game_orch = _FakeGameOrchestrator()
-    builder_calls: list[Path] = []
-
-    def _fake_build(data_root: Path, stdin: object, stdout: object) -> ApplicationGraph:
-        builder_calls.append(data_root)
-        return ApplicationGraph(
-            game_orchestrator=fake_game_orch,
-            application_orchestrator=fake_app_orch,
-        )
-
-    monkeypatch.setattr(
-        "campaignnarrator.cli._build_application_graph",
-        _fake_build,
-    )
-
-    stdout = StringIO()
-    exit_code = main(
-        [
-            "--data-root",
-            str(tmp_path),
-            "--encounter-id",
-            "goblin-camp",
-        ],
-        stdin=StringIO("status\nexit\n"),
-        stdout=stdout,
-    )
-
-    assert exit_code == 0
-    assert builder_calls == [tmp_path]
-    assert fake_app_orch.encounter_id == "goblin-camp"
-    assert stdout.getvalue() == "Encounter output\n"
-
-
 def test_cli_routes_to_game_orchestrator_when_no_encounter_id(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
     """When no --encounter-id is given, main() calls game_orchestrator.run()."""
 
-    fake_app_orch = _FakeApplicationOrchestrator(encounter_orchestrator=object())
     fake_game_orch = _FakeGameOrchestrator()
 
     monkeypatch.setattr(
         "campaignnarrator.cli._build_application_graph",
         lambda _data_root, stdin, stdout: ApplicationGraph(
             game_orchestrator=fake_game_orch,
-            application_orchestrator=fake_app_orch,
         ),
     )
 
@@ -196,7 +162,6 @@ def test_cli_routes_to_game_orchestrator_when_no_encounter_id(
 
     assert exit_code == 0
     assert fake_game_orch.run_called is True
-    assert fake_app_orch.encounter_id is None
 
 
 def test_cli_rejects_legacy_input_flag(tmp_path: Path) -> None:
@@ -215,12 +180,7 @@ def test_main_uses_settings_data_root_as_default(
 
     def _fake_build(data_root: Path, stdin: object, stdout: object) -> ApplicationGraph:
         captured.append(data_root)
-        return ApplicationGraph(
-            game_orchestrator=_FakeGameOrchestrator(),
-            application_orchestrator=_FakeApplicationOrchestrator(
-                encounter_orchestrator=object()
-            ),
-        )
+        return ApplicationGraph(game_orchestrator=_FakeGameOrchestrator())
 
     monkeypatch.setattr(
         "campaignnarrator.cli._build_application_graph",
@@ -242,12 +202,7 @@ def test_main_uses_settings_default_data_root_when_env_unset(
 
     def _fake_build(data_root: Path, stdin: object, stdout: object) -> ApplicationGraph:
         captured.append(data_root)
-        return ApplicationGraph(
-            game_orchestrator=_FakeGameOrchestrator(),
-            application_orchestrator=_FakeApplicationOrchestrator(
-                encounter_orchestrator=object()
-            ),
-        )
+        return ApplicationGraph(game_orchestrator=_FakeGameOrchestrator())
 
     monkeypatch.setattr(
         "campaignnarrator.cli._build_application_graph",
@@ -298,9 +253,6 @@ def test_build_application_graph_wires_repository_paths(
     monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
     monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
-    monkeypatch.setattr(
-        f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
-    )
     monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
@@ -351,9 +303,6 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
     monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
-    monkeypatch.setattr(
-        f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
-    )
     monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
@@ -373,15 +322,7 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     result = ApplicationFactory(tmp_path, stdin=StringIO(), stdout=StringIO()).build()
 
     assert isinstance(result, ApplicationGraph)
-    assert isinstance(result.application_orchestrator, _FakeApplicationOrchestrator)
-    enc = result.application_orchestrator.encounter_orchestrator
-    assert isinstance(enc, _FakeEncounterOrchestrator)
-    assert isinstance(enc.agents.rules, _FakeRulesAgent)
-    assert isinstance(enc.agents.narrator, _FakeNarratorAgent)
-    assert enc.agents.rules.adapter is adapter
-    assert enc.agents.narrator.adapter is adapter
-    assert enc.agents.narrator.personality == NARRATOR_PERSONALITY
-    assert enc.adapter is adapter
+    assert result.game_orchestrator is not None
     state_repo = _FakeStateRepository.instances[0]
     assert isinstance(state_repo.actor_repo, _FakeActorRepository)
     assert isinstance(state_repo.encounter_repo, _FakeEncounterRepository)
@@ -396,48 +337,19 @@ def test_build_application_graph_wires_agents_and_orchestrators(
 def test_main_without_encounter_id_calls_game_orchestrator(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """When --encounter-id is omitted, GameOrchestrator.run() is called."""
+    """When no --encounter-id is given, GameOrchestrator.run() is called."""
     monkeypatch.setenv("OPENAI_API_KEY", "fake-key")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-test")
 
     mock_game_orch = MagicMock()
-    mock_app_orch = MagicMock()
 
     with patch(
         "campaignnarrator.cli._build_application_graph",
-        return_value=MagicMock(
-            game_orchestrator=mock_game_orch,
-            application_orchestrator=mock_app_orch,
-        ),
+        return_value=MagicMock(game_orchestrator=mock_game_orch),
     ):
         main(["--data-root", str(tmp_path)])
 
     mock_game_orch.run.assert_called_once()
-    mock_app_orch.run_encounter.assert_not_called()
-
-
-def test_main_with_encounter_id_calls_application_orchestrator(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """When --encounter-id is provided, legacy ApplicationOrchestrator is used."""
-    monkeypatch.setenv("OPENAI_API_KEY", "fake-key")
-    monkeypatch.setenv("OPENAI_MODEL", "gpt-test")
-
-    mock_game_orch = MagicMock()
-    mock_app_orch = MagicMock()
-    mock_app_orch.run_encounter.return_value = MagicMock(output_text="done\n")
-
-    with patch(
-        "campaignnarrator.cli._build_application_graph",
-        return_value=MagicMock(
-            game_orchestrator=mock_game_orch,
-            application_orchestrator=mock_app_orch,
-        ),
-    ):
-        main(["--data-root", str(tmp_path), "--encounter-id", "goblin-camp"])
-
-    mock_app_orch.run_encounter.assert_called_once_with(encounter_id="goblin-camp")
-    mock_game_orch.run.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -474,9 +386,6 @@ def test_application_factory_build_returns_application_graph(
     monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
     monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
-    monkeypatch.setattr(
-        f"{af_ns}.ApplicationOrchestrator", _FakeApplicationOrchestrator
-    )
     monkeypatch.setattr(f"{af_ns}.StartupInterpreterAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", _noop_agent)
@@ -501,7 +410,6 @@ def test_application_factory_build_returns_application_graph(
     graph = factory.build()
     assert graph is not None
     assert graph.game_orchestrator is not None
-    assert graph.application_orchestrator is not None
 
 
 # ---------------------------------------------------------------------------
@@ -605,3 +513,62 @@ def test_build_embedding_adapter_ollama_uses_configured_model(
     adapter = _build_embedding_adapter(settings)
     assert isinstance(adapter, OllamaEmbeddingAdapter)
     assert adapter._model == "my-custom-model"
+
+
+# ---------------------------------------------------------------------------
+# Signal handling tests
+# ---------------------------------------------------------------------------
+
+
+def test_sigterm_handler_calls_save_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SIGTERM handler must call game_orchestrator.save_state()."""
+    captured_handler: dict[int, object] = {}
+
+    def _fake_signal(signum: int, handler: object) -> None:
+        captured_handler[signum] = handler
+
+    monkeypatch.setattr(signal, "signal", _fake_signal)
+
+    fake_game_orch = _FakeGameOrchestrator()
+    monkeypatch.setattr(
+        "campaignnarrator.cli._build_application_graph",
+        lambda *_a, **_kw: MagicMock(game_orchestrator=fake_game_orch),
+    )
+    main(["--data-root", str(tmp_path)])
+
+    handler = captured_handler.get(signal.SIGTERM)
+    assert handler is not None, "SIGTERM handler was not registered"
+    # The handler calls sys.exit(0) after save_state() — catch the SystemExit:
+    with pytest.raises(SystemExit):
+        handler(signal.SIGTERM, None)  # type: ignore[call-arg]
+    assert fake_game_orch.save_state_called
+
+
+def test_sigint_calls_save_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """KeyboardInterrupt during run() must trigger game_orchestrator.save_state()."""
+    fake_game_orch = _FakeGameOrchestrator()
+
+    def _raise_keyboard_interrupt() -> None:
+        raise KeyboardInterrupt
+
+    fake_game_orch.run = _raise_keyboard_interrupt  # type: ignore[method-assign]
+
+    monkeypatch.setattr(
+        "campaignnarrator.cli._build_application_graph",
+        lambda *_a, **_kw: MagicMock(game_orchestrator=fake_game_orch),
+    )
+    # If cli.py catches KeyboardInterrupt and calls save_state(), no exception escapes.
+    # If it doesn't, suppress the KeyboardInterrupt so pytest can report the assertion failure.
+    with contextlib.suppress(KeyboardInterrupt):
+        main(["--data-root", str(tmp_path)])
+    assert fake_game_orch.save_state_called
+
+
+def test_encounter_id_flag_removed(tmp_path: Path) -> None:
+    """--encounter-id must no longer be accepted by the CLI."""
+    with pytest.raises(SystemExit):
+        main(["--data-root", str(tmp_path), "--encounter-id", "goblin-camp"])
