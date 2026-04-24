@@ -152,6 +152,7 @@ class ModuleOrchestrator:
                 "encounter_id": encounter.encounter_id,
             },
         )
+        self._repos.memory.clear_encounter_memory()
         new_ids = (*module.completed_encounter_ids, encounter.encounter_id)
         new_summaries = (*module.completed_encounter_summaries, summary)
         updated_module = replace(

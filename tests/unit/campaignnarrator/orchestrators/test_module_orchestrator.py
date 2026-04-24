@@ -447,6 +447,25 @@ def test_run_with_scripted_io_module_not_found_no_crash() -> None:
     mock_encounter_planner.prepare.assert_not_called()
 
 
+def test_archive_encounter_calls_clear_encounter_memory() -> None:
+    """_archive_encounter() must call clear_encounter_memory() after store_narrative()."""
+    active = _make_active_encounter(
+        phase=EncounterPhase.ENCOUNTER_COMPLETE,
+        outcome="victory",
+    )
+    orch, _, mock_enc_repo, _, _, mock_memory_repo = _make_orchestrator(
+        active_encounter=active,
+    )
+    mock_enc_repo.load_active.side_effect = [
+        _make_active_encounter(
+            phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="victory"
+        ),
+        None,
+    ]
+    orch.run(campaign=_make_campaign(), player=_make_player())
+    mock_memory_repo.clear_encounter_memory.assert_called_once()
+
+
 def test_run_player_quits_mid_encounter_does_not_archive() -> None:
     """If player quits (encounter not complete after run), no archiving occurs."""
     active = _make_active_encounter(phase=EncounterPhase.COMBAT)

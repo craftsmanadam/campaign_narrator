@@ -20,6 +20,7 @@ from campaignnarrator.domain.models import (
     CombatStatus,
     EncounterPhase,
     EncounterState,
+    GameState,
     InitiativeTurn,
     Narration,
     NarrationFrame,
@@ -33,6 +34,7 @@ from campaignnarrator.domain.models import (
     WeaponState,
 )
 from campaignnarrator.orchestrators.actor_summaries import actor_narrative_summary
+from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.tools.dice_expression import actor_modifiers, execute_roll
 from campaignnarrator.tools.state_updates import apply_state_effects, require_int
 
@@ -45,11 +47,13 @@ class _TurnResult:
 
     narration is None when the turn was skipped — no Narrator assessment called.
     session_ended is True only for player exit_session — never set by NPC turns.
+    player_input is the raw combat action text; empty string for NPC/skipped turns.
     """
 
     state: EncounterState
     narration: str | None
     session_ended: bool = False
+    player_input: str = ""
 
 
 _COMBAT_INTENT_INSTRUCTIONS = (
@@ -132,11 +136,13 @@ class CombatOrchestrator:
         roll_dice: Callable[[str], int],
         adapter: object | None = None,
         _intent_agent: object | None = None,
+        memory_repository: MemoryRepository | None = None,
     ) -> None:
         self._rules_agent = rules_agent
         self._narrator_agent = narrator_agent
         self._io = io
         self._roll_dice = roll_dice
+        self._memory_repository = memory_repository
         if _intent_agent is not None:
             self._intent_agent = _intent_agent
         elif adapter is not None:
@@ -156,8 +162,10 @@ class CombatOrchestrator:
             turn = state.combat_turns[0]
             result = self._process_turn(state, turn)
             state = result.state
+            self._stage_turn_in_memory(state, result)
 
             if result.session_ended:
+                self._flush_combat_memory()
                 return CombatResult(
                     status=CombatStatus.SAVED_AND_QUIT,
                     final_state=state,
@@ -169,22 +177,44 @@ class CombatOrchestrator:
 
             down_result = self._check_player_down_no_allies(state)
             if down_result is not None:
+                self._flush_combat_memory()
                 return down_result
 
             assessment = self._assess_combat(state, result.narration)
             if not assessment.combat_active:
                 self._io.display(assessment.outcome.full_description)  # type: ignore[union-attr]
+                self._flush_combat_memory()
                 return CombatResult(
                     status=CombatStatus.COMPLETE,
                     final_state=state,
                     death_saves_remaining=None,
                 )
 
+        self._flush_combat_memory()
         return CombatResult(
             status=CombatStatus.COMPLETE,
             final_state=state,
             death_saves_remaining=None,
         )
+
+    def _stage_turn_in_memory(self, state: EncounterState, result: _TurnResult) -> None:
+        """Stage per-turn game state and exchange in memory repository."""
+        if self._memory_repository is None:
+            return
+        player = state.actors[state.player_actor_id]
+        self._memory_repository.update_game_state(
+            GameState(player=player, encounter=state)
+        )
+        if result.narration is not None:
+            self._memory_repository.log_combat_round(result.narration)
+            self._memory_repository.update_exchange(
+                result.player_input, result.narration
+            )
+
+    def _flush_combat_memory(self) -> None:
+        """Clear staged combat logs at end of combat."""
+        if self._memory_repository is not None:
+            self._memory_repository.clear_combat_memory()
 
     def _process_turn(self, state: EncounterState, turn: InitiativeTurn) -> _TurnResult:
         actor = state.actors[turn.actor_id]
@@ -207,6 +237,7 @@ class CombatOrchestrator:
             state=self._rotate_turns(result.state),
             narration=result.narration,
             session_ended=result.session_ended,
+            player_input=result.player_input,
         )
 
     def _run_player_turn(self, state: EncounterState, actor: ActorState) -> _TurnResult:
@@ -220,6 +251,7 @@ class CombatOrchestrator:
         self._io.display(self._format_resources(resources))
 
         last_narration = ""
+        last_player_input = ""
         while True:
             raw_input = self._io.prompt("> ")
             intent = self._classify_combat_intent(raw_input)
@@ -239,8 +271,11 @@ class CombatOrchestrator:
                 state, actor, raw_input, resources
             )
             last_narration = narration_text
+            last_player_input = raw_input
 
-        return _TurnResult(state=state, narration=last_narration)
+        return _TurnResult(
+            state=state, narration=last_narration, player_input=last_player_input
+        )
 
     def _handle_combat_action(
         self,

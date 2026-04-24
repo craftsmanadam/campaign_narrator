@@ -308,6 +308,7 @@ class EncounterOrchestrator:
             roll_dice=self._roll_dice,
             adapter=self._adapter,
             _intent_agent=self._combat_intent_agent,
+            memory_repository=self._memory_repository,
         )
         result = orchestrator.run(state)
         self._memory_repository.update_game_state(
