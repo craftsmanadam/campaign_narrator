@@ -119,9 +119,29 @@ class FakeNarratorAgent:
 class FakeMemoryRepository:
     """Minimal memory repository that satisfies the EncounterOrchestrator contract."""
 
-    def __init__(self) -> None:
+    def __init__(self, state_repo: StateRepository | None = None) -> None:
+        self._state_repo = state_repo
         self.appended_events: list[dict] = []
         self.stored_narratives: list[tuple[str, dict]] = []
+        self.staged_narrations: list[tuple[str, dict]] = []
+
+    def load_game_state(self) -> GameState:
+        if self._state_repo is not None:
+            return self._state_repo.load()
+        raise ValueError("no state_repo configured")  # noqa: TRY003
+
+    def update_game_state(self, game_state: GameState) -> None:
+        if self._state_repo is not None:
+            self._state_repo.save(game_state)
+
+    def update_exchange(self, player_input: str, narrator_output: str) -> None:
+        pass
+
+    def stage_narration(self, text: str, metadata: dict) -> None:
+        self.staged_narrations.append((text, metadata))
+
+    def retrieve_relevant(self, query: str, limit: int = 5) -> list[str]:
+        return []
 
     def append_event(self, event: dict) -> None:
         self.appended_events.append(event)
@@ -231,7 +251,7 @@ def test_stealth_routes_to_skill_check() -> None:
 @given("an active encounter in social phase", target_fixture="social_encounter_setup")
 def active_social_encounter(tmp_path: Path, context: dict) -> dict:
     state_repo = _make_social_repository(tmp_path)
-    memory_repo = FakeMemoryRepository()
+    memory_repo = FakeMemoryRepository(state_repo=state_repo)
     context["state_repo"] = state_repo
     context["memory_repo"] = memory_repo
     return context
@@ -273,7 +293,7 @@ def player_inputs_with_hostile_intent(
     state_repo.save(GameState(player=game_state.player, encounter=updated_encounter))
 
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(state=state_repo, memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
@@ -314,7 +334,7 @@ def player_inputs_with_scene_observation_intent(
     memory_repo: FakeMemoryRepository = context["memory_repo"]
 
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(state=state_repo, memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
@@ -347,7 +367,7 @@ def player_inputs_with_save_exit_intent(
 
     narrate_count_before = fake_narrator.narrate_call_count
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(state=state_repo, memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
@@ -392,7 +412,7 @@ def player_inputs_with_skill_check_intent(
     memory_repo: FakeMemoryRepository = context["memory_repo"]
 
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(state=state_repo, memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,

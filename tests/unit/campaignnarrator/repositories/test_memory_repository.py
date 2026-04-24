@@ -367,13 +367,26 @@ def test_update_game_state_does_not_write_disk(tmp_path: Path) -> None:
     mock_state_repo.save.assert_not_called()
 
 
-def test_load_game_state_delegates_to_state_repo(tmp_path: Path) -> None:
-    """load_game_state() reads from StateRepository — not from cache."""
+def test_load_game_state_delegates_to_state_repo_when_cache_empty(
+    tmp_path: Path,
+) -> None:
+    """load_game_state() reads from StateRepository when no game state is cached."""
     mock_state_repo = MagicMock()
     repo = MemoryRepository(str(tmp_path), state_repo=mock_state_repo)
     result = repo.load_game_state()
     mock_state_repo.load.assert_called_once()
     assert result is mock_state_repo.load.return_value
+
+
+def test_load_game_state_returns_cached_state_when_staged(tmp_path: Path) -> None:
+    """load_game_state() returns staged cache without hitting disk once staged."""
+    mock_state_repo = MagicMock()
+    repo = MemoryRepository(str(tmp_path), state_repo=mock_state_repo)
+    staged = MagicMock()
+    repo.update_game_state(staged)
+    result = repo.load_game_state()
+    assert result is staged
+    mock_state_repo.load.assert_not_called()
 
 
 def test_update_exchange_appends_two_items(tmp_path: Path) -> None:

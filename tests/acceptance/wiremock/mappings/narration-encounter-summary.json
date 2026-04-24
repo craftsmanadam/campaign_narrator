@@ -7,7 +7,7 @@
       {
         "matchesJsonPath": {
           "expression": "$.messages[1].content",
-          "contains": "public_events"
+          "contains": "module_title"
         }
       }
     ]

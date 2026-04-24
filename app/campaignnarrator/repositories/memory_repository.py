@@ -229,7 +229,9 @@ class MemoryRepository:
         self._cache = replace(self._cache, game_state=game_state)
 
     def load_game_state(self) -> GameState:
-        """Read game state from disk via private StateRepository."""
+        """Return cached game state if staged, else read from disk."""
+        if self._cache.game_state is not None:
+            return self._cache.game_state
         return self._state_repo.load()
 
     def update_exchange(self, player_input: str, narrator_output: str) -> None:

@@ -120,8 +120,8 @@ class ModuleOrchestrator:
         # Encounter in progress — resume it; output is displayed live during the loop
         self._encounter_orchestrator.run_encounter(encounter_id=active.encounter_id)
 
-        # Reload to detect natural completion vs player quit
-        reloaded = self._repos.encounter.load_active()
+        # Reload from cache (not disk) to detect completion vs player quit
+        reloaded = self._repos.memory.load_game_state().encounter
         if reloaded is not None and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE:
             module = self._archive_encounter(
                 encounter=reloaded, module=module, campaign=campaign
@@ -191,7 +191,8 @@ class ModuleOrchestrator:
         encounter_id = result.encounter_state.encounter_id
         self._encounter_orchestrator.run_encounter(encounter_id=encounter_id)
 
-        reloaded = self._repos.encounter.load_active()
+        # Reload from cache (not disk) to detect completion vs player quit
+        reloaded = self._repos.memory.load_game_state().encounter
         if (
             reloaded is not None
             and reloaded.encounter_id == encounter_id

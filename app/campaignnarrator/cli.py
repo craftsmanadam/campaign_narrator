@@ -73,6 +73,8 @@ def main(
         graph.game_orchestrator.run()
     except KeyboardInterrupt:
         graph.game_orchestrator.save_state()
+    else:
+        graph.game_orchestrator.save_state()
 
     return 0
 

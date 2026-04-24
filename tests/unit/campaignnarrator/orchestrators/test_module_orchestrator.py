@@ -16,6 +16,7 @@ from campaignnarrator.domain.models import (
     EncounterPhase,
     EncounterReady,
     EncounterState,
+    GameState,
     Milestone,
     MilestoneAchieved,
     ModuleState,
@@ -148,6 +149,10 @@ def _make_orchestrator(
     mock_encounter_orch = MagicMock()
     mock_encounter_orch.run_encounter.return_value = None
     mock_actor_repo.load_player.return_value = _make_player()
+    # Default: post-run memory read returns no active encounter (player quit, no completion)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=_make_player(), encounter=None
+    )
 
     repos = ModuleOrchestratorRepositories(
         campaign=mock_campaign_repo,
@@ -186,11 +191,7 @@ def test_module_orchestrator_instantiates() -> None:
 def test_run_with_in_progress_encounter_calls_run_encounter() -> None:
     """Step 2c: active encounter not complete → resume it."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
-    orch, _, mock_enc_repo, _, mock_enc_orch, _ = _make_orchestrator(
-        active_encounter=active
-    )
-    # After run_encounter, reload returns non-complete phase (player quit)
-    mock_enc_repo.load_active.side_effect = [active, active]
+    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(active_encounter=active)
     orch.run(campaign=_make_campaign(), player=_make_player())
     mock_enc_orch.run_encounter.assert_called_once_with(
         encounter_id="module-001-enc-001"
@@ -216,11 +217,8 @@ def test_run_with_no_active_encounter_calls_run_encounter() -> None:
 def test_run_does_not_forward_encounter_output_to_io() -> None:
     """Encounter output is displayed live in EncounterOrchestrator; not forwarded."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
-    orch, _, mock_enc_repo, _, mock_enc_orch, _ = _make_orchestrator(
-        active_encounter=active
-    )
+    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(active_encounter=active)
     mock_enc_orch.run_encounter.return_value = MagicMock(output_text="Docks at dusk.")
-    mock_enc_repo.load_active.side_effect = [active, active]
     orch.run(campaign=_make_campaign(), player=_make_player())
     # Output display is the encounter orchestrator's responsibility; module orchestrator
     # must not re-display it via io.display.
@@ -453,15 +451,7 @@ def test_archive_encounter_calls_clear_encounter_memory() -> None:
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="victory",
     )
-    orch, _, mock_enc_repo, _, _, mock_memory_repo = _make_orchestrator(
-        active_encounter=active,
-    )
-    mock_enc_repo.load_active.side_effect = [
-        _make_active_encounter(
-            phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="victory"
-        ),
-        None,
-    ]
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
     orch.run(campaign=_make_campaign(), player=_make_player())
     mock_memory_repo.clear_encounter_memory.assert_called_once()
 
@@ -469,11 +459,31 @@ def test_archive_encounter_calls_clear_encounter_memory() -> None:
 def test_run_player_quits_mid_encounter_does_not_archive() -> None:
     """If player quits (encounter not complete after run), no archiving occurs."""
     active = _make_active_encounter(phase=EncounterPhase.COMBAT)
-    orch, _, mock_enc_repo, mock_narrator, _mock_enc_orch, _ = _make_orchestrator(
-        active_encounter=active
+    orch, _, mock_enc_repo, mock_narrator, _mock_enc_orch, mock_memory_repo = (
+        _make_orchestrator(active_encounter=active)
     )
-    # After run_encounter, encounter is still in COMBAT (player quit)
-    mock_enc_repo.load_active.side_effect = [active, active]
+    # After run_encounter, memory returns COMBAT phase (player quit, not complete)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=_make_player(), encounter=active
+    )
     orch.run(campaign=_make_campaign(), player=_make_player())
     mock_narrator.summarize_encounter.assert_not_called()
     mock_enc_repo.clear.assert_not_called()
+
+
+def test_run_encounter_completes_during_run_triggers_archive() -> None:
+    """Encounter that reaches ENCOUNTER_COMPLETE during run_encounter is archived."""
+    active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
+    completed = _make_active_encounter(
+        phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="victory"
+    )
+    orch, _, mock_enc_repo, mock_narrator, _, mock_memory_repo = _make_orchestrator(
+        active_encounter=active
+    )
+    # After run_encounter, memory cache holds the completed encounter
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=_make_player(), encounter=completed
+    )
+    orch.run(campaign=_make_campaign(), player=_make_player())
+    mock_narrator.summarize_encounter.assert_called_once()
+    mock_enc_repo.clear.assert_called_once()
