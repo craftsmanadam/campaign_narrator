@@ -27,7 +27,6 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     OrchestratorAgents,
     OrchestratorRepositories,
-    OrchestratorTools,
 )
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
@@ -301,7 +300,6 @@ def player_inputs_with_hostile_intent(
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
-        tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
         _player_intent_agent=fake_player_intent,
         _combat_intent_agent=fake_combat_intent,
@@ -342,7 +340,6 @@ def player_inputs_with_scene_observation_intent(
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
-        tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
         _player_intent_agent=fake_player_intent,
     )
@@ -375,7 +372,6 @@ def player_inputs_with_save_exit_intent(
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
-        tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
         _player_intent_agent=fake_player_intent,
     )
@@ -420,7 +416,6 @@ def player_inputs_with_skill_check_intent(
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
-        tools=OrchestratorTools(roll_dice=lambda _: 10),
         io=io,
         _player_intent_agent=fake_player_intent,
     )
