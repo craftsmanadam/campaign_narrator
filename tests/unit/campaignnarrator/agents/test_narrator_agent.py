@@ -753,3 +753,58 @@ def test_open_scene_skips_retrieve_memory_when_context_pre_populated() -> None:
     mock_repo.retrieve_relevant.assert_not_called()
     call_args = mock_scene_agent.run_sync.call_args[0][0]
     assert "Pre-loaded context from the caller." in call_args
+
+
+# ---------------------------------------------------------------------------
+# encounter_complete propagation
+# ---------------------------------------------------------------------------
+
+
+def _make_narrate_model(response: dict) -> FunctionModel:
+    """FunctionModel that returns a scripted NarrationResponse."""
+
+    def fn(messages: object, info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[ToolCallPart("final_result", json.dumps(response))])
+
+    return FunctionModel(fn)
+
+
+def _make_narrator_with_narrate_model(response: dict) -> NarratorAgent:
+    """Build a NarratorAgent wired to a scripted _narrate_agent."""
+    narrate_agent = Agent(
+        _make_narrate_model(response),
+        output_type=NarrationResponse,
+        instructions="narrate",
+    )
+    return NarratorAgent(
+        adapter=MagicMock(),
+        _scene_agent=MagicMock(),
+        _assess_agent=MagicMock(),
+        _narrate_agent=narrate_agent,
+    )
+
+
+def test_narrate_propagates_encounter_complete_false_by_default() -> None:
+    narrator = _make_narrator_with_narrate_model(
+        {"text": "You are in the grove.", "current_location": "the grove"}
+    )
+    result = narrator.narrate(_frame())
+    assert result.encounter_complete is False
+    assert result.next_location_hint is None
+    assert result.completion_reason is None
+
+
+def test_narrate_propagates_encounter_complete_true() -> None:
+    narrator = _make_narrator_with_narrate_model(
+        {
+            "text": "You head toward the cave.",
+            "current_location": "the road north",
+            "encounter_complete": True,
+            "completion_reason": "Player departed the grove.",
+            "next_location_hint": "Cave of Whispers",
+        }
+    )
+    result = narrator.narrate(_frame())
+    assert result.encounter_complete is True
+    assert result.next_location_hint == "Cave of Whispers"
+    assert result.completion_reason == "Player departed the grove."

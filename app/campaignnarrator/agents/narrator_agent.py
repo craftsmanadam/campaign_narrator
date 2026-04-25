@@ -162,6 +162,9 @@ class NarratorAgent:
             text=result.text,
             audience="player",
             current_location=result.current_location,
+            encounter_complete=result.encounter_complete,
+            completion_reason=result.completion_reason,
+            next_location_hint=result.next_location_hint,
         )
 
     def open_scene(self, frame: NarrationFrame) -> SceneOpeningResponse:
