@@ -589,6 +589,27 @@ class ActorState:
             parts.append(f"— {self.description}")
         return " ".join(parts)
 
+    def as_modifiers(self) -> dict[str, int]:
+        """Pre-compute the modifiers dict for rules adjudication.
+
+        Returns ability modifiers, proficiency bonus, level, and per-class-level
+        entries for each entry in class_levels.
+        """
+        modifiers: dict[str, int] = {
+            "strength_mod": _ability_modifier(self.strength),
+            "dexterity_mod": _ability_modifier(self.dexterity),
+            "constitution_mod": _ability_modifier(self.constitution),
+            "intelligence_mod": _ability_modifier(self.intelligence),
+            "wisdom_mod": _ability_modifier(self.wisdom),
+            "charisma_mod": _ability_modifier(self.charisma),
+            "proficiency_bonus": self.proficiency_bonus,
+            "level": self.level,
+        }
+        if self.class_levels:
+            for class_name, class_level in self.class_levels:
+                modifiers[f"{class_name.lower()}_level"] = class_level
+        return modifiers
+
     def to_dict(self) -> dict[str, object]:
         """Serialize to a JSON-compatible dict. Excludes transient fields."""
         return {

@@ -32,9 +32,6 @@ from campaignnarrator.domain.models import (
     TurnResources,
     WeaponState,
 )
-from campaignnarrator.orchestrators.actor_summaries import (
-    actor_modifiers,
-)
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.tools.dice import roll
 from campaignnarrator.tools.state_updates import apply_state_effects, require_int
@@ -445,7 +442,7 @@ class CombatOrchestrator:
             phase=EncounterPhase.COMBAT,
             allowed_outcomes=allowed_outcomes,
             compendium_context=feat_context + inventory_context + weapon_context,
-            actor_modifiers=actor_modifiers(actor),
+            actor_modifiers=actor.as_modifiers(),
             visible_actors_context=visible_actors_context,
         )
 

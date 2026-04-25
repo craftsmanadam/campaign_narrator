@@ -2606,3 +2606,61 @@ def test_actor_state_narrative_summary_includes_description() -> None:
     actor = replace(TALIA, description="a tall human fighter", hp_current=TALIA.hp_max)
     summary = actor.narrative_summary()
     assert "a tall human fighter" in summary
+
+
+# ---------------------------------------------------------------------------
+# ActorState.as_modifiers
+# ---------------------------------------------------------------------------
+
+
+def test_actor_state_as_modifiers_basic_values() -> None:
+    """as_modifiers returns correct ability mods, proficiency, and level."""
+    proficiency = 3
+    char_level = 5
+    actor = replace(
+        TALIA,
+        strength=14,
+        dexterity=10,
+        constitution=12,
+        intelligence=8,
+        wisdom=16,
+        charisma=6,
+        proficiency_bonus=proficiency,
+        level=char_level,
+    )
+    result = actor.as_modifiers()
+    expected_strength_mod = 2  # (14-10)//2
+    expected_dexterity_mod = 0  # (10-10)//2
+    expected_constitution_mod = 1  # (12-10)//2
+    expected_intelligence_mod = -1  # (8-10)//2
+    expected_wisdom_mod = 3  # (16-10)//2
+    expected_charisma_mod = -2  # (6-10)//2
+    assert result["strength_mod"] == expected_strength_mod
+    assert result["dexterity_mod"] == expected_dexterity_mod
+    assert result["constitution_mod"] == expected_constitution_mod
+    assert result["intelligence_mod"] == expected_intelligence_mod
+    assert result["wisdom_mod"] == expected_wisdom_mod
+    assert result["charisma_mod"] == expected_charisma_mod
+    assert result["proficiency_bonus"] == proficiency
+    assert result["level"] == char_level
+
+
+def test_actor_state_as_modifiers_with_class_levels() -> None:
+    """as_modifiers adds per-class-level entries when class_levels is set."""
+    class_level = 9
+    actor = replace(
+        TALIA,
+        level=18,
+        class_levels=(("Fighter", class_level), ("Wizard", class_level)),
+    )
+    result = actor.as_modifiers()
+    assert result["fighter_level"] == class_level
+    assert result["wizard_level"] == class_level
+
+
+def test_actor_state_as_modifiers_negative_modifier() -> None:
+    """Strength 8 produces strength_mod of -1."""
+    expected_mod = -1
+    actor = replace(TALIA, strength=8)
+    result = actor.as_modifiers()
+    assert result["strength_mod"] == expected_mod

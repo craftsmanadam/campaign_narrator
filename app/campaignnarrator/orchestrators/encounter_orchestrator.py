@@ -29,9 +29,6 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
 )
-from campaignnarrator.orchestrators.actor_summaries import (
-    actor_modifiers,
-)
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.tools.dice import roll
@@ -357,7 +354,7 @@ class EncounterOrchestrator:
             allowed_outcomes=("success", "failure", "complication", "peaceful"),
             check_hints=_non_empty_tuple((intent.check_hint,)),
             compendium_context=compendium_context,
-            actor_modifiers=actor_modifiers(player),
+            actor_modifiers=player.as_modifiers(),
         )
         self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
