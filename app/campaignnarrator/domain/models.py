@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Literal, Protocol
+from typing import Literal, Protocol, Self
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -1166,6 +1166,9 @@ class Narration:
     audience: str | None = None
     scene_tone: str | None = None
     current_location: str | None = None
+    encounter_complete: bool = False
+    completion_reason: str | None = None
+    next_location_hint: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1256,6 +1259,17 @@ class NarrationResponse(BaseModel):
 
     text: str
     current_location: str
+    encounter_complete: bool = False
+    completion_reason: str | None = None
+    next_location_hint: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_completion_fields(self) -> Self:
+        if self.encounter_complete and not self.next_location_hint:
+            raise ValueError("next_location_hint required when encounter_complete=True")
+        if self.encounter_complete and not self.completion_reason:
+            raise ValueError("completion_reason required when encounter_complete=True")
+        return self
 
 
 class SceneOpeningResponse(BaseModel):

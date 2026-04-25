@@ -36,6 +36,7 @@ from campaignnarrator.domain.models import (
     ModuleState,
     Narration,
     NarrationFrame,
+    NarrationResponse,
     NpcPresence,
     NpcPresenceStatus,
     PlayerInput,
@@ -2743,3 +2744,69 @@ def test_actor_state_as_modifiers_negative_modifier() -> None:
     actor = replace(TALIA, strength=8)
     result = actor.as_modifiers()
     assert result["strength_mod"] == expected_mod
+
+
+# --- NarrationResponse encounter completion fields ---
+
+
+def test_narration_response_defaults_encounter_complete_to_false() -> None:
+    response = NarrationResponse(text="You step into the grove.", current_location="the grove")
+    assert response.encounter_complete is False
+    assert response.completion_reason is None
+    assert response.next_location_hint is None
+
+
+def test_narration_response_accepts_all_completion_fields() -> None:
+    response = NarrationResponse(
+        text="You leave the grove.",
+        current_location="the road north",
+        encounter_complete=True,
+        completion_reason="Player departed to a new location.",
+        next_location_hint="Cave of Whispers",
+    )
+    assert response.encounter_complete is True
+    assert response.completion_reason == "Player departed to a new location."
+    assert response.next_location_hint == "Cave of Whispers"
+
+
+def test_narration_response_validator_rejects_complete_without_hint() -> None:
+    with pytest.raises(ValidationError):
+        NarrationResponse(
+            text="You leave.",
+            current_location="the road",
+            encounter_complete=True,
+            completion_reason="Player departed.",
+            next_location_hint=None,
+        )
+
+
+def test_narration_response_validator_rejects_complete_without_reason() -> None:
+    with pytest.raises(ValidationError):
+        NarrationResponse(
+            text="You leave.",
+            current_location="the road",
+            encounter_complete=True,
+            completion_reason=None,
+            next_location_hint="Cave of Whispers",
+        )
+
+
+# --- Narration encounter completion fields ---
+
+
+def test_narration_defaults_encounter_complete_to_false() -> None:
+    narration = Narration(text="The grove is quiet.")
+    assert narration.encounter_complete is False
+    assert narration.completion_reason is None
+    assert narration.next_location_hint is None
+
+
+def test_narration_accepts_encounter_complete_fields() -> None:
+    narration = Narration(
+        text="You head toward the cave.",
+        encounter_complete=True,
+        completion_reason="Player departed.",
+        next_location_hint="Cave of Whispers",
+    )
+    assert narration.encounter_complete is True
+    assert narration.next_location_hint == "Cave of Whispers"
