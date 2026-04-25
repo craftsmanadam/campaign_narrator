@@ -48,12 +48,6 @@ class RecoveryPeriod(StrEnum):
     DAY = "day"  # items only — "regains charges at dawn"
 
 
-# HP ratio thresholds for actor narrative summaries
-_HP_THRESHOLD_BARELY_STANDING = 0.25
-_HP_THRESHOLD_BLOODIED = 0.5
-_HP_THRESHOLD_LIGHTLY_WOUNDED = 0.75
-
-
 @dataclass(frozen=True, slots=True)
 class Milestone:
     """A campaign story anchor point. Narrator-only — never shown to the player."""
@@ -447,6 +441,12 @@ def _int_pair_tuple_from_data(
             if isinstance(k, str) and type(val) is int:
                 result.append((k, val))
     return tuple(result)
+
+
+# HP ratio thresholds for actor narrative summaries
+_HP_THRESHOLD_BARELY_STANDING = 0.25
+_HP_THRESHOLD_BLOODIED = 0.5
+_HP_THRESHOLD_LIGHTLY_WOUNDED = 0.75
 
 
 @dataclass(frozen=True, slots=True)

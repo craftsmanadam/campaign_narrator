@@ -2600,3 +2600,9 @@ def test_actor_state_narrative_summary_pc_includes_player_tag() -> None:
 def test_actor_state_narrative_summary_defeated() -> None:
     actor = replace(TALIA, hp_current=0)
     assert "defeated" in actor.narrative_summary()
+
+
+def test_actor_state_narrative_summary_includes_description() -> None:
+    actor = replace(TALIA, description="a tall human fighter", hp_current=TALIA.hp_max)
+    summary = actor.narrative_summary()
+    assert "a tall human fighter" in summary
