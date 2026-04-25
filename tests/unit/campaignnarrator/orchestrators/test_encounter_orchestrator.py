@@ -1947,7 +1947,7 @@ def test_narrator_encounter_complete_without_location_hint_does_not_close(
 def test_narrator_encounter_complete_on_skill_check_does_not_close(
     tmp_path: Path,
 ) -> None:
-    """Signal raised during a skill check narration (purpose=social_resolution) is rejected."""
+    """Signal raised during a skill check narration (purpose not in allowed set) is rejected."""
     narrator_agent = FakeNarratorAgent(
         encounter_complete=True,
         next_location_hint="somewhere",
