@@ -145,6 +145,9 @@ class FakeMemoryRepository:
     def clear_combat_memory(self) -> None:
         pass
 
+    def get_exchange_buffer(self) -> tuple[str, ...]:
+        return ()
+
     def retrieve_relevant(self, query: str, limit: int = 5) -> list[str]:
         return []
 

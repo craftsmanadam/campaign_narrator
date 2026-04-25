@@ -3,13 +3,29 @@
   "object": "chat.completion",
   "created": 1710000111,
   "model": "gpt-5.4",
-  "choices": [{
-    "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "Talia presses forward. Goblin Scout 2 falls dead."
-    },
-    "finish_reason": "stop"
-  }],
-  "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70}
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_xxx",
+            "type": "function",
+            "function": {
+              "name": "final_result",
+              "arguments": "{\"text\": \"Talia presses forward. Goblin Scout 2 falls dead.\", \"current_location\": \"A ruined roadside camp.\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 50,
+    "completion_tokens": 20,
+    "total_tokens": 70
+  }
 }
