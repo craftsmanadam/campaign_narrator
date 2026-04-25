@@ -127,9 +127,19 @@ class FakeRulesAgent:
 class FakeNarratorAgent:
     """Narrator stub that returns formatted narration."""
 
-    def __init__(self, scene_tone: str | None = None) -> None:
+    def __init__(
+        self,
+        scene_tone: str | None = None,
+        *,
+        encounter_complete: bool = False,
+        next_location_hint: str | None = None,
+        completion_reason: str | None = None,
+    ) -> None:
         self.frames: list[NarrationFrame] = []
         self._scene_tone = scene_tone
+        self._encounter_complete = encounter_complete
+        self._next_location_hint = next_location_hint
+        self._completion_reason = completion_reason
 
     def narrate(self, frame: NarrationFrame) -> Narration:
         self.frames.append(frame)
@@ -139,6 +149,9 @@ class FakeNarratorAgent:
             text=f"{frame.purpose}: {outcomes}".strip(),
             audience="player",
             scene_tone=tone,
+            encounter_complete=self._encounter_complete,
+            next_location_hint=self._next_location_hint,
+            completion_reason=self._completion_reason,
         )
 
     def summarize_encounter_partial(self, encounter: object) -> str:
@@ -1882,3 +1895,88 @@ def test_public_actor_summaries_includes_all_when_no_presences() -> None:
     )
     summaries = state.public_actor_summaries()
     assert len(summaries) == _EXPECTED_ALL_ACTOR_COUNT
+
+
+def test_narrator_encounter_complete_signal_closes_encounter(
+    tmp_path: Path,
+) -> None:
+    """Valid signal (next_location_hint set, purpose=scene_response) closes the encounter."""
+    narrator_agent = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint="Cave of Whispers",
+        completion_reason="Player departed the grove.",
+    )
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_social_repository(tmp_path),
+        intents=[_intent(IntentCategory.SCENE_OBSERVATION)],
+        io=ScriptedIO(["I head to the cave."]),
+        narrator_agent=narrator_agent,
+    )
+
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert result.completed is True
+
+
+def test_narrator_encounter_complete_without_location_hint_does_not_close(
+    tmp_path: Path,
+) -> None:
+    """Signal missing next_location_hint is rejected — encounter stays open."""
+    narrator_agent = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint=None,
+        completion_reason="Player departed.",
+    )
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_social_repository(tmp_path),
+        intents=[
+            _intent(IntentCategory.SCENE_OBSERVATION),
+            _intent(IntentCategory.SAVE_EXIT),
+        ],
+        io=ScriptedIO(["I head to the cave.", "exit"]),
+        narrator_agent=narrator_agent,
+    )
+
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert result.completed is False
+
+
+def test_narrator_encounter_complete_on_skill_check_does_not_close(
+    tmp_path: Path,
+) -> None:
+    """Signal raised during a skill check narration (purpose=social_resolution) is rejected."""
+    narrator_agent = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint="somewhere",
+        completion_reason="Erroneous signal.",
+    )
+    rules_agent = FakeRulesAgent(
+        [
+            RulesAdjudication(
+                is_legal=True,
+                action_type="skill_check",
+                summary="Talia scans the clearing.",
+                roll_requests=(),
+                state_effects=(),
+                reasoning_summary="Nothing special found.",
+            )
+        ]
+    )
+    orchestrator = _orchestrator(
+        tmp_path,
+        state_repository=_social_repository(tmp_path),
+        intents=[
+            _intent(IntentCategory.SKILL_CHECK, check_hint="Perception"),
+            _intent(IntentCategory.SAVE_EXIT),
+        ],
+        io=ScriptedIO(["I search the clearing for danger.", "exit"]),
+        narrator_agent=narrator_agent,
+        rules_agent=rules_agent,
+    )
+
+    result = orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert result.completed is False

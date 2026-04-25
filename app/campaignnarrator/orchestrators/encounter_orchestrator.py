@@ -492,7 +492,57 @@ class EncounterOrchestrator:
         )
         if narration.current_location is not None:
             state = replace(state, current_location=narration.current_location)
+        if narration.encounter_complete and self._completion_is_allowed(
+            state, narration, frame
+        ):
+            _log.info(
+                "Narrator closed encounter %s: %s → %s",
+                state.encounter_id,
+                narration.completion_reason,
+                narration.next_location_hint,
+            )
+            state = apply_state_effects(
+                state,
+                (
+                    StateEffect(
+                        effect_type="set_phase",
+                        target=f"encounter:{state.encounter_id}",
+                        value="encounter_complete",
+                    ),
+                ),
+            )
         return narration, state
+
+    def _completion_is_allowed(
+        self,
+        state: EncounterState,
+        narration: Narration,
+        frame: NarrationFrame,
+    ) -> bool:
+        """Validate narrator encounter_complete signal before applying phase transition.
+
+        Requires next_location_hint (proxy for intentional signal), non-COMBAT phase,
+        and an action-driven frame purpose to reject meta-calls and skill-check
+        narrations.
+        """
+        if not narration.next_location_hint:
+            _log.warning(
+                "Narrator signaled encounter_complete with no next_location_hint"
+                " — ignoring"
+            )
+            return False
+        if state.phase is EncounterPhase.COMBAT:
+            _log.warning(
+                "Narrator signaled encounter_complete during COMBAT phase — ignoring"
+            )
+            return False
+        if frame.purpose not in ("scene_response", "npc_dialogue"):
+            _log.warning(
+                "Narrator signaled encounter_complete for purpose=%r — ignoring",
+                frame.purpose,
+            )
+            return False
+        return True
 
     def _append_event(self, event: dict[str, object]) -> None:
         self._memory_repository.append_event(event)
