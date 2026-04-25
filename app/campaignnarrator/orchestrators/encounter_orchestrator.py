@@ -10,7 +10,6 @@ from campaignnarrator.agents.player_intent_agent import PlayerIntentAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     ActorState,
-    ActorType,
     CombatResult,
     CombatStatus,
     EncounterPhase,
@@ -219,7 +218,7 @@ class EncounterOrchestrator:
             phase=state.phase,
             setting=state.setting,
             recent_events=state.public_events[-5:],
-            actor_summaries=_public_actor_summaries(state),
+            actor_summaries=state.public_actor_summaries(),
         )
         _log.debug(
             "Intent classified: category=%s check_hint=%r reason=%r input=%r",
@@ -503,7 +502,7 @@ def _status_frame(state: EncounterState) -> NarrationFrame:
     return _frame(
         state,
         "status_response",
-        resolved_outcomes=("; ".join(_public_actor_summaries(state)),),
+        resolved_outcomes=("; ".join(state.public_actor_summaries()),),
         allowed_disclosures=("player HP", "inventory", "visible actors"),
     )
 
@@ -539,7 +538,7 @@ def _frame(
         purpose=purpose,
         phase=state.phase,
         setting=state.current_location or state.setting,
-        public_actor_summaries=_public_actor_summaries(state),
+        public_actor_summaries=state.public_actor_summaries(),
         npc_presences=tuple(
             p for p in state.npc_presences if p.status is not NpcPresenceStatus.DEPARTED
         ),
@@ -548,22 +547,6 @@ def _frame(
         allowed_disclosures=allowed_disclosures,
         compendium_context=compendium_context,
         tone_guidance=state.scene_tone,
-    )
-
-
-def _public_actor_summaries(state: EncounterState) -> tuple[str, ...]:
-    if not state.npc_presences:
-        # No presence list — old encounter or unit-test fixture; include everyone.
-        return tuple(actor.narrative_summary() for actor in state.actors.values())
-    present_ids = {
-        p.actor_id
-        for p in state.npc_presences
-        if p.status is not NpcPresenceStatus.DEPARTED
-    }
-    return tuple(
-        actor.narrative_summary()
-        for actor in state.actors.values()
-        if actor.actor_type == ActorType.PC or actor.actor_id in present_ids
     )
 
 

@@ -804,6 +804,26 @@ class EncounterState:
 
         return tuple(actor.name for actor in self.actors.values() if actor.is_visible)
 
+    def public_actor_summaries(self) -> tuple[str, ...]:
+        """Return narration-safe summaries for actors visible in the current scene.
+
+        When npc_presences is empty (old encounters or bare test fixtures) all actors
+        are included.  When populated, only PCs and non-DEPARTED NPCs appear so the
+        narrator never sees actors who have left the scene.
+        """
+        if not self.npc_presences:
+            return tuple(actor.narrative_summary() for actor in self.actors.values())
+        present_ids = {
+            p.actor_id
+            for p in self.npc_presences
+            if p.status is not NpcPresenceStatus.DEPARTED
+        }
+        return tuple(
+            actor.narrative_summary()
+            for actor in self.actors.values()
+            if actor.actor_type == ActorType.PC or actor.actor_id in present_ids
+        )
+
     def with_phase(self, phase: EncounterPhase) -> EncounterState:
         """Return a copy of the state with an updated phase."""
 

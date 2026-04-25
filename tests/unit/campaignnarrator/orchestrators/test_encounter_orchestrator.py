@@ -33,7 +33,6 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     OrchestratorAgents,
     OrchestratorRepositories,
-    _public_actor_summaries,
 )
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
@@ -1824,7 +1823,7 @@ _EXPECTED_ALL_ACTOR_COUNT = 2
 
 
 def test_public_actor_summaries_excludes_departed_npcs() -> None:
-    """_public_actor_summaries filters out DEPARTED actors when npc_presences is set."""
+    """public_actor_summaries filters out DEPARTED actors when npc_presences is set."""
     talia = TALIA
     goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
     departed_presence = NpcPresence(
@@ -1841,7 +1840,7 @@ def test_public_actor_summaries_excludes_departed_npcs() -> None:
         actors={"pc:talia": talia, "npc:goblin-scout": goblin},
         npc_presences=(departed_presence,),
     )
-    summaries = _public_actor_summaries(state)
+    summaries = state.public_actor_summaries()
     # Talia (PC) must appear; goblin (DEPARTED) must not
     assert any("Talia" in s for s in summaries)
     assert not any("Goblin" in s for s in summaries)
@@ -1865,13 +1864,13 @@ def test_public_actor_summaries_includes_concealed_npcs() -> None:
         actors={"pc:talia": talia, "npc:goblin-scout": goblin},
         npc_presences=(concealed_presence,),
     )
-    summaries = _public_actor_summaries(state)
+    summaries = state.public_actor_summaries()
     # CONCEALED NPC must still appear — it is in the scene
     assert any("Goblin" in s for s in summaries)
 
 
 def test_public_actor_summaries_includes_all_when_no_presences() -> None:
-    """_public_actor_summaries includes all actors when npc_presences is empty (backward compat)."""
+    """public_actor_summaries includes all actors when npc_presences is empty (backward compat)."""
     talia = TALIA
     goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
     state = EncounterState(
@@ -1881,5 +1880,5 @@ def test_public_actor_summaries_includes_all_when_no_presences() -> None:
         actors={"pc:talia": talia, "npc:goblin-scout": goblin},
         npc_presences=(),
     )
-    summaries = _public_actor_summaries(state)
+    summaries = state.public_actor_summaries()
     assert len(summaries) == _EXPECTED_ALL_ACTOR_COUNT

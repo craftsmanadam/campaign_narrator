@@ -1515,6 +1515,63 @@ def test_encounter_state_accepts_npc_presences() -> None:
     assert enc_with_npc.npc_presences[0].display_name == "Mira"
 
 
+# ---------------------------------------------------------------------------
+# EncounterState.public_actor_summaries
+# ---------------------------------------------------------------------------
+
+
+_EXPECTED_PUBLIC_ACTOR_COUNT = 2
+
+
+def test_encounter_state_public_actor_summaries_no_presences_includes_all() -> None:
+    """When npc_presences is empty, all actors are included (backward compat)."""
+    goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": TALIA, "npc:goblin-scout": goblin},
+        npc_presences=(),
+    )
+    summaries = state.public_actor_summaries()
+    assert len(summaries) == _EXPECTED_PUBLIC_ACTOR_COUNT
+
+
+def test_encounter_state_public_actor_summaries_excludes_departed() -> None:
+    """DEPARTED NPCs are excluded from public summaries."""
+    goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
+    departed = NpcPresence(
+        actor_id="npc:goblin-scout",
+        display_name="Goblin Scout",
+        description="the goblin scout",
+        name_known=True,
+        status=NpcPresenceStatus.DEPARTED,
+    )
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": TALIA, "npc:goblin-scout": goblin},
+        npc_presences=(departed,),
+    )
+    summaries = state.public_actor_summaries()
+    assert any("Talia" in s for s in summaries)
+    assert not any("Goblin" in s for s in summaries)
+
+
+def test_encounter_state_public_actor_summaries_pc_always_included() -> None:
+    """PCs always appear in summaries regardless of npc_presences."""
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": TALIA},
+        npc_presences=(),
+    )
+    summaries = state.public_actor_summaries()
+    assert any("Talia" in s for s in summaries)
+
+
 def test_actor_state_has_level_field() -> None:
     """ActorState must carry a total character level, defaulting to 1."""
     actor = ActorState(
