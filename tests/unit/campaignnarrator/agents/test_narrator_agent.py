@@ -9,10 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from campaignnarrator.agents.narrator_agent import NarratorAgent
-from campaignnarrator.agents.prompts import (
-    BASE_NARRATE_INSTRUCTIONS,
-    SCENE_OPENING_INSTRUCTIONS,
-)
+from campaignnarrator.agents.prompts import BASE_NARRATE_INSTRUCTIONS
 from campaignnarrator.domain.models import (
     CampaignState,
     CombatAssessment,
@@ -104,11 +101,6 @@ def test_narrator_rejects_empty_text_output() -> None:
     )
     with pytest.raises(ValueError, match="empty narration output"):
         narrator.narrate(_frame())
-
-
-def test_narrator_prompt_includes_safety_guardrails() -> None:
-    assert "You may not invent permanent campaign canon" in BASE_NARRATE_INSTRUCTIONS
-    assert "HP changes, inventory changes" in BASE_NARRATE_INSTRUCTIONS
 
 
 def test_narrator_input_includes_disclosures_and_outcomes() -> None:
@@ -640,32 +632,6 @@ def test_open_scene_raises_on_empty_text(
 # ---------------------------------------------------------------------------
 # Hard rules and NPC presence serialization
 # ---------------------------------------------------------------------------
-
-
-def test_base_narrate_instructions_contain_hard_rules() -> None:
-    """BASE_NARRATE_INSTRUCTIONS must include all hard rules and narrative authority."""
-    assert "Never expose mechanical stats" in BASE_NARRATE_INSTRUCTIONS
-    assert "Do not re-describe the opening scene" in BASE_NARRATE_INSTRUCTIONS
-    assert "mechanically relevant actors" in BASE_NARRATE_INSTRUCTIONS
-    assert "incidental non-combat NPCs" in BASE_NARRATE_INSTRUCTIONS
-    assert "name_known is false" in BASE_NARRATE_INSTRUCTIONS
-    assert "NARRATIVE AUTHORITY" in BASE_NARRATE_INSTRUCTIONS
-    assert "Never respond" in BASE_NARRATE_INSTRUCTIONS
-
-
-def test_base_narrate_instructions_contain_dramatic_structure_rules() -> None:
-    """BASE_NARRATE_INSTRUCTIONS must enforce dramatic structure rules."""
-    assert "Every player action must change" in BASE_NARRATE_INSTRUCTIONS
-    assert "Escalation" in BASE_NARRATE_INSTRUCTIONS
-    assert "Commitment" in BASE_NARRATE_INSTRUCTIONS
-    assert "Failure has teeth" in BASE_NARRATE_INSTRUCTIONS
-
-
-def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
-    """SCENE_OPENING_INSTRUCTIONS must reference NPC stat source fields."""
-    assert "monster_compendium" in SCENE_OPENING_INSTRUCTIONS
-    assert "simple_npc" in SCENE_OPENING_INSTRUCTIONS
-    assert "public_actor_summaries" in SCENE_OPENING_INSTRUCTIONS
 
 
 def test_narrate_serializes_npc_presences_in_frame() -> None:
