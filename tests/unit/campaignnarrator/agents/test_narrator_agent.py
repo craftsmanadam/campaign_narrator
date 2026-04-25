@@ -646,7 +646,8 @@ def test_base_narrate_instructions_contain_hard_rules() -> None:
     """BASE_NARRATE_INSTRUCTIONS must include all hard rules and narrative authority."""
     assert "Never expose mechanical stats" in BASE_NARRATE_INSTRUCTIONS
     assert "Do not re-describe the opening scene" in BASE_NARRATE_INSTRUCTIONS
-    assert "Do not introduce new named characters" in BASE_NARRATE_INSTRUCTIONS
+    assert "mechanically relevant actors" in BASE_NARRATE_INSTRUCTIONS
+    assert "incidental non-combat NPCs" in BASE_NARRATE_INSTRUCTIONS
     assert "name_known is false" in BASE_NARRATE_INSTRUCTIONS
     assert "NARRATIVE AUTHORITY" in BASE_NARRATE_INSTRUCTIONS
     assert "Never respond" in BASE_NARRATE_INSTRUCTIONS
