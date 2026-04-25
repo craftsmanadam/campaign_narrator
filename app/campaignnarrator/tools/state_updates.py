@@ -10,6 +10,8 @@ from campaignnarrator.domain.models import (
     ActorState,
     EncounterPhase,
     EncounterState,
+    NpcPresence,
+    NpcPresenceStatus,
     StateEffect,
 )
 
@@ -120,6 +122,38 @@ def _apply_remove_condition(
     )
 
 
+def _apply_set_npc_status(
+    state: EncounterState,
+    target: str,
+    value: object,
+) -> EncounterState:
+    raw = _require_string(value, "npc status")
+    try:
+        new_status = NpcPresenceStatus(raw)
+    except ValueError as exc:
+        raise TypeError(f"set_npc_status: invalid status {raw!r}") from exc  # noqa: TRY003
+    presences = list(state.npc_presences)
+    for i, presence in enumerate(presences):
+        if presence.actor_id == target:
+            presences[i] = NpcPresence(
+                actor_id=presence.actor_id,
+                display_name=presence.display_name,
+                description=presence.description,
+                name_known=presence.name_known,
+                status=new_status,
+            )
+            return replace(
+                state,
+                npc_presences=tuple(presences),
+                hidden_facts=_copy_hidden_facts(state),
+            )
+    _log.warning(
+        "set_npc_status: no NpcPresence found for actor_id %r — effect ignored",
+        target,
+    )
+    return state
+
+
 _EFFECT_HANDLERS = {
     "set_phase": _apply_set_phase,
     "append_public_event": _apply_append_public_event,
@@ -128,6 +162,7 @@ _EFFECT_HANDLERS = {
     "inventory_spent": _apply_inventory_spent,
     "add_condition": _apply_add_condition,
     "remove_condition": _apply_remove_condition,
+    "set_npc_status": _apply_set_npc_status,
 }
 
 

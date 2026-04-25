@@ -12,6 +12,8 @@ from campaignnarrator.domain.models import (
     EncounterPhase,
     EncounterState,
     InventoryItem,
+    NpcPresence,
+    NpcPresenceStatus,
     StateEffect,
 )
 from campaignnarrator.tools.state_updates import apply_state_effects, require_int
@@ -458,3 +460,53 @@ def test_remove_condition_is_safe_when_condition_absent() -> None:
     )
     updated = apply_state_effects(state, (effect,))
     assert updated.actors["pc:talia"].conditions == state.actors["pc:talia"].conditions
+
+
+def test_set_npc_status_marks_npc_departed() -> None:
+    presence = NpcPresence(
+        actor_id="npc:goblin-scout",
+        display_name="Goblin Scout",
+        description="the goblin",
+        name_known=True,
+        status=NpcPresenceStatus.PRESENT,
+    )
+    state = replace(_default_encounter(), npc_presences=(presence,))
+    effect = StateEffect(
+        effect_type="set_npc_status",
+        target="npc:goblin-scout",
+        value="departed",
+    )
+    result = apply_state_effects(state, (effect,))
+    assert result.npc_presences[0].status is NpcPresenceStatus.DEPARTED
+
+
+def test_set_npc_status_unknown_actor_is_ignored(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    state = _default_encounter()
+    effect = StateEffect(
+        effect_type="set_npc_status",
+        target="npc:nonexistent",
+        value="departed",
+    )
+    with caplog.at_level(logging.WARNING):
+        result = apply_state_effects(state, (effect,))
+    assert result == state
+    assert "no NpcPresence found" in caplog.text
+
+
+def test_set_npc_status_invalid_value_raises() -> None:
+    presence = NpcPresence(
+        actor_id="npc:goblin-scout",
+        display_name="Goblin Scout",
+        description="the goblin",
+        name_known=True,
+    )
+    state = replace(_default_encounter(), npc_presences=(presence,))
+    effect = StateEffect(
+        effect_type="set_npc_status",
+        target="npc:goblin-scout",
+        value="gone",
+    )
+    with pytest.raises(TypeError, match="invalid status"):
+        apply_state_effects(state, (effect,))

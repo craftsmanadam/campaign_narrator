@@ -10,6 +10,7 @@ from campaignnarrator.agents.player_intent_agent import PlayerIntentAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
     ActorState,
+    ActorType,
     CombatResult,
     CombatStatus,
     EncounterPhase,
@@ -19,6 +20,7 @@ from campaignnarrator.domain.models import (
     IntentCategory,
     Narration,
     NarrationFrame,
+    NpcPresenceStatus,
     PlayerInput,
     PlayerIntent,
     PlayerIO,
@@ -542,7 +544,9 @@ def _frame(
         phase=state.phase,
         setting=state.current_location or state.setting,
         public_actor_summaries=_public_actor_summaries(state),
-        npc_presences=state.npc_presences,
+        npc_presences=tuple(
+            p for p in state.npc_presences if p.status is not NpcPresenceStatus.DEPARTED
+        ),
         recent_public_events=state.public_events[-5:],
         resolved_outcomes=resolved_outcomes,
         allowed_disclosures=allowed_disclosures,
@@ -552,7 +556,19 @@ def _frame(
 
 
 def _public_actor_summaries(state: EncounterState) -> tuple[str, ...]:
-    return tuple(actor_narrative_summary(actor) for actor in state.actors.values())
+    if not state.npc_presences:
+        # No presence list — old encounter or unit-test fixture; include everyone.
+        return tuple(actor_narrative_summary(actor) for actor in state.actors.values())
+    present_ids = {
+        p.actor_id
+        for p in state.npc_presences
+        if p.status is not NpcPresenceStatus.DEPARTED
+    }
+    return tuple(
+        actor_narrative_summary(actor)
+        for actor in state.actors.values()
+        if actor.actor_type == ActorType.PC or actor.actor_id in present_ids
+    )
 
 
 def _non_empty_tuple(values: tuple[str | None, ...]) -> tuple[str, ...]:

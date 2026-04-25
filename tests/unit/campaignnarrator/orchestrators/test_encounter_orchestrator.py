@@ -20,6 +20,8 @@ from campaignnarrator.domain.models import (
     IntentCategory,
     Narration,
     NarrationFrame,
+    NpcPresence,
+    NpcPresenceStatus,
     PlayerIntent,
     RollRequest,
     RollVisibility,
@@ -34,12 +36,15 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     OrchestratorAgents,
     OrchestratorRepositories,
+    _public_actor_summaries,
 )
 from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 
 from tests.conftest import ScriptedIO
+from tests.fixtures.fighter_talia import TALIA
+from tests.fixtures.goblin_scout import make_goblin_scout
 
 _DAMAGED_GOBLIN_HP = 2
 
@@ -1816,3 +1821,45 @@ class TestDCResolution:
         # LLM summary IS included in resolved_outcomes when no DC
         frame = narrator_agent.frames[-1]
         assert "The goblins are impressed." in frame.resolved_outcomes
+
+
+_EXPECTED_ALL_ACTOR_COUNT = 2
+
+
+def test_public_actor_summaries_excludes_departed_npcs() -> None:
+    """_public_actor_summaries filters out DEPARTED actors when npc_presences is set."""
+    talia = TALIA
+    goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
+    departed_presence = NpcPresence(
+        actor_id="npc:goblin-scout",
+        display_name="Goblin Scout",
+        description="the goblin scout",
+        name_known=True,
+        status=NpcPresenceStatus.DEPARTED,
+    )
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": talia, "npc:goblin-scout": goblin},
+        npc_presences=(departed_presence,),
+    )
+    summaries = _public_actor_summaries(state)
+    # Talia (PC) must appear; goblin (DEPARTED) must not
+    assert any("Talia" in s for s in summaries)
+    assert not any("Goblin" in s for s in summaries)
+
+
+def test_public_actor_summaries_includes_all_when_no_presences() -> None:
+    """_public_actor_summaries includes all actors when npc_presences is empty (backward compat)."""
+    talia = TALIA
+    goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": talia, "npc:goblin-scout": goblin},
+        npc_presences=(),
+    )
+    summaries = _public_actor_summaries(state)
+    assert len(summaries) == _EXPECTED_ALL_ACTOR_COUNT
