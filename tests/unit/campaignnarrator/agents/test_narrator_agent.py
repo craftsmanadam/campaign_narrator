@@ -652,6 +652,14 @@ def test_base_narrate_instructions_contain_hard_rules() -> None:
     assert "Never respond" in BASE_NARRATE_INSTRUCTIONS
 
 
+def test_base_narrate_instructions_contain_dramatic_structure_rules() -> None:
+    """BASE_NARRATE_INSTRUCTIONS must enforce dramatic structure rules."""
+    assert "Every player action must change" in BASE_NARRATE_INSTRUCTIONS
+    assert "Escalation" in BASE_NARRATE_INSTRUCTIONS
+    assert "Commitment" in BASE_NARRATE_INSTRUCTIONS
+    assert "Failure has teeth" in BASE_NARRATE_INSTRUCTIONS
+
+
 def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
     """SCENE_OPENING_INSTRUCTIONS must reference NPC stat source fields."""
     assert "monster_compendium" in SCENE_OPENING_INSTRUCTIONS
