@@ -22,6 +22,7 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     NarrationResponse,
     NpcPresence,
+    NpcPresenceStatus,
     SceneOpeningResponse,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -58,7 +59,7 @@ def _serialize_npc_presences(presences: tuple[NpcPresence, ...]) -> str:
     lines = ["ESTABLISHED NPCs IN SCENE:"]
     for p in presences:
         name_state = "named" if p.name_known else "unnamed"
-        visibility = "visible" if p.visible else "not visible"
+        visibility = p.status.value
         label = p.display_name if p.name_known else p.description
         lines.append(
             f"- {label} [{name_state}] ({visibility}) — actor_id: {p.actor_id}"

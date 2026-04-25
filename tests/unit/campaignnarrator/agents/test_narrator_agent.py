@@ -23,6 +23,7 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     NarrationResponse,
     NpcPresence,
+    NpcPresenceStatus,
     SceneOpeningResponse,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -665,7 +666,7 @@ def test_narrate_serializes_npc_presences_in_frame() -> None:
         display_name="Mira",
         description="the innkeeper",
         name_known=False,
-        visible=True,
+        status=NpcPresenceStatus.PRESENT,
     )
     frame = NarrationFrame(
         purpose="scene_response",

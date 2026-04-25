@@ -26,6 +26,7 @@ from campaignnarrator.domain.models import (
     MilestoneAchieved,
     ModuleState,
     NpcPresence,
+    NpcPresenceStatus,
 )
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
@@ -336,7 +337,7 @@ class EncounterPlannerOrchestrator:
                     display_name=npc.display_name,
                     description=npc.description,
                     name_known=npc.name_known,
-                    visible=True,
+                    status=NpcPresenceStatus.PRESENT,
                 )
             )
 
