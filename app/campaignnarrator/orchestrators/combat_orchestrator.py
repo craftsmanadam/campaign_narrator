@@ -34,7 +34,6 @@ from campaignnarrator.domain.models import (
 )
 from campaignnarrator.orchestrators.actor_summaries import (
     actor_modifiers,
-    actor_narrative_summary,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.tools.dice import roll
@@ -463,7 +462,7 @@ class CombatOrchestrator:
             phase=EncounterPhase.COMBAT,
             setting=state.setting,
             public_actor_summaries=tuple(
-                actor_narrative_summary(a) for a in state.actors.values()
+                a.narrative_summary() for a in state.actors.values()
             ),
             recent_public_events=(),
             resolved_outcomes=(*roll_events, summary),
@@ -613,7 +612,7 @@ class CombatOrchestrator:
         )
 
     def _format_combat_status(self, state: EncounterState) -> str:
-        summaries = [actor_narrative_summary(a) for a in state.actors.values()]
+        summaries = [a.narrative_summary() for a in state.actors.values()]
         return " | ".join(summaries)
 
     def _rotate_turns(self, state: EncounterState) -> EncounterState:

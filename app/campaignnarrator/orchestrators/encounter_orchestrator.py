@@ -31,7 +31,6 @@ from campaignnarrator.domain.models import (
 )
 from campaignnarrator.orchestrators.actor_summaries import (
     actor_modifiers,
-    actor_narrative_summary,
 )
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -558,14 +557,14 @@ def _frame(
 def _public_actor_summaries(state: EncounterState) -> tuple[str, ...]:
     if not state.npc_presences:
         # No presence list — old encounter or unit-test fixture; include everyone.
-        return tuple(actor_narrative_summary(actor) for actor in state.actors.values())
+        return tuple(actor.narrative_summary() for actor in state.actors.values())
     present_ids = {
         p.actor_id
         for p in state.npc_presences
         if p.status is not NpcPresenceStatus.DEPARTED
     }
     return tuple(
-        actor_narrative_summary(actor)
+        actor.narrative_summary()
         for actor in state.actors.values()
         if actor.actor_type == ActorType.PC or actor.actor_id in present_ids
     )

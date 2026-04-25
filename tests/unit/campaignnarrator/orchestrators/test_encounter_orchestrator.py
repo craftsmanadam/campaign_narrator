@@ -29,9 +29,6 @@ from campaignnarrator.domain.models import (
     RulesAdjudicationRequest,
     StateEffect,
 )
-from campaignnarrator.orchestrators.actor_summaries import (
-    actor_narrative_summary as _actor_narrative_summary,
-)
 from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
     OrchestratorAgents,
@@ -938,7 +935,7 @@ def _make_actor(
 
 def test_narrative_summary_uninjured() -> None:
     actor = _make_actor("Talia", hp_current=20, hp_max=20)
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "20" not in result
     assert "16" not in result  # no AC
     assert "uninjured" in result
@@ -947,45 +944,45 @@ def test_narrative_summary_uninjured() -> None:
 
 def test_narrative_summary_lightly_wounded() -> None:
     actor = _make_actor("Talia", hp_current=14, hp_max=20)  # 70% = lightly wounded
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "lightly wounded" in result
 
 
 def test_narrative_summary_bloodied() -> None:
     actor = _make_actor("Talia", hp_current=9, hp_max=20)  # 45% = bloodied
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "bloodied" in result
     assert "9" not in result
 
 
 def test_narrative_summary_barely_standing() -> None:
     actor = _make_actor("Goblin", hp_current=1, hp_max=7)  # ~14% = barely standing
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "barely standing" in result
 
 
 def test_narrative_summary_defeated() -> None:
     actor = _make_actor("Goblin", hp_current=0, hp_max=7)
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "defeated" in result
 
 
 def test_narrative_summary_includes_conditions() -> None:
     actor = _make_actor("Talia", hp_current=15, hp_max=20, conditions=("poisoned",))
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "poisoned" in result
 
 
 def test_narrative_summary_no_hp_numbers() -> None:
     actor = _make_actor("Talia", hp_current=15, hp_max=20)
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "15/20" not in result
     assert "AC" not in result
 
 
 def test_narrative_summary_pc_includes_player_tag() -> None:
     actor = _make_actor("Gareth", hp_current=20, hp_max=20, actor_type=ActorType.PC)
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "player" in result
     assert "Gareth" in result
     assert "uninjured" in result
@@ -993,7 +990,7 @@ def test_narrative_summary_pc_includes_player_tag() -> None:
 
 def test_narrative_summary_npc_excludes_player_tag() -> None:
     actor = _make_actor("Goblin", hp_current=7, hp_max=7, actor_type=ActorType.NPC)
-    result = _actor_narrative_summary(actor)
+    result = actor.narrative_summary()
     assert "player" not in result
     assert "uninjured" in result
 

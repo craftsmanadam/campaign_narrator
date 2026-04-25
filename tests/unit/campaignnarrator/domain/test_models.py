@@ -2577,3 +2577,26 @@ def test_condition_methods_compose_correctly() -> None:
     actor = actor.without_condition("hidden")
     assert actor.has_condition("hidden") is False
     assert actor.has_condition("poisoned") is True
+
+
+# ---------------------------------------------------------------------------
+# ActorState.narrative_summary
+# ---------------------------------------------------------------------------
+
+
+def test_actor_state_narrative_summary_uninjured() -> None:
+    actor = replace(TALIA, hp_current=TALIA.hp_max)
+    assert "uninjured" in actor.narrative_summary()
+    assert str(TALIA.hp_max) not in actor.narrative_summary()
+
+
+def test_actor_state_narrative_summary_pc_includes_player_tag() -> None:
+    actor = replace(TALIA, hp_current=TALIA.hp_max)
+    summary = actor.narrative_summary()
+    assert "player" in summary
+    assert TALIA.name in summary
+
+
+def test_actor_state_narrative_summary_defeated() -> None:
+    actor = replace(TALIA, hp_current=0)
+    assert "defeated" in actor.narrative_summary()

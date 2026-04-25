@@ -48,6 +48,12 @@ class RecoveryPeriod(StrEnum):
     DAY = "day"  # items only — "regains charges at dawn"
 
 
+# HP ratio thresholds for actor narrative summaries
+_HP_THRESHOLD_BARELY_STANDING = 0.25
+_HP_THRESHOLD_BLOODIED = 0.5
+_HP_THRESHOLD_LIGHTLY_WOUNDED = 0.75
+
+
 @dataclass(frozen=True, slots=True)
 class Milestone:
     """A campaign story anchor point. Narrator-only — never shown to the player."""
@@ -553,6 +559,35 @@ class ActorState:
         if name not in self.conditions:
             return self
         return replace(self, conditions=tuple(c for c in self.conditions if c != name))
+
+    def narrative_summary(self) -> str:
+        """Return a narration-safe actor summary using injury labels instead of numbers.
+
+        The player character is tagged ``(player)`` so the narrator can distinguish
+        them from NPCs and never assign the player's name to a background figure.
+        """
+        ratio = self.hp_current / self.hp_max if self.hp_max > 0 else 0.0
+        if ratio <= 0:
+            injury = "defeated"
+        elif ratio <= _HP_THRESHOLD_BARELY_STANDING:
+            injury = "barely standing"
+        elif ratio <= _HP_THRESHOLD_BLOODIED:
+            injury = "bloodied"
+        elif ratio <= _HP_THRESHOLD_LIGHTLY_WOUNDED:
+            injury = "lightly wounded"
+        else:
+            injury = "uninjured"
+
+        if self.actor_type is ActorType.PC:
+            parts = [self.name, f"(player, {injury})"]
+        else:
+            parts = [self.name, f"({injury})"]
+
+        if self.conditions:
+            parts.append(f"[{', '.join(self.conditions)}]")
+        if self.description:
+            parts.append(f"— {self.description}")
+        return " ".join(parts)
 
     def to_dict(self) -> dict[str, object]:
         """Serialize to a JSON-compatible dict. Excludes transient fields."""
