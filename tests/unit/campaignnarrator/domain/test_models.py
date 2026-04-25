@@ -2328,6 +2328,32 @@ def test_npc_presence_from_dict_backward_compat_visible_false() -> None:
     assert presence.status is NpcPresenceStatus.CONCEALED
 
 
+def test_npc_presence_from_dict_raises_on_invalid_status() -> None:
+    with pytest.raises(TypeError, match="invalid status"):
+        NpcPresence.from_dict(
+            {
+                "actor_id": "npc:x",
+                "display_name": "X",
+                "description": "d",
+                "name_known": False,
+                "status": "gone",
+            }
+        )
+
+
+def test_npc_presence_from_dict_status_takes_priority_over_visible() -> None:
+    data = {
+        "actor_id": "npc:x",
+        "display_name": "X",
+        "description": "d",
+        "name_known": False,
+        "status": "departed",
+        "visible": True,
+    }
+    presence = NpcPresence.from_dict(data)
+    assert presence.status is NpcPresenceStatus.DEPARTED
+
+
 def test_resource_state_round_trips_to_dict() -> None:
     r = ResourceState(
         resource="second_wind",

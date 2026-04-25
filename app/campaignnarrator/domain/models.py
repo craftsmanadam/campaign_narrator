@@ -207,11 +207,11 @@ class InitiativeTurn:
 class NpcPresenceStatus(StrEnum):
     """Scene presence state for an established NPC.
 
-    PRESENT  – NPC is active in the scene and visible to the player.
-    CONCEALED – NPC is in the scene but hidden from the player (e.g. behind a
+    PRESENT  - NPC is active in the scene and visible to the player.
+    CONCEALED - NPC is in the scene but hidden from the player (e.g. behind a
                 screen, in disguise).  The narrator may still reference them
                 obliquely; the player has not interacted with them directly.
-    DEPARTED – NPC has left the scene.  They must not appear in narrator
+    DEPARTED - NPC has left the scene.  They must not appear in narrator
                context; the orchestrator filters them out entirely.
     """
 
@@ -257,12 +257,22 @@ class NpcPresence:
             and isinstance(name_known, bool)
         ):
             raise TypeError("NpcPresence: missing or invalid required fields")  # noqa: TRY003
-        # Backward compatibility: old saves use visible: bool
+        # Backward compatibility: old saves use visible: bool.
+        # visible=True → PRESENT; visible=False → CONCEALED.
+        # DEPARTED had no representation in old saves and cannot appear here.
         raw_status = data.get("status")
         if isinstance(raw_status, str):
-            status = NpcPresenceStatus(raw_status)
+            try:
+                status = NpcPresenceStatus(raw_status)
+            except ValueError as exc:
+                msg = f"NpcPresence: invalid status value {raw_status!r}"
+                raise TypeError(msg) from exc
         elif "visible" in data:
-            status = NpcPresenceStatus.PRESENT if data["visible"] else NpcPresenceStatus.CONCEALED
+            status = (
+                NpcPresenceStatus.PRESENT
+                if data["visible"]
+                else NpcPresenceStatus.CONCEALED
+            )
         else:
             status = NpcPresenceStatus.PRESENT
         return cls(
@@ -1264,8 +1274,8 @@ __all__ = [
     "Narration",
     "NarrationFrame",
     "NarrationResponse",
-    "NpcPresenceStatus",
     "NpcPresence",
+    "NpcPresenceStatus",
     "PlayerIO",
     "PlayerInput",
     "PlayerIntent",

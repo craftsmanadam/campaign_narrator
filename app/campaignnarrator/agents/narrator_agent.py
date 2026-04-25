@@ -22,7 +22,6 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     NarrationResponse,
     NpcPresence,
-    NpcPresenceStatus,
     SceneOpeningResponse,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
