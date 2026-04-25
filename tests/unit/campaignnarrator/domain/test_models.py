@@ -199,6 +199,38 @@ def test_rules_adjudication_carries_rolls_and_state_effects() -> None:
     )
 
 
+def test_state_effect_apply_on_defaults_to_always() -> None:
+    effect = StateEffect(effect_type="add_condition", target="pc:talia", value="hidden")
+    assert effect.apply_on == "always"
+
+
+def test_state_effect_apply_on_accepts_success_and_failure() -> None:
+    success_effect = StateEffect(
+        effect_type="add_condition",
+        target="pc:talia",
+        value="hidden",
+        apply_on="success",
+    )
+    failure_effect = StateEffect(
+        effect_type="add_condition",
+        target="pc:talia",
+        value="poisoned",
+        apply_on="failure",
+    )
+    assert success_effect.apply_on == "success"
+    assert failure_effect.apply_on == "failure"
+
+
+def test_state_effect_apply_on_rejects_invalid_value() -> None:
+    with pytest.raises(ValidationError):
+        StateEffect(
+            effect_type="add_condition",
+            target="pc:talia",
+            value="hidden",
+            apply_on="maybe",
+        )
+
+
 def test_narration_frame_contains_resolved_public_context() -> None:
     """Narration frames should capture only the public-facing outcome summary."""
 

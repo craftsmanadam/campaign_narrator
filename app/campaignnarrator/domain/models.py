@@ -1000,6 +1000,7 @@ class StateEffect(BaseModel):
     effect_type: str
     target: str
     value: object = None
+    apply_on: Literal["always", "success", "failure"] = "always"
 
 
 @dataclass(frozen=True, slots=True)
