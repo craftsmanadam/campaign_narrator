@@ -21,6 +21,7 @@ from campaignnarrator.domain.models import (
     Milestone,
     ModuleState,
     NarrationFrame,
+    NarrationResponse,
     NpcPresence,
     SceneOpeningResponse,
 )
@@ -55,13 +56,21 @@ def _make_narrator(
     text: str = "The goblins lower their weapons.",
     scene_response: SceneOpeningResponse | None = None,
 ) -> tuple[NarratorAgent, MagicMock, MagicMock]:
-    """Return (narrator, mock_adapter, mock_scene_agent)."""
+    """Return (narrator, mock_adapter, mock_scene_agent).
+
+    narrator._narrate_agent is a MagicMock configured to return NarrationResponse(text).
+    """
     mock_adapter = MagicMock()
     mock_adapter.generate_text.return_value = text
 
     mock_scene_agent = MagicMock()
     if scene_response is not None:
         mock_scene_agent.run_sync.return_value.output = scene_response
+
+    mock_narrate_agent = MagicMock()
+    mock_narrate_agent.run_sync.return_value.output = NarrationResponse(
+        text=text, current_location="A ruined roadside camp."
+    )
 
     mock_memory_repo = MagicMock()
     mock_memory_repo.retrieve_relevant.return_value = []
@@ -73,47 +82,46 @@ def _make_narrator(
         memory_repository=mock_memory_repo,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
+        _narrate_agent=mock_narrate_agent,
     )
     return narrator, mock_adapter, mock_scene_agent
 
 
-def test_narrator_uses_generate_text_for_non_opening_frames() -> None:
+def test_narrator_uses_narrate_agent_for_non_opening_frames() -> None:
     narrator, mock_adapter, _ = _make_narrator("The goblins lower their weapons.")
     result = narrator.narrate(_frame("social_resolution"))
     assert result.text == "The goblins lower their weapons."
     assert result.audience == "player"
-    mock_adapter.generate_text.assert_called_once()
+    narrator._narrate_agent.run_sync.assert_called_once()
+    mock_adapter.generate_text.assert_not_called()
 
 
 def test_narrator_rejects_empty_text_output() -> None:
-    narrator, _, __ = _make_narrator("   ")
+    narrator, _, __ = _make_narrator()
+    narrator._narrate_agent.run_sync.return_value.output = NarrationResponse(
+        text="   ", current_location="somewhere"
+    )
     with pytest.raises(ValueError, match="empty narration output"):
         narrator.narrate(_frame())
 
 
 def test_narrator_prompt_includes_safety_guardrails() -> None:
-    narrator, mock_adapter, _ = _make_narrator()
-    narrator.narrate(_frame("recap_response"))
-    call_kwargs = mock_adapter.generate_text.call_args[1]
-    assert "Do not invent mechanics" in call_kwargs["instructions"]
-    assert (
-        "Use only provided public and allowed context." in call_kwargs["instructions"]
-    )
+    assert "Do not invent mechanics" in BASE_NARRATE_INSTRUCTIONS
+    assert "Use only provided public and allowed context." in BASE_NARRATE_INSTRUCTIONS
 
 
 def test_narrator_input_includes_disclosures_and_outcomes() -> None:
-    narrator, mock_adapter, _ = _make_narrator()
+    narrator, _, __ = _make_narrator()
     narrator.narrate(_frame("status_response"))
-    call_kwargs = mock_adapter.generate_text.call_args[1]
-    assert '"allowed_disclosures": [' in call_kwargs["input_text"]
-    assert '"resolved_outcomes": [' in call_kwargs["input_text"]
+    input_json = narrator._narrate_agent.run_sync.call_args[0][0]
+    assert '"allowed_disclosures": [' in input_json
+    assert '"resolved_outcomes": [' in input_json
 
 
 def test_narrator_personality_is_prepended_to_instructions() -> None:
-    narrator, mock_adapter, _ = _make_narrator()
-    narrator.narrate(_frame())
-    call_kwargs = mock_adapter.generate_text.call_args[1]
-    assert call_kwargs["instructions"].startswith("Test narrator.")
+    narrator, _, __ = _make_narrator()
+    instructions = narrator._instructions(BASE_NARRATE_INSTRUCTIONS)
+    assert instructions.startswith("Test narrator.")
 
 
 def test_narrate_scene_opening_calls_scene_agent() -> None:
@@ -148,7 +156,8 @@ def test_narrate_non_opening_does_not_use_scene_agent() -> None:
     result = narrator.narrate(_frame("social_resolution"))
     assert result.scene_tone is None
     mock_scene_agent.run_sync.assert_not_called()
-    mock_adapter.generate_text.assert_called_once()
+    narrator._narrate_agent.run_sync.assert_called_once()
+    mock_adapter.generate_text.assert_not_called()
 
 
 def test_narrate_scene_opening_prepends_personality_to_scene_instructions() -> None:
@@ -158,6 +167,7 @@ def test_narrate_scene_opening_prepends_personality_to_scene_instructions() -> N
         personality="Gothic style.",
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
     )
     assert "Gothic style." in narrator._scene_instructions
     assert "opening a new encounter scene" in narrator._scene_instructions
@@ -178,6 +188,7 @@ def test_declare_npc_intent_from_json_returns_prose_string() -> None:
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
     )
     context_json = json.dumps(
         {"actor_id": "npc:goblin-1", "name": "Goblin Scout", "hp_current": 7}
@@ -197,6 +208,7 @@ def test_declare_npc_intent_from_json_raises_value_error_on_blank_response() -> 
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
     )
     with pytest.raises(ValueError, match="empty npc intent"):
         narrator.declare_npc_intent_from_json(json.dumps({"actor_id": "npc:goblin-1"}))
@@ -221,6 +233,7 @@ def test_assess_combat_from_json_returns_active_assessment_when_combat_continues
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
+        _narrate_agent=MagicMock(),
     )
     assessment = narrator.assess_combat_from_json(
         json.dumps({"actors": [], "recent_events": []})
@@ -252,6 +265,7 @@ def test_assess_combat_from_json_returns_inactive_assessment_with_outcome() -> N
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
+        _narrate_agent=MagicMock(),
     )
     assessment = narrator.assess_combat_from_json(
         json.dumps({"actors": [], "recent_events": []})
@@ -276,6 +290,7 @@ def test_assess_combat_from_json_raises_value_error_when_inactive_but_no_outcome
         adapter=adapter,
         _scene_agent=MagicMock(),
         _assess_agent=assess_agent,
+        _narrate_agent=MagicMock(),
     )
     with pytest.raises(ValueError, match="combat_active=False but no outcome"):
         narrator.assess_combat_from_json(
@@ -303,6 +318,7 @@ def _make_narrator_with_memory(
         memory_repository=mock_memory_repo,
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
     )
     return narrator, mock_memory_repo
 
@@ -522,6 +538,7 @@ def _make_scene_narrator(
         memory_repository=mock_repo,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
     )
     return narrator, mock_repo, mock_scene_agent
 
@@ -566,6 +583,7 @@ def narrator_with_mock_scene_agent() -> tuple[NarratorAgent, MagicMock]:
         memory_repository=mock_memory_repo,
         _scene_agent=mock_scene_agent,
         _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
     )
     return narrator, mock_scene_agent
 
@@ -640,8 +658,7 @@ def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
 
 def test_narrate_serializes_npc_presences_in_frame() -> None:
     """NarrationFrame.npc_presences appear as ESTABLISHED NPCs block in LLM context."""
-    narrator, mock_adapter, _ = _make_narrator()
-    mock_adapter.generate_text.return_value = "Mira greets you warmly."
+    narrator, _, __ = _make_narrator()
 
     presence = NpcPresence(
         actor_id="npc:mira-000",
@@ -662,20 +679,14 @@ def test_narrate_serializes_npc_presences_in_frame() -> None:
     )
     narrator.narrate(frame)
 
-    call_args = mock_adapter.generate_text.call_args
-    # input_text can be positional or keyword
-    input_text = call_args.kwargs.get("input_text") or (
-        call_args.args[1] if len(call_args.args) > 1 else None
-    )
-    assert input_text is not None
+    input_text = narrator._narrate_agent.run_sync.call_args[0][0]
     assert "ESTABLISHED NPCs" in input_text
     assert "the innkeeper" in input_text
 
 
 def test_narrate_includes_player_action_in_frame_when_present() -> None:
     """player_action must appear in the LLM input when set on the frame."""
-    narrator, mock_adapter, _ = _make_narrator()
-    mock_adapter.generate_text.return_value = "The man stammers his name."
+    narrator, _, __ = _make_narrator()
 
     frame = NarrationFrame(
         purpose="npc_dialogue",
@@ -689,26 +700,18 @@ def test_narrate_includes_player_action_in_frame_when_present() -> None:
     )
     narrator.narrate(frame)
 
-    call_args = mock_adapter.generate_text.call_args
-    input_text = call_args.kwargs.get("input_text") or (
-        call_args.args[1] if len(call_args.args) > 1 else None
-    )
-    assert input_text is not None
+    input_text = narrator._narrate_agent.run_sync.call_args[0][0]
     assert "player_action" in input_text
     assert "Baron's Shadow" in input_text
 
 
 def test_narrate_omits_player_action_key_when_none() -> None:
     """player_action must not appear in the LLM input when not set."""
-    narrator, mock_adapter, _ = _make_narrator()
+    narrator, _, __ = _make_narrator()
 
     narrator.narrate(_frame("scene_response"))
 
-    call_args = mock_adapter.generate_text.call_args
-    input_text = call_args.kwargs.get("input_text") or (
-        call_args.args[1] if len(call_args.args) > 1 else None
-    )
-    assert input_text is not None
+    input_text = narrator._narrate_agent.run_sync.call_args[0][0]
     assert "player_action" not in input_text
 
 
@@ -732,18 +735,14 @@ def test_narrate_scene_opening_skips_retrieve_memory_when_context_pre_populated(
 
 def test_narrate_non_opening_includes_prior_narrative_context_when_set() -> None:
     """Non-scene-opening frames include prior_narrative_context in LLM input when set."""
-    narrator, mock_adapter, _ = _make_narrator("Narration text.")
+    narrator, _, __ = _make_narrator("Narration text.")
     frame = replace(
         _frame("social_resolution"),
         prior_narrative_context="Earlier, the party camped near the river.",
     )
     narrator.narrate(frame)
 
-    call_args = mock_adapter.generate_text.call_args
-    input_text = call_args.kwargs.get("input_text") or (
-        call_args.args[1] if len(call_args.args) > 1 else None
-    )
-    assert input_text is not None
+    input_text = narrator._narrate_agent.run_sync.call_args[0][0]
     assert "prior_narrative_context" in input_text
     assert "Earlier, the party camped near the river." in input_text
 

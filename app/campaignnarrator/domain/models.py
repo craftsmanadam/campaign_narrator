@@ -685,6 +685,7 @@ class EncounterState:
     outcome: str | None = None
     scene_tone: str | None = None
     npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
+    current_location: str | None = None
 
     def __post_init__(self) -> None:
         """Snapshot mutable mappings so encounter state cannot be mutated externally."""
@@ -693,6 +694,8 @@ class EncounterState:
         object.__setattr__(
             self, "hidden_facts", MappingProxyType(dict(self.hidden_facts))
         )
+        if self.current_location is None:
+            object.__setattr__(self, "current_location", self.setting)
 
     @property
     def player_actor_id(self) -> str:
@@ -718,6 +721,7 @@ class EncounterState:
             "encounter_id": self.encounter_id,
             "phase": self.phase.value,
             "setting": self.setting,
+            "current_location": self.current_location,
             "public_events": list(self.public_events),
             "hidden_facts": dict(self.hidden_facts),
             "combat_turns": [t.to_dict() for t in self.combat_turns],
@@ -780,6 +784,7 @@ class EncounterState:
         )
         outcome = data.get("outcome")
         scene_tone = data.get("scene_tone")
+        current_location = data.get("current_location")
         return cls(
             encounter_id=encounter_id,
             phase=EncounterPhase(phase_raw),
@@ -791,6 +796,9 @@ class EncounterState:
             outcome=outcome if isinstance(outcome, str) else None,
             scene_tone=scene_tone if isinstance(scene_tone, str) else None,
             npc_presences=npc_presences,
+            current_location=(
+                current_location if isinstance(current_location, str) else None
+            ),
         )
 
 
@@ -1048,6 +1056,7 @@ class Narration:
     text: str
     audience: str | None = None
     scene_tone: str | None = None
+    current_location: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1129,6 +1138,15 @@ class MilestoneAchieved:
 
     Signals ModuleOrchestrator to advance to the next module.
     """
+
+
+class NarrationResponse(BaseModel):
+    """Structured LLM output for all non-scene-opening narrations."""
+
+    model_config = ConfigDict(frozen=True)
+
+    text: str
+    current_location: str
 
 
 class SceneOpeningResponse(BaseModel):
@@ -1222,6 +1240,7 @@ __all__ = [
     "ModuleState",
     "Narration",
     "NarrationFrame",
+    "NarrationResponse",
     "NpcPresence",
     "PlayerIO",
     "PlayerInput",

@@ -1200,18 +1200,21 @@ def test_considering_rules_displayed_before_adjudication(
 
 
 def test_resume_encounter_displays_recap_before_prompt(tmp_path: Path) -> None:
-    """When resuming an encounter with prior events, a recap must appear before the prompt."""
+    """When resuming with a non-empty exchange buffer, session_resume narration appears."""
     io = ScriptedIO(["exit"])
-    orchestrator = _orchestrator(
-        tmp_path,
-        state_repository=_social_repository(
-            tmp_path,
-            public_events=("The goblin scout eyed you warily.",),
-        ),
+    state_repo = _social_repository(tmp_path)
+    memory = FakeMemoryRepository(
+        game_state=state_repo.load(),
+        exchange_buffer=("I spoke to the goblin.", "The goblin eyed you warily."),
+    )
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=memory),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
         io=io,
+        _player_intent_agent=FakePlayerIntentAgent(),
     )
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
-    assert "recap_response" in result.output_text
+    assert "session_resume" in result.output_text
 
 
 def test_fresh_encounter_does_not_show_recap(tmp_path: Path) -> None:
@@ -1375,6 +1378,7 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
     memory_repository = FakeMemoryRepository(
         prior_context=[prior_summary],
         game_state=state_repo.load(),
+        exchange_buffer=("I searched the camp.",),  # triggers session_resume path
     )
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -1390,10 +1394,10 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
 
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    # The recap frame must have prior_narrative_context populated from memory
-    recap_frames = [f for f in narrator_agent.frames if f.purpose == "recap_response"]
-    assert recap_frames, "Expected at least one recap_response frame"
-    assert prior_summary in recap_frames[0].prior_narrative_context
+    # session_resume replaces recap_response in the new exchange-buffer-based resume flow
+    resume_frames = [f for f in narrator_agent.frames if f.purpose == "session_resume"]
+    assert resume_frames, "Expected at least one session_resume frame"
+    assert prior_summary in resume_frames[0].prior_narrative_context
 
 
 def test_resume_recap_includes_exchange_buffer_in_prior_context(
@@ -1428,10 +1432,10 @@ def test_resume_recap_includes_exchange_buffer_in_prior_context(
 
     orchestrator.run_encounter(encounter_id="goblin-camp")
 
-    recap_frames = [f for f in narrator_agent.frames if f.purpose == "recap_response"]
-    assert recap_frames, "Expected at least one recap_response frame"
-    assert "I search the camp." in recap_frames[0].prior_narrative_context
-    assert "You find charred goblin bones." in recap_frames[0].prior_narrative_context
+    resume_frames = [f for f in narrator_agent.frames if f.purpose == "session_resume"]
+    assert resume_frames, "Expected at least one session_resume frame"
+    assert "I search the camp." in resume_frames[0].prior_narrative_context
+    assert "You find charred goblin bones." in resume_frames[0].prior_narrative_context
 
 
 class TestSaveExitPath:

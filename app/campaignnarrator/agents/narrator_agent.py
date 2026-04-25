@@ -20,6 +20,7 @@ from campaignnarrator.domain.models import (
     ModuleState,
     Narration,
     NarrationFrame,
+    NarrationResponse,
     NpcPresence,
     SceneOpeningResponse,
 )
@@ -76,6 +77,7 @@ class NarratorAgent:
         memory_repository: MemoryRepository | None = None,
         _scene_agent: object | None = None,
         _assess_agent: object | None = None,
+        _narrate_agent: object | None = None,
     ) -> None:
         self._adapter = adapter
         self._personality = personality
@@ -97,6 +99,15 @@ class NarratorAgent:
                 adapter.model,
                 output_type=CombatAssessment,
                 instructions=_ASSESS_COMBAT_INSTRUCTIONS,
+            )
+        )
+        self._narrate_agent = (
+            _narrate_agent
+            if _narrate_agent is not None
+            else Agent(
+                adapter.model,
+                output_type=NarrationResponse,
+                instructions=self._instructions(_BASE_NARRATE_INSTRUCTIONS),
             )
         )
 
@@ -144,13 +155,14 @@ class NarratorAgent:
             )
 
         frame_json = json.dumps(frame_dict, indent=2, sort_keys=True)
-        text = self._adapter.generate_text(
-            instructions=self._instructions(_BASE_NARRATE_INSTRUCTIONS),
-            input_text=frame_json,
-        )
-        if not text.strip():
+        result = self._narrate_agent.run_sync(frame_json).output  # NarrationResponse
+        if not result.text.strip():
             raise ValueError("empty narration output")  # noqa: TRY003
-        return Narration(text=text, audience="player")
+        return Narration(
+            text=result.text,
+            audience="player",
+            current_location=result.current_location,
+        )
 
     def open_scene(self, frame: NarrationFrame) -> SceneOpeningResponse:
         """Return the raw SceneOpeningResponse for a scene opening frame.

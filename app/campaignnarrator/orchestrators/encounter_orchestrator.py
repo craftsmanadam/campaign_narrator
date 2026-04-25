@@ -103,9 +103,7 @@ class EncounterOrchestrator:
         state = game_state.encounter
 
         if state.phase is EncounterPhase.SCENE_OPENING:
-            opening = self._narrate(
-                _frame(state, "scene_opening"), encounter_id=state.encounter_id
-            )
+            opening, state = self._narrate(_frame(state, "scene_opening"), state)
             state = replace(
                 state, phase=EncounterPhase.SOCIAL, scene_tone=opening.scene_tone
             )
@@ -115,16 +113,21 @@ class EncounterOrchestrator:
                 GameState(player=player, encounter=state)
             )
             self._memory_repository.update_exchange("", opening.text)
-        elif state.public_events:
-            prior_context = self._retrieve_prior_context(state.setting)
-            recap_frame = replace(
-                _recap_frame(state), prior_narrative_context=prior_context
+        elif self._memory_repository.get_exchange_buffer():
+            self._io.display("--- Resuming session ---")
+            for entry in self._memory_repository.get_exchange_buffer():
+                self._io.display(entry)
+            self._io.display("---")
+            prior_context = self._retrieve_prior_context(
+                state.current_location or state.setting
             )
-            recap_text = self._narrate(
-                recap_frame, encounter_id=state.encounter_id
-            ).text
-            self._io.display(recap_text)
-            output.append(recap_text)
+            resume_frame = replace(
+                _frame(state, "session_resume", resolved_outcomes=state.public_events),
+                prior_narrative_context=prior_context,
+            )
+            resume_narration, state = self._narrate(resume_frame, state)
+            self._io.display(resume_narration.text)
+            output.append(resume_narration.text)
 
         if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
             return EncounterRunResult(
@@ -189,25 +192,19 @@ class EncounterOrchestrator:
                     )
                     break
                 case IntentCategory.STATUS:
-                    text = self._narrate(
-                        _status_frame(state), encounter_id=state.encounter_id
-                    ).text
-                    self._io.display(text)
-                    output.append(text)
+                    narration, state = self._narrate(_status_frame(state), state)
+                    self._io.display(narration.text)
+                    output.append(narration.text)
                     continue
                 case IntentCategory.RECAP:
-                    text = self._narrate(
-                        _recap_frame(state), encounter_id=state.encounter_id
-                    ).text
-                    self._io.display(text)
-                    output.append(text)
+                    narration, state = self._narrate(_recap_frame(state), state)
+                    self._io.display(narration.text)
+                    output.append(narration.text)
                     continue
                 case IntentCategory.LOOK_AROUND:
-                    text = self._narrate(
-                        _look_frame(state), encounter_id=state.encounter_id
-                    ).text
-                    self._io.display(text)
-                    output.append(text)
+                    narration, state = self._narrate(_look_frame(state), state)
+                    self._io.display(narration.text)
+                    output.append(narration.text)
                     continue
 
             self._io.display("\n...\n")
@@ -313,33 +310,33 @@ class EncounterOrchestrator:
                 )
             case IntentCategory.NPC_DIALOGUE:
                 state = _clear_player_hidden(state)
-                narration = self._narrate(
+                narration, state = self._narrate(
                     replace(
                         _frame(state, "npc_dialogue"),
                         player_action=player_input.raw_text,
                     ),
-                    encounter_id=state.encounter_id,
+                    state,
                 )
                 return state, narration
             case IntentCategory.SCENE_OBSERVATION:
-                narration = self._narrate(
+                narration, state = self._narrate(
                     replace(
                         _frame(state, "scene_response"),
                         player_action=player_input.raw_text,
                     ),
-                    encounter_id=state.encounter_id,
+                    state,
                 )
                 return state, narration
             case _:
                 _log.warning(
                     "Unhandled intent category in narrative path: %s", intent.category
                 )
-                narration = self._narrate(
+                narration, state = self._narrate(
                     replace(
                         _frame(state, "scene_response"),
                         player_action=player_input.raw_text,
                     ),
-                    encounter_id=state.encounter_id,
+                    state,
                 )
                 return state, narration
 
@@ -376,7 +373,7 @@ class EncounterOrchestrator:
                     "outcome": updated_state.outcome,
                 }
             )
-        narration = self._narrate(
+        narration, updated_state = self._narrate(
             replace(
                 _frame(
                     updated_state,
@@ -386,7 +383,7 @@ class EncounterOrchestrator:
                 ),
                 player_action=player_input.raw_text,
             ),
-            encounter_id=updated_state.encounter_id,
+            updated_state,
         )
         return updated_state, narration
 
@@ -421,9 +418,9 @@ class EncounterOrchestrator:
                 "outcome": "combat",
             }
         )
-        narration = self._narrate(
+        narration, updated_state = self._narrate(
             _frame(updated_state, "combat_start", resolved_outcomes=(event,)),
-            encounter_id=updated_state.encounter_id,
+            updated_state,
         )
         return updated_state, narration
 
@@ -460,18 +457,22 @@ class EncounterOrchestrator:
             parts.append("Recent exchanges:\n" + "\n".join(exchange))
         return "\n\n".join(parts)
 
-    def _narrate(self, frame: NarrationFrame, *, encounter_id: str) -> Narration:
+    def _narrate(
+        self, frame: NarrationFrame, state: EncounterState
+    ) -> tuple[Narration, EncounterState]:
         narration = self._narrator_agent.narrate(frame)
         self._memory_repository.store_narrative(
             narration.text,
             {
                 "event_type": "narration",
-                "encounter_id": encounter_id,
+                "encounter_id": state.encounter_id,
                 "campaign_id": "",
                 "module_id": "",
             },
         )
-        return narration
+        if narration.current_location is not None:
+            state = replace(state, current_location=narration.current_location)
+        return narration, state
 
     def _append_event(self, event: dict[str, object]) -> None:
         self._memory_repository.append_event(event)
@@ -516,7 +517,7 @@ def _frame(
     return NarrationFrame(
         purpose=purpose,
         phase=state.phase,
-        setting=state.setting,
+        setting=state.current_location or state.setting,
         public_actor_summaries=_public_actor_summaries(state),
         npc_presences=state.npc_presences,
         recent_public_events=state.public_events[-5:],
