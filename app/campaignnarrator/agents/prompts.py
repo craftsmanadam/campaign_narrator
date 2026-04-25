@@ -102,7 +102,7 @@ RULES_INSTRUCTIONS: str = (
     "  For any state effect that should apply conditionally on the DC roll result, "
     "set apply_on on that effect: use 'success' if the effect only applies when "
     "the roll meets or exceeds difficulty_class (e.g., add_condition hidden on a "
-    "Stealth check; revealing a secret on a Persuasion check), or 'failure' if "
+    "Stealth check), or 'failure' if "
     "the effect only applies when the roll falls short (e.g., add_condition "
     "poisoned on a failed Constitution saving throw; add_condition frightened on "
     "a failed Wisdom saving throw). Effects that apply regardless of outcome "
