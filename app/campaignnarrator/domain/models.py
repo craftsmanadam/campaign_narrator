@@ -1279,10 +1279,10 @@ class NarrationResponse(BaseModel):
 
     @model_validator(mode="after")
     def _validate_completion_fields(self) -> Self:
-        if self.encounter_complete and not self.next_location_hint:
-            raise _MissingCompletionHint()
         if self.encounter_complete and not self.completion_reason:
             raise _MissingCompletionReason()
+        if self.encounter_complete and not self.next_location_hint:
+            raise _MissingCompletionHint()
         return self
 
 

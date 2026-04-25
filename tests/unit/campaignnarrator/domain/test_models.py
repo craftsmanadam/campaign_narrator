@@ -2811,4 +2811,5 @@ def test_narration_accepts_encounter_complete_fields() -> None:
         next_location_hint="Cave of Whispers",
     )
     assert narration.encounter_complete is True
+    assert narration.completion_reason == "Player departed."
     assert narration.next_location_hint == "Cave of Whispers"
