@@ -107,8 +107,8 @@ def test_narrator_rejects_empty_text_output() -> None:
 
 
 def test_narrator_prompt_includes_safety_guardrails() -> None:
-    assert "Do not invent mechanics" in BASE_NARRATE_INSTRUCTIONS
-    assert "Use only provided public and allowed context." in BASE_NARRATE_INSTRUCTIONS
+    assert "You may not invent permanent campaign canon" in BASE_NARRATE_INSTRUCTIONS
+    assert "HP changes, inventory changes" in BASE_NARRATE_INSTRUCTIONS
 
 
 def test_narrator_input_includes_disclosures_and_outcomes() -> None:
@@ -643,11 +643,13 @@ def test_open_scene_raises_on_empty_text(
 
 
 def test_base_narrate_instructions_contain_hard_rules() -> None:
-    """BASE_NARRATE_INSTRUCTIONS must include all four hard rules."""
+    """BASE_NARRATE_INSTRUCTIONS must include all hard rules and narrative authority."""
     assert "Never expose mechanical stats" in BASE_NARRATE_INSTRUCTIONS
-    assert "Do not reset or re-describe the opening scene" in BASE_NARRATE_INSTRUCTIONS
+    assert "Do not re-describe the opening scene" in BASE_NARRATE_INSTRUCTIONS
     assert "Do not introduce new named characters" in BASE_NARRATE_INSTRUCTIONS
     assert "name_known is false" in BASE_NARRATE_INSTRUCTIONS
+    assert "NARRATIVE AUTHORITY" in BASE_NARRATE_INSTRUCTIONS
+    assert "Never respond" in BASE_NARRATE_INSTRUCTIONS
 
 
 def test_scene_opening_instructions_contain_npc_declaration_guidance() -> None:
