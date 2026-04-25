@@ -1572,6 +1572,27 @@ def test_encounter_state_public_actor_summaries_pc_always_included() -> None:
     assert any("Talia" in s for s in summaries)
 
 
+def test_encounter_state_public_actor_summaries_includes_concealed() -> None:
+    """CONCEALED NPCs remain in summaries — they are present in the scene."""
+    goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
+    concealed = NpcPresence(
+        actor_id="npc:goblin-scout",
+        display_name="Goblin Scout",
+        description="the goblin scout",
+        name_known=True,
+        status=NpcPresenceStatus.CONCEALED,
+    )
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": TALIA, "npc:goblin-scout": goblin},
+        npc_presences=(concealed,),
+    )
+    summaries = state.public_actor_summaries()
+    assert any("Goblin" in s for s in summaries)
+
+
 def test_actor_state_has_level_field() -> None:
     """ActorState must carry a total character level, defaulting to 1."""
     actor = ActorState(
