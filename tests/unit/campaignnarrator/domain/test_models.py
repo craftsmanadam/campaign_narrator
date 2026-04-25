@@ -2750,7 +2750,9 @@ def test_actor_state_as_modifiers_negative_modifier() -> None:
 
 
 def test_narration_response_defaults_encounter_complete_to_false() -> None:
-    response = NarrationResponse(text="You step into the grove.", current_location="the grove")
+    response = NarrationResponse(
+        text="You step into the grove.", current_location="the grove"
+    )
     assert response.encounter_complete is False
     assert response.completion_reason is None
     assert response.next_location_hint is None
