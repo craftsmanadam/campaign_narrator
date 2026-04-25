@@ -443,6 +443,11 @@ def _int_pair_tuple_from_data(
     return tuple(result)
 
 
+def _ability_modifier(score: int) -> int:
+    """Compute D&D 5e ability modifier from raw score."""
+    return (score - 10) // 2
+
+
 # HP ratio thresholds for actor narrative summaries
 _HP_THRESHOLD_BARELY_STANDING = 0.25
 _HP_THRESHOLD_BLOODIED = 0.5
@@ -966,11 +971,6 @@ class CombatAssessment(BaseModel):
     model_config = ConfigDict(frozen=True)
     combat_active: bool
     outcome: CombatOutcome | None  # None when combat_active is True
-
-
-def _ability_modifier(score: int) -> int:
-    """Compute D&D 5e ability modifier from raw score."""
-    return (score - 10) // 2
 
 
 class RollRequest(BaseModel):

@@ -2656,6 +2656,7 @@ def test_actor_state_as_modifiers_with_class_levels() -> None:
     result = actor.as_modifiers()
     assert result["fighter_level"] == class_level
     assert result["wizard_level"] == class_level
+    assert result["proficiency_bonus"] == TALIA.proficiency_bonus
 
 
 def test_actor_state_as_modifiers_negative_modifier() -> None:
