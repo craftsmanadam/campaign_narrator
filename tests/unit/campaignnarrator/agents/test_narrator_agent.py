@@ -778,6 +778,7 @@ def _make_narrator_with_narrate_model(response: dict) -> NarratorAgent:
     )
     return NarratorAgent(
         adapter=MagicMock(),
+        memory_repository=MagicMock(),
         _scene_agent=MagicMock(),
         _assess_agent=MagicMock(),
         _narrate_agent=narrate_agent,
