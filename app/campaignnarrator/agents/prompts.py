@@ -139,6 +139,8 @@ RULES_INSTRUCTIONS: str = (
     "value is one of: 'present', 'concealed', 'departed'. "
     "Use 'departed' when the player moves past an NPC, the NPC flees, or the NPC "
     "is otherwise no longer part of the scene. "
+    "Use 'concealed' when the NPC is in the scene but the player has not yet "
+    "interacted with them (e.g. a hooded figure at the bar, an NPC in disguise). "
     "Target is the NPC's actor_id. "
     "Use this instead of manually tracking NPC visibility.\n"
     "Do NOT invent other effect types. If no supported effect applies, "

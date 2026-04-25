@@ -10,7 +10,6 @@ from campaignnarrator.domain.models import (
     ActorState,
     EncounterPhase,
     EncounterState,
-    NpcPresence,
     NpcPresenceStatus,
     StateEffect,
 )
@@ -135,13 +134,7 @@ def _apply_set_npc_status(
     presences = list(state.npc_presences)
     for i, presence in enumerate(presences):
         if presence.actor_id == target:
-            presences[i] = NpcPresence(
-                actor_id=presence.actor_id,
-                display_name=presence.display_name,
-                description=presence.description,
-                name_known=presence.name_known,
-                status=new_status,
-            )
+            presences[i] = replace(presence, status=new_status)
             return replace(
                 state,
                 npc_presences=tuple(presences),

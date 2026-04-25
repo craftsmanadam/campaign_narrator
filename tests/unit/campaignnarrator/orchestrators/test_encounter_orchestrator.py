@@ -1850,6 +1850,29 @@ def test_public_actor_summaries_excludes_departed_npcs() -> None:
     assert not any("Goblin" in s for s in summaries)
 
 
+def test_public_actor_summaries_includes_concealed_npcs() -> None:
+    """CONCEALED NPCs remain in summaries — they are present in the scene."""
+    talia = TALIA
+    goblin = make_goblin_scout("npc:goblin-scout", "Goblin Scout")
+    concealed_presence = NpcPresence(
+        actor_id="npc:goblin-scout",
+        display_name="Goblin Scout",
+        description="the goblin scout",
+        name_known=True,
+        status=NpcPresenceStatus.CONCEALED,
+    )
+    state = EncounterState(
+        encounter_id="test",
+        phase=EncounterPhase.SOCIAL,
+        setting="A camp.",
+        actors={"pc:talia": talia, "npc:goblin-scout": goblin},
+        npc_presences=(concealed_presence,),
+    )
+    summaries = _public_actor_summaries(state)
+    # CONCEALED NPC must still appear — it is in the scene
+    assert any("Goblin" in s for s in summaries)
+
+
 def test_public_actor_summaries_includes_all_when_no_presences() -> None:
     """_public_actor_summaries includes all actors when npc_presences is empty (backward compat)."""
     talia = TALIA
