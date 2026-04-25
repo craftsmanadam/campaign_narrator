@@ -1624,3 +1624,195 @@ class TestHiddenConditionClearing:
         state = fake_memory.staged_game_state.encounter  # type: ignore[union-attr]
         player = state.actors["pc:talia"]
         assert not player.has_condition("hidden")
+
+
+class TestDCResolution:
+    """_apply_adjudication captures DC roll outcome and filters state_effects by apply_on."""
+
+    def test_dc_success_applies_success_and_always_effects_excludes_failure(
+        self, tmp_path: Path, mocker: object
+    ) -> None:
+        """When the DC roll succeeds, apply_on='failure' effects are excluded."""
+        rules_agent = FakeRulesAgent(
+            [
+                RulesAdjudication(
+                    is_legal=True,
+                    action_type="skill_check",
+                    summary="The player attempts to hide.",
+                    roll_requests=(
+                        RollRequest(
+                            owner="pc:talia",
+                            visibility=RollVisibility.PUBLIC,
+                            expression="1d20+2",
+                            purpose="Stealth check",
+                            difficulty_class=15,
+                        ),
+                    ),
+                    state_effects=(
+                        StateEffect(
+                            effect_type="add_condition",
+                            target="pc:talia",
+                            value="hidden",
+                            apply_on="success",
+                        ),
+                        StateEffect(
+                            effect_type="add_condition",
+                            target="pc:talia",
+                            value="spotted",
+                            apply_on="failure",
+                        ),
+                        StateEffect(
+                            effect_type="append_public_event",
+                            target="encounter:goblin-camp",
+                            value="Stealth attempted.",
+                            apply_on="always",
+                        ),
+                    ),
+                )
+            ]
+        )
+        mocker.patch(  # type: ignore[attr-defined]
+            "campaignnarrator.domain.models._roll",
+            side_effect=[18],  # above DC 15
+        )
+        narrator_agent = FakeNarratorAgent()
+        orchestrator = _orchestrator(
+            tmp_path,
+            state_repository=_social_repository(tmp_path),
+            intents=[_intent(IntentCategory.SKILL_CHECK, check_hint="Stealth")],
+            rules_agent=rules_agent,
+            narrator_agent=narrator_agent,
+            io=ScriptedIO(["I try to hide.", "exit"]),
+        )
+
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+
+        state = orchestrator.current_state()
+        assert state is not None
+        assert state.actors["pc:talia"].has_condition(
+            "hidden"
+        )  # success effect applied
+        assert not state.actors["pc:talia"].has_condition(
+            "spotted"
+        )  # failure effect excluded
+        # Roll result appears in resolved_outcomes; LLM summary does not
+        frame = narrator_agent.frames[-1]
+        assert any("Succeeded (DC 15)" in o for o in frame.resolved_outcomes)
+        assert "The player attempts to hide." not in frame.resolved_outcomes
+
+    def test_dc_failure_applies_failure_and_always_effects_excludes_success(
+        self, tmp_path: Path, mocker: object
+    ) -> None:
+        """When the DC roll fails, apply_on='success' effects are excluded."""
+        rules_agent = FakeRulesAgent(
+            [
+                RulesAdjudication(
+                    is_legal=True,
+                    action_type="skill_check",
+                    summary="The player attempts to hide.",
+                    roll_requests=(
+                        RollRequest(
+                            owner="pc:talia",
+                            visibility=RollVisibility.PUBLIC,
+                            expression="1d20+2",
+                            purpose="Stealth check",
+                            difficulty_class=15,
+                        ),
+                    ),
+                    state_effects=(
+                        StateEffect(
+                            effect_type="add_condition",
+                            target="pc:talia",
+                            value="hidden",
+                            apply_on="success",
+                        ),
+                        StateEffect(
+                            effect_type="add_condition",
+                            target="pc:talia",
+                            value="spotted",
+                            apply_on="failure",
+                        ),
+                    ),
+                )
+            ]
+        )
+        mocker.patch(  # type: ignore[attr-defined]
+            "campaignnarrator.domain.models._roll",
+            side_effect=[8],  # below DC 15
+        )
+        narrator_agent = FakeNarratorAgent()
+        orchestrator = _orchestrator(
+            tmp_path,
+            state_repository=_social_repository(tmp_path),
+            intents=[_intent(IntentCategory.SKILL_CHECK, check_hint="Stealth")],
+            rules_agent=rules_agent,
+            narrator_agent=narrator_agent,
+            io=ScriptedIO(["I try to hide.", "exit"]),
+        )
+
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+
+        state = orchestrator.current_state()
+        assert state is not None
+        assert not state.actors["pc:talia"].has_condition(
+            "hidden"
+        )  # success effect excluded
+        assert state.actors["pc:talia"].has_condition(
+            "spotted"
+        )  # failure effect applied
+        frame = narrator_agent.frames[-1]
+        assert any("Failed (DC 15)" in o for o in frame.resolved_outcomes)
+        assert "The player attempts to hide." not in frame.resolved_outcomes
+
+    def test_no_dc_applies_all_effects_and_includes_summary(
+        self, tmp_path: Path, mocker: object
+    ) -> None:
+        """Without a DC roll, all effects apply and adjudication.summary is in resolved_outcomes."""
+        rules_agent = FakeRulesAgent(
+            [
+                RulesAdjudication(
+                    is_legal=True,
+                    action_type="skill_check",
+                    summary="The goblins are impressed.",
+                    roll_requests=(
+                        RollRequest(
+                            owner="pc:talia",
+                            visibility=RollVisibility.PUBLIC,
+                            expression="1d20+2",
+                            purpose="Persuasion check",
+                            # No difficulty_class set
+                        ),
+                    ),
+                    state_effects=(
+                        StateEffect(
+                            effect_type="add_condition",
+                            target="pc:talia",
+                            value="charmed",
+                            apply_on="success",
+                        ),
+                    ),
+                )
+            ]
+        )
+        mocker.patch(  # type: ignore[attr-defined]
+            "campaignnarrator.domain.models._roll", side_effect=[12]
+        )
+        narrator_agent = FakeNarratorAgent()
+        orchestrator = _orchestrator(
+            tmp_path,
+            state_repository=_social_repository(tmp_path),
+            intents=[_intent(IntentCategory.SKILL_CHECK, check_hint="Persuasion")],
+            rules_agent=rules_agent,
+            narrator_agent=narrator_agent,
+            io=ScriptedIO(["I try to convince them.", "exit"]),
+        )
+
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+
+        state = orchestrator.current_state()
+        assert state is not None
+        # Without DC, all effects apply regardless of apply_on value
+        assert state.actors["pc:talia"].has_condition("charmed")
+        # LLM summary IS included in resolved_outcomes when no DC
+        frame = narrator_agent.frames[-1]
+        assert "The goblins are impressed." in frame.resolved_outcomes

@@ -360,7 +360,7 @@ class EncounterOrchestrator:
         )
         self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
-        updated_state, roll_events = self._apply_adjudication(
+        updated_state, roll_events, resolved_action_type = self._apply_adjudication(
             state, adjudication, player
         )
         for event in roll_events:
@@ -373,12 +373,17 @@ class EncounterOrchestrator:
                     "outcome": updated_state.outcome,
                 }
             )
+        has_dc_roll = resolved_action_type is not None
+        resolved_outcomes = (
+            *roll_events,
+            *([] if has_dc_roll else [adjudication.summary]),
+        )
         narration, updated_state = self._narrate(
             replace(
                 _frame(
                     updated_state,
                     "social_resolution",
-                    resolved_outcomes=(*roll_events, adjudication.summary),
+                    resolved_outcomes=resolved_outcomes,
                     compendium_context=compendium_context,
                 ),
                 player_action=player_input.raw_text,
@@ -429,13 +434,20 @@ class EncounterOrchestrator:
         state: EncounterState,
         adjudication: RulesAdjudication,
         player: ActorState,
-    ) -> tuple[EncounterState, tuple[str, ...]]:
+    ) -> tuple[EncounterState, tuple[str, ...], str | None]:
+        # returns (updated_state, roll_events, resolved_action_type_or_none)
+        resolved_action_type: str | None = None
         roll_events: list[str] = []
+
         for roll_request in adjudication.roll_requests:
-            if roll_request.visibility is RollVisibility.PUBLIC:
-                result = roll_request.roll(player)
-                _log.info("%s", result)
-                roll_events.append(str(result))
+            if roll_request.visibility is not RollVisibility.PUBLIC:
+                continue
+            result = roll_request.roll(player)
+            _log.info("%s", result)
+            roll_events.append(str(result))
+            if result.difficulty_class is not None and resolved_action_type is None:
+                resolved_action_type = "success" if result.evaluate() else "failure"
+
         roll_effects = tuple(
             StateEffect(
                 effect_type="append_public_event",
@@ -444,9 +456,20 @@ class EncounterOrchestrator:
             )
             for event in roll_events
         )
+
+        if resolved_action_type is not None:
+            effects_to_apply: list[StateEffect] = [
+                e
+                for e in adjudication.state_effects
+                if e.apply_on in ("always", resolved_action_type)
+            ]
+        else:
+            effects_to_apply = list(adjudication.state_effects)
+
         return (
-            apply_state_effects(state, (*roll_effects, *adjudication.state_effects)),
+            apply_state_effects(state, (*roll_effects, *effects_to_apply)),
             tuple(roll_events),
+            resolved_action_type,
         )
 
     def _retrieve_prior_context(self, query: str) -> str:
