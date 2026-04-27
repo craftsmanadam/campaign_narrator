@@ -372,7 +372,9 @@ def test_rules_instructions_constrain_skill_checks_to_one_roll_request() -> None
     assert "exactly ONE" in RULES_INSTRUCTIONS or "exactly one" in RULES_INSTRUCTIONS
 
 
-def test_rules_instructions_require_public_event_for_successful_discovery_checks() -> None:
+def test_rules_instructions_require_public_event_for_successful_discovery_checks() -> (
+    None
+):
     """RULES_INSTRUCTIONS must tell the LLM to emit append_public_event on successful discovery checks."""
     assert "discovery checks" in RULES_INSTRUCTIONS.lower()
     assert "apply_on='success'" in RULES_INSTRUCTIONS

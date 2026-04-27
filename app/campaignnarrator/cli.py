@@ -5,9 +5,10 @@ from __future__ import annotations
 import argparse
 import signal
 import sys
+from argparse import Namespace
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from campaignnarrator.adapters.embedding_adapter import (
     EmbeddingAdapter,
@@ -36,6 +37,21 @@ def _build_application_graph(
     return ApplicationFactory(data_root, stdin, stdout).build()
 
 
+def _arguments(argv: Sequence[str] | None) -> Namespace:
+    parser = argparse.ArgumentParser(prog="campaignnarrator")
+    parser.add_argument("--data-root", type=Path, default=None)
+    args = parser.parse_args(argv)
+    return args
+
+
+def _data_root(args: Namespace, settings) -> Any:
+    if args.data_root is not None:
+        data_root = args.data_root
+    else:
+        data_root = Path(settings.data_root)
+    return data_root
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -46,16 +62,9 @@ def main(
 
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
-
-    parser = argparse.ArgumentParser(prog="campaignnarrator")
-    parser.add_argument("--data-root", type=Path, default=None)
-    args = parser.parse_args(argv)
-
+    args = _arguments(argv)
     settings = Settings()
-    if args.data_root is not None:
-        data_root = args.data_root
-    else:
-        data_root = Path(settings.data_root)
+    data_root = _data_root(args, settings)
     configure_logging(
         data_root=data_root,
         console_logging=settings.console_logging,
