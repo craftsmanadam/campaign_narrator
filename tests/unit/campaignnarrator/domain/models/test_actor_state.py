@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-import pytest
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
@@ -13,7 +12,6 @@ from campaignnarrator.domain.models import (
     RecoveryPeriod,
     ResourceState,
     TurnResources,
-    WeaponState,
 )
 
 from tests.fixtures.fighter_talia import TALIA
@@ -734,5 +732,3 @@ def test_actor_state_as_modifiers_negative_modifier() -> None:
     actor = replace(TALIA, strength=8)
     result = actor.as_modifiers()
     assert result["strength_mod"] == expected_mod
-
-

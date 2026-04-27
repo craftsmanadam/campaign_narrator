@@ -11,6 +11,16 @@ from .actor_state import ActorState, ActorType
 from .campaign_state import CampaignState, ModuleState
 from .npc_presence import NpcPresence, NpcPresenceStatus
 
+# Statuses that mean the NPC is physically in the scene.
+_ACTIVE_NPC_STATUSES = frozenset(
+    {
+        NpcPresenceStatus.AVAILABLE,
+        NpcPresenceStatus.PRESENT,
+        NpcPresenceStatus.INTERACTED,
+        NpcPresenceStatus.CONCEALED,
+    }
+)
+
 
 class EncounterPhase(StrEnum):
     """High-level phases for encounter progression."""
@@ -91,15 +101,13 @@ class EncounterState:
         """Return narration-safe summaries for actors visible in the current scene.
 
         When npc_presences is empty (old encounters or bare test fixtures) all actors
-        are included.  When populated, only PCs and non-DEPARTED NPCs appear so the
-        narrator never sees actors who have left the scene.
+        are included. When populated, only PCs and actively present NPCs appear.
+        MENTIONED and DEPARTED NPCs are excluded.
         """
         if not self.npc_presences:
             return tuple(actor.narrative_summary() for actor in self.actors.values())
         present_ids = {
-            p.actor_id
-            for p in self.npc_presences
-            if p.status is not NpcPresenceStatus.DEPARTED
+            p.actor_id for p in self.npc_presences if p.status in _ACTIVE_NPC_STATUSES
         }
         return tuple(
             actor.narrative_summary()

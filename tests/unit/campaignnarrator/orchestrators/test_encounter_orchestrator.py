@@ -22,6 +22,7 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     NpcPresence,
     NpcPresenceStatus,
+    PlayerInput,
     PlayerIntent,
     RollRequest,
     RollVisibility,
@@ -185,6 +186,7 @@ class FakePlayerIntentAgent:
         setting: str,
         recent_events: tuple[str, ...],
         actor_summaries: tuple[str, ...],
+        npc_presences: tuple[NpcPresence, ...] = (),
     ) -> PlayerIntent:
         self.calls.append(raw_text)
         if self._intents:
@@ -1020,6 +1022,7 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
             setting: str,
             recent_events: tuple[str, ...],
             actor_summaries: tuple[str, ...],
+            npc_presences: tuple[NpcPresence, ...] = (),
         ) -> PlayerIntent:
             captured_summaries.append(actor_summaries)
             return super().classify(
@@ -1028,6 +1031,7 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
                 setting=setting,
                 recent_events=recent_events,
                 actor_summaries=actor_summaries,
+                npc_presences=npc_presences,
             )
 
     initial_state = _social_repository(tmp_path).load()
@@ -1980,3 +1984,293 @@ def test_narrator_encounter_complete_on_skill_check_does_not_close(
     result = orchestrator.run_encounter(encounter_id="goblin-camp")
 
     assert result.completed is False
+
+
+# ---------------------------------------------------------------------------
+# Helpers for NPC tracking tests (Tasks 1-3)
+# ---------------------------------------------------------------------------
+
+
+def _make_state(**kwargs: object) -> EncounterState:
+    """Build a minimal EncounterState suitable for direct orchestrator method tests."""
+    defaults: dict[str, object] = {
+        "encounter_id": "test-enc",
+        "phase": EncounterPhase.SOCIAL,
+        "setting": "A ruined camp.",
+        "actors": {"pc:talia": _default_player()},
+        "npc_presences": (),
+    }
+    defaults.update(kwargs)
+    return EncounterState(**defaults)  # type: ignore[arg-type]
+
+
+@pytest.fixture
+def make_state():
+    """Fixture that returns the _make_state factory."""
+    return _make_state
+
+
+def _make_orchestrator(
+    *,
+    _player_intent_agent: object | None = None,
+    narrator_agent: object | None = None,
+) -> EncounterOrchestrator:
+    """Build a minimal EncounterOrchestrator for direct method tests."""
+
+    class _FakeGameState:
+        player = _default_player()
+        encounter = _make_state()
+
+    fake_memory = FakeMemoryRepository(game_state=_FakeGameState())
+    return EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=fake_memory),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(),
+            narrator=narrator_agent or FakeNarratorAgent(),
+        ),
+        io=ScriptedIO([], on_exhaust="exit"),
+        _player_intent_agent=_player_intent_agent or FakePlayerIntentAgent(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task 1: _classify_intent passes npc_presences to the intent agent
+# ---------------------------------------------------------------------------
+
+
+def test_classify_intent_passes_npc_presences_to_agent(make_state) -> None:
+    """_classify_intent must forward state.npc_presences to the intent agent."""
+    captured_presences: list = []
+
+    class CapturingIntentAgent:
+        def classify(
+            self,
+            raw_text,
+            *,
+            phase,
+            setting,
+            recent_events,
+            actor_summaries,
+            npc_presences=(),
+        ):
+            captured_presences.extend(npc_presences)
+            return PlayerIntent(category=IntentCategory.SCENE_OBSERVATION)
+
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    state = make_state(npc_presences=(presence,))
+    orchestrator = _make_orchestrator(_player_intent_agent=CapturingIntentAgent())
+    orchestrator._classify_intent(state, PlayerInput("look around"))
+    assert len(captured_presences) == 1
+    assert captured_presences[0].actor_id == "npc:elder"
+
+
+# ---------------------------------------------------------------------------
+# Task 2: _update_npc_interaction
+# ---------------------------------------------------------------------------
+
+
+def test_update_npc_interaction_sets_status_to_interacted(make_state) -> None:
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    state = make_state(npc_presences=(presence,))
+    orchestrator = _make_orchestrator()
+    updated = orchestrator._update_npc_interaction(
+        state, "npc:elder", "Player asked about children; Elder denied knowledge."
+    )
+    updated_presence = next(
+        p for p in updated.npc_presences if p.actor_id == "npc:elder"
+    )
+    assert updated_presence.status is NpcPresenceStatus.INTERACTED
+
+
+def test_update_npc_interaction_appends_summary(make_state) -> None:
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    state = make_state(npc_presences=(presence,))
+    orchestrator = _make_orchestrator()
+    updated = orchestrator._update_npc_interaction(
+        state, "npc:elder", "Player asked about children; Elder denied knowledge."
+    )
+    updated_presence = next(
+        p for p in updated.npc_presences if p.actor_id == "npc:elder"
+    )
+    assert len(updated_presence.interaction_summaries) == 1
+    assert "Elder denied knowledge" in updated_presence.interaction_summaries[0]
+
+
+def test_update_npc_interaction_appends_to_existing_summaries(make_state) -> None:
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.INTERACTED,
+        interaction_summaries=("First exchange.",),
+    )
+    state = make_state(npc_presences=(presence,))
+    orchestrator = _make_orchestrator()
+    updated = orchestrator._update_npc_interaction(
+        state, "npc:elder", "Second exchange."
+    )
+    updated_presence = next(
+        p for p in updated.npc_presences if p.actor_id == "npc:elder"
+    )
+    assert updated_presence.interaction_summaries == (
+        "First exchange.",
+        "Second exchange.",
+    )
+
+
+def test_update_npc_interaction_returns_state_unchanged_when_actor_not_found(
+    make_state,
+) -> None:
+    state = make_state(npc_presences=())
+    orchestrator = _make_orchestrator()
+    updated = orchestrator._update_npc_interaction(state, "npc:nobody", "summary")
+    assert updated is state
+
+
+# ---------------------------------------------------------------------------
+# Task 3: NPC_DIALOGUE case calls _update_npc_interaction
+# ---------------------------------------------------------------------------
+
+
+def test_npc_dialogue_updates_npc_interaction_when_summary_and_target_present(
+    make_state,
+) -> None:
+    """After npc_dialogue, NPC status becomes INTERACTED and summary is appended."""
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    state = make_state(npc_presences=(presence,), phase=EncounterPhase.SOCIAL)
+
+    class _FakeNarratorWithSummary:
+        def narrate(self, frame):
+            return Narration(
+                text="Elder Rovan eyes you warily.",
+                npc_interaction_summary="Player asked about children; Elder denied knowledge.",
+            )
+
+        def summarize_encounter_partial(self, encounter):
+            return "Partial summary."
+
+        def declare_npc_intent_from_json(self, context_json):
+            return "The enemy advances."
+
+        def assess_combat_from_json(self, state_json):
+            return None
+
+    orchestrator = _make_orchestrator(
+        narrator_agent=_FakeNarratorWithSummary(),
+    )
+    updated_state, _ = orchestrator._handle_non_combat_action(
+        state,
+        PlayerInput("I ask Elder Rovan about the missing children."),
+        PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"),
+        state.actors[state.player_actor_id],
+    )
+    updated_presence = next(
+        p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
+    )
+    assert updated_presence.status is NpcPresenceStatus.INTERACTED
+    assert len(updated_presence.interaction_summaries) == 1
+
+
+def test_npc_dialogue_skips_update_when_no_summary(make_state) -> None:
+    """If narrator returns no npc_interaction_summary, state is not updated."""
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    state = make_state(npc_presences=(presence,), phase=EncounterPhase.SOCIAL)
+
+    class _FakeNarratorNoSummary:
+        def narrate(self, frame):
+            return Narration(
+                text="Elder Rovan nods.",
+                npc_interaction_summary=None,
+            )
+
+        def summarize_encounter_partial(self, encounter):
+            return "Partial summary."
+
+        def declare_npc_intent_from_json(self, context_json):
+            return "The enemy advances."
+
+        def assess_combat_from_json(self, state_json):
+            return None
+
+    orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorNoSummary())
+    updated_state, _ = orchestrator._handle_non_combat_action(
+        state,
+        PlayerInput("I greet the elder."),
+        PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"),
+        state.actors[state.player_actor_id],
+    )
+    updated_presence = next(
+        p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
+    )
+    assert updated_presence.status is NpcPresenceStatus.AVAILABLE
+
+
+def test_npc_dialogue_skips_update_when_no_target_npc_id(make_state) -> None:
+    """If intent has no target_npc_id, state is not updated even with a summary."""
+    presence = NpcPresence(
+        actor_id="npc:elder",
+        display_name="Elder Rovan",
+        description="the village elder",
+        name_known=True,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    state = make_state(npc_presences=(presence,), phase=EncounterPhase.SOCIAL)
+
+    class _FakeNarratorWithSummaryNoTarget:
+        def narrate(self, frame):
+            return Narration(
+                text="Someone replies.",
+                npc_interaction_summary="Some exchange happened.",
+            )
+
+        def summarize_encounter_partial(self, encounter):
+            return "Partial summary."
+
+        def declare_npc_intent_from_json(self, context_json):
+            return "The enemy advances."
+
+        def assess_combat_from_json(self, state_json):
+            return None
+
+    orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorWithSummaryNoTarget())
+    updated_state, _ = orchestrator._handle_non_combat_action(
+        state,
+        PlayerInput("I say hello."),
+        PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id=None),
+        state.actors[state.player_actor_id],
+    )
+    updated_presence = next(
+        p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
+    )
+    assert updated_presence.status is NpcPresenceStatus.AVAILABLE

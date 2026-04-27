@@ -40,6 +40,7 @@ class Narration:
     encounter_complete: bool = False
     completion_reason: str | None = None
     next_location_hint: str | None = None
+    npc_interaction_summary: str | None = None
 
 
 class _MissingCompletionHint(ValueError):
@@ -66,6 +67,7 @@ class NarrationResponse(BaseModel):
     encounter_complete: bool = False
     completion_reason: str | None = None
     next_location_hint: str | None = None
+    npc_interaction_summary: str | None = None
 
     @model_validator(mode="after")
     def _validate_completion_fields(self) -> Self:

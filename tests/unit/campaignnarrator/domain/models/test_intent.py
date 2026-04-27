@@ -107,3 +107,21 @@ def test_player_intent_normaliser_ignores_non_dict_input() -> None:
     """Non-dict input is passed through unchanged for pydantic to reject."""
     with pytest.raises(ValidationError):
         PlayerIntent.model_validate("not a dict")
+
+
+def test_player_intent_defaults_target_npc_id_to_none() -> None:
+    intent = PlayerIntent(category=IntentCategory.NPC_DIALOGUE)
+    assert intent.target_npc_id is None
+
+
+def test_player_intent_accepts_target_npc_id() -> None:
+    intent = PlayerIntent(
+        category=IntentCategory.NPC_DIALOGUE,
+        target_npc_id="npc:elder-rovan",
+    )
+    assert intent.target_npc_id == "npc:elder-rovan"
+
+
+def test_player_intent_target_npc_id_not_included_for_other_categories() -> None:
+    intent = PlayerIntent(category=IntentCategory.SKILL_CHECK, check_hint="Stealth")
+    assert intent.target_npc_id is None

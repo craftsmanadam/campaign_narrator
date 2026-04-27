@@ -8,6 +8,7 @@ import pytest
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
+    CampaignState,
     EncounterPhase,
     EncounterReady,
     EncounterState,
@@ -37,8 +38,6 @@ def _make_module(**overrides: object) -> ModuleState:
 
 
 def _make_campaign_state_for_game_state() -> object:
-    from campaignnarrator.domain.models import CampaignState
-
     return CampaignState(
         campaign_id="c1",
         name="The Cursed Coast",
@@ -484,6 +483,29 @@ def test_encounter_state_round_trips_to_dict() -> None:
     assert result.scene_tone == "warm and welcoming"
     assert result.outcome is None
     assert result.actors["pc:talia"].actor_id == "pc:talia"
+
+
+def test_public_actor_summaries_excludes_mentioned_npcs() -> None:
+    """MENTIONED NPCs must not appear in actor summaries even if they have actor entries."""
+    elder = make_goblin_scout("npc:elder", "Elder Rovan")
+    state = EncounterState(
+        encounter_id="enc-1",
+        phase=EncounterPhase.SOCIAL,
+        setting="village square",
+        actors={"pc:talia": TALIA, "npc:elder": elder},
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:elder",
+                display_name="Elder Rovan",
+                description="the village elder",
+                name_known=True,
+                status=NpcPresenceStatus.MENTIONED,
+            ),
+        ),
+    )
+    summaries = state.public_actor_summaries()
+    assert not any("Elder" in s for s in summaries)
+    assert any("pc:talia" in s or "talia" in s.lower() for s in summaries)
 
 
 def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:

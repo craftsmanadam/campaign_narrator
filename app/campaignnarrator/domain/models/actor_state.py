@@ -6,7 +6,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
-from .actor_components import FeatState, InventoryItem, RecoveryPeriod, ResourceState, WeaponState
+from .actor_components import (
+    FeatState,
+    InventoryItem,
+    ResourceState,
+    WeaponState,
+)
 
 # HP ratio thresholds for actor narrative summaries
 _HP_THRESHOLD_BARELY_STANDING = 0.25

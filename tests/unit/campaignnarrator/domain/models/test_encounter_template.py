@@ -171,5 +171,3 @@ def test_encounter_template_empty_npcs_allowed() -> None:
         downstream_dependencies=(),
     )
     assert template.npcs == ()
-
-

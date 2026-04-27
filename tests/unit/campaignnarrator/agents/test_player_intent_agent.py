@@ -7,7 +7,13 @@ from unittest.mock import MagicMock
 
 from campaignnarrator.agents.player_intent_agent import PlayerIntentAgent
 from campaignnarrator.agents.prompts import PLAYER_INTENT_INSTRUCTIONS
-from campaignnarrator.domain.models import EncounterPhase, IntentCategory, PlayerIntent
+from campaignnarrator.domain.models import (
+    EncounterPhase,
+    IntentCategory,
+    NpcPresence,
+    NpcPresenceStatus,
+    PlayerIntent,
+)
 
 
 def test_player_intent_instructions_cover_all_categories() -> None:
@@ -106,3 +112,144 @@ def test_classify_non_skill_check_has_no_check_hint() -> None:
         actor_summaries=(),
     )
     assert result.check_hint is None
+
+
+# ---------------------------------------------------------------------------
+# npc_presences tests
+# ---------------------------------------------------------------------------
+
+
+class _StubResult:
+    def __init__(self, intent: PlayerIntent) -> None:
+        self.output = intent
+
+
+def test_classify_includes_npc_presences_in_payload_when_provided() -> None:
+    """When npc_presences is non-empty, the JSON payload includes npc_presences."""
+    captured: list[str] = []
+    stub_output = PlayerIntent(category=IntentCategory.NPC_DIALOGUE)
+
+    class CapturingAgent:
+        def run_sync(self, payload_json: str) -> _StubResult:
+            captured.append(payload_json)
+            return _StubResult(stub_output)
+
+    agent = PlayerIntentAgent(adapter=MagicMock(), _agent=CapturingAgent())
+    presences = (
+        NpcPresence(
+            actor_id="npc:elder",
+            display_name="Elder Rovan",
+            description="the village elder",
+            name_known=True,
+            status=NpcPresenceStatus.AVAILABLE,
+        ),
+    )
+    agent.classify(
+        "I speak to Elder Rovan",
+        phase=EncounterPhase.SOCIAL,
+        setting="village square",
+        recent_events=(),
+        actor_summaries=(),
+        npc_presences=presences,
+    )
+    payload = json.loads(captured[0])
+    assert "npc_presences" in payload
+    assert payload["npc_presences"][0]["actor_id"] == "npc:elder"
+    assert payload["npc_presences"][0]["display_name"] == "Elder Rovan"
+
+
+def test_classify_omits_npc_presences_from_payload_when_empty() -> None:
+    """When npc_presences is empty, the JSON payload has no npc_presences key."""
+    captured: list[str] = []
+    stub_output = PlayerIntent(category=IntentCategory.SCENE_OBSERVATION)
+
+    class CapturingAgent:
+        def run_sync(self, payload_json: str) -> _StubResult:
+            captured.append(payload_json)
+            return _StubResult(stub_output)
+
+    agent = PlayerIntentAgent(adapter=MagicMock(), _agent=CapturingAgent())
+    agent.classify(
+        "I look around",
+        phase=EncounterPhase.SOCIAL,
+        setting="village square",
+        recent_events=(),
+        actor_summaries=(),
+    )
+    payload = json.loads(captured[0])
+    assert "npc_presences" not in payload
+
+
+def test_classify_excludes_departed_npcs_from_payload() -> None:
+    """DEPARTED NPCs are filtered out of the npc_presences payload."""
+    captured: list[str] = []
+    stub_output = PlayerIntent(category=IntentCategory.NPC_DIALOGUE)
+
+    class CapturingAgent:
+        def run_sync(self, payload_json: str) -> _StubResult:
+            captured.append(payload_json)
+            return _StubResult(stub_output)
+
+    agent = PlayerIntentAgent(adapter=MagicMock(), _agent=CapturingAgent())
+    presences = (
+        NpcPresence(
+            actor_id="npc:elder",
+            display_name="Elder Rovan",
+            description="the village elder",
+            name_known=True,
+            status=NpcPresenceStatus.AVAILABLE,
+        ),
+        NpcPresence(
+            actor_id="npc:guard",
+            display_name="Guard",
+            description="the guard",
+            name_known=False,
+            status=NpcPresenceStatus.DEPARTED,
+        ),
+    )
+    agent.classify(
+        "I speak to the elder",
+        phase=EncounterPhase.SOCIAL,
+        setting="village square",
+        recent_events=(),
+        actor_summaries=(),
+        npc_presences=presences,
+    )
+    payload = json.loads(captured[0])
+    ids = [e["actor_id"] for e in payload.get("npc_presences", [])]
+    assert "npc:elder" in ids
+    assert "npc:guard" not in ids
+
+
+def test_classify_omits_display_name_for_unknown_npcs() -> None:
+    """When name_known=False, display_name is omitted and description is included."""
+    captured: list[str] = []
+    stub_output = PlayerIntent(category=IntentCategory.NPC_DIALOGUE)
+
+    class CapturingAgent:
+        def run_sync(self, payload_json: str) -> _StubResult:
+            captured.append(payload_json)
+            return _StubResult(stub_output)
+
+    agent = PlayerIntentAgent(adapter=MagicMock(), _agent=CapturingAgent())
+    presences = (
+        NpcPresence(
+            actor_id="npc:stranger",
+            display_name="Mira",
+            description="the hooded stranger",
+            name_known=False,
+            status=NpcPresenceStatus.AVAILABLE,
+        ),
+    )
+    agent.classify(
+        "I approach the stranger",
+        phase=EncounterPhase.SOCIAL,
+        setting="village square",
+        recent_events=(),
+        actor_summaries=(),
+        npc_presences=presences,
+    )
+    payload = json.loads(captured[0])
+    entry = payload["npc_presences"][0]
+    assert "display_name" not in entry
+    assert entry["description"] == "the hooded stranger"

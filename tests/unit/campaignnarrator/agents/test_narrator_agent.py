@@ -8,7 +8,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
-from campaignnarrator.agents.narrator_agent import NarratorAgent
+from campaignnarrator.agents.narrator_agent import (
+    NarratorAgent,
+    _serialize_npc_presences,
+)
 from campaignnarrator.agents.prompts import BASE_NARRATE_INSTRUCTIONS
 from campaignnarrator.domain.models import (
     CampaignState,
@@ -809,3 +812,144 @@ def test_narrate_propagates_encounter_complete_true() -> None:
     assert result.encounter_complete is True
     assert result.next_location_hint == "Cave of Whispers"
     assert result.completion_reason == "Player departed the grove."
+
+
+# ---------------------------------------------------------------------------
+# _serialize_npc_presences two-section behaviour
+# ---------------------------------------------------------------------------
+
+
+def test_serialize_npc_presences_empty_returns_empty_string() -> None:
+    assert _serialize_npc_presences(()) == ""
+
+
+def test_serialize_npc_presences_available_npc_in_established_section() -> None:
+    presences = (
+        NpcPresence(
+            actor_id="npc:elder",
+            display_name="Elder Rovan",
+            description="the village elder",
+            name_known=True,
+            status=NpcPresenceStatus.AVAILABLE,
+        ),
+    )
+    result = _serialize_npc_presences(presences)
+    assert "ESTABLISHED NPCs IN SCENE:" in result
+    assert "Elder Rovan" in result
+    assert "available" in result
+    assert "npc:elder" in result
+
+
+def test_serialize_npc_presences_mentioned_npc_in_known_but_not_present_section() -> (
+    None
+):
+    presences = (
+        NpcPresence(
+            actor_id="npc:innkeeper",
+            display_name="Gareth",
+            description="the innkeeper",
+            name_known=False,
+            status=NpcPresenceStatus.MENTIONED,
+        ),
+    )
+    result = _serialize_npc_presences(presences)
+    assert "KNOWN BUT NOT PRESENT:" in result
+    assert "the innkeeper" in result
+    assert "ESTABLISHED NPCs IN SCENE:" not in result
+
+
+def test_serialize_npc_presences_interacted_npc_lists_summaries() -> None:
+    presences = (
+        NpcPresence(
+            actor_id="npc:elder",
+            display_name="Elder Rovan",
+            description="the village elder",
+            name_known=True,
+            status=NpcPresenceStatus.INTERACTED,
+            interaction_summaries=(
+                "Player asked about children; Elder denied knowledge.",
+            ),
+        ),
+    )
+    result = _serialize_npc_presences(presences)
+    assert "Prior exchanges:" in result
+    assert "Player asked about children" in result
+
+
+def test_serialize_npc_presences_unnamed_npc_uses_description() -> None:
+    presences = (
+        NpcPresence(
+            actor_id="npc:stranger",
+            display_name="Mira",
+            description="the hooded stranger",
+            name_known=False,
+            status=NpcPresenceStatus.AVAILABLE,
+        ),
+    )
+    result = _serialize_npc_presences(presences)
+    assert "the hooded stranger" in result
+    assert "Mira" not in result
+
+
+def test_serialize_npc_presences_two_sections_when_both_present() -> None:
+    presences = (
+        NpcPresence(
+            actor_id="npc:elder",
+            display_name="Elder Rovan",
+            description="the village elder",
+            name_known=True,
+            status=NpcPresenceStatus.AVAILABLE,
+        ),
+        NpcPresence(
+            actor_id="npc:innkeeper",
+            display_name="Gareth",
+            description="the innkeeper",
+            name_known=False,
+            status=NpcPresenceStatus.MENTIONED,
+        ),
+    )
+    result = _serialize_npc_presences(presences)
+    assert "ESTABLISHED NPCs IN SCENE:" in result
+    assert "KNOWN BUT NOT PRESENT:" in result
+
+
+def test_narrate_propagates_npc_interaction_summary() -> None:
+    """narrate() must pass npc_interaction_summary from NarrationResponse to Narration."""
+    narrator = _make_narrator_with_narrate_model(
+        {
+            "text": "Elder Rovan eyes you warily.",
+            "current_location": "village square",
+            "npc_interaction_summary": "Player asked about children; Elder denied knowledge.",
+        }
+    )
+    frame = NarrationFrame(
+        purpose="npc_dialogue",
+        phase=EncounterPhase.SOCIAL,
+        setting="village square",
+        public_actor_summaries=(),
+        recent_public_events=(),
+        resolved_outcomes=(),
+        allowed_disclosures=(),
+        player_action="I ask about the missing children.",
+    )
+    narration = narrator.narrate(frame)
+    assert (
+        narration.npc_interaction_summary
+        == "Player asked about children; Elder denied knowledge."
+    )
+
+
+def test_base_narrate_instructions_contains_npc_interaction_summary_field() -> None:
+    assert "npc_interaction_summary" in BASE_NARRATE_INSTRUCTIONS
+
+
+def test_base_narrate_instructions_contains_npc_interaction_tracking_section() -> None:
+    assert "NPC INTERACTION TRACKING" in BASE_NARRATE_INSTRUCTIONS
+
+
+def test_base_narrate_instructions_references_established_npcs_block() -> None:
+    assert "ESTABLISHED NPCs IN SCENE" in BASE_NARRATE_INSTRUCTIONS
+
+
+def test_base_narrate_instructions_references_prior_exchanges() -> None:
+    assert "Prior exchanges" in BASE_NARRATE_INSTRUCTIONS

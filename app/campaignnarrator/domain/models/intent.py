@@ -30,6 +30,7 @@ class PlayerIntent(BaseModel):
     category: IntentCategory
     check_hint: str | None = None
     reason: str = ""
+    target_npc_id: str | None = None
 
     @model_validator(mode="before")
     @classmethod

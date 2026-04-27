@@ -3,24 +3,27 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 
 class NpcPresenceStatus(StrEnum):
     """Scene presence state for an established NPC.
 
-    PRESENT  - NPC is active in the scene and visible to the player.
-    CONCEALED - NPC is in the scene but hidden from the player (e.g. behind a
-                screen, in disguise).  The narrator may still reference them
-                obliquely; the player has not interacted with them directly.
-    DEPARTED - NPC has left the scene.  They must not appear in narrator
-               context; the orchestrator filters them out entirely.
+    AVAILABLE  - NPC is in scene, not yet addressed by the player.
+    INTERACTED - NPC is in scene; player has spoken to them at least once.
+    MENTIONED  - NPC is referenced/known but not physically present.
+    DEPARTED   - NPC has left the scene. Filtered out of narrator context entirely.
+    PRESENT    - Legacy alias for AVAILABLE. Accepted on deserialization of old saves.
+    CONCEALED  - NPC is in scene but hidden from the player.
     """
 
-    PRESENT = "present"
-    CONCEALED = "concealed"
+    AVAILABLE = "available"
+    INTERACTED = "interacted"
+    MENTIONED = "mentioned"
     DEPARTED = "departed"
+    PRESENT = "present"  # legacy alias — old saves; treated as AVAILABLE
+    CONCEALED = "concealed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,16 +39,20 @@ class NpcPresence:
     display_name: str  # Canonical name used when name_known=True
     description: str  # Narrative label used when name_known=False ("the innkeeper")
     name_known: bool  # Has the player learned this NPC's name?
-    status: NpcPresenceStatus = NpcPresenceStatus.PRESENT
+    status: NpcPresenceStatus = NpcPresenceStatus.AVAILABLE
+    interaction_summaries: tuple[str, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        d: dict[str, object] = {
             "actor_id": self.actor_id,
             "display_name": self.display_name,
             "description": self.description,
             "name_known": self.name_known,
             "status": self.status.value,
         }
+        if self.interaction_summaries:
+            d["interaction_summaries"] = list(self.interaction_summaries)
+        return d
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> NpcPresence:
@@ -62,7 +69,6 @@ class NpcPresence:
             raise TypeError("NpcPresence: missing or invalid required fields")  # noqa: TRY003
         # Backward compatibility: old saves use visible: bool.
         # visible=True → PRESENT; visible=False → CONCEALED.
-        # DEPARTED had no representation in old saves and cannot appear here.
         raw_status = data.get("status")
         if isinstance(raw_status, str):
             try:
@@ -77,11 +83,18 @@ class NpcPresence:
                 else NpcPresenceStatus.CONCEALED
             )
         else:
-            status = NpcPresenceStatus.PRESENT
+            status = NpcPresenceStatus.AVAILABLE
+        summaries_raw = data.get("interaction_summaries", ())
+        interaction_summaries: tuple[str, ...] = (
+            tuple(str(s) for s in summaries_raw if isinstance(s, str))
+            if isinstance(summaries_raw, list | tuple)
+            else ()
+        )
         return cls(
             actor_id=actor_id,
             display_name=display_name,
             description=description,
             name_known=name_known,
             status=status,
+            interaction_summaries=interaction_summaries,
         )

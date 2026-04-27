@@ -19,6 +19,7 @@ from campaignnarrator.domain.models import (
     IntentCategory,
     Narration,
     NarrationFrame,
+    NpcPresence,
     PlayerIntent,
     RulesAdjudication,
     RulesAdjudicationRequest,
@@ -66,6 +67,7 @@ class FakePlayerIntentAgent:
         setting: str,
         recent_events: tuple[str, ...],
         actor_summaries: tuple[str, ...],
+        npc_presences: tuple[NpcPresence, ...] = (),
     ) -> PlayerIntent:
         index = min(self._call_index, len(self._intents) - 1)
         self._call_index += 1

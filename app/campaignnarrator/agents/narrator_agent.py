@@ -22,6 +22,7 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     NarrationResponse,
     NpcPresence,
+    NpcPresenceStatus,
     SceneOpeningResponse,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -51,18 +52,39 @@ _SUMMARIZE_INSTRUCTIONS = (
 )
 
 
+_ESTABLISHED_STATUSES = frozenset(
+    {
+        NpcPresenceStatus.AVAILABLE,
+        NpcPresenceStatus.PRESENT,
+        NpcPresenceStatus.INTERACTED,
+        NpcPresenceStatus.CONCEALED,
+    }
+)
+
+
 def _serialize_npc_presences(presences: tuple[NpcPresence, ...]) -> str:
-    """Serialize NPC presences as a structured block for the narrator LLM."""
+    """Serialize NPC presences as a two-section block for the narrator LLM."""
     if not presences:
         return ""
-    lines = ["ESTABLISHED NPCs IN SCENE:"]
-    for p in presences:
-        name_state = "named" if p.name_known else "unnamed"
-        visibility = p.status.value
-        label = p.display_name if p.name_known else p.description
-        lines.append(
-            f"- {label} [{name_state}] ({visibility}) — actor_id: {p.actor_id}"
-        )
+    established = [p for p in presences if p.status in _ESTABLISHED_STATUSES]
+    mentioned = [p for p in presences if p.status is NpcPresenceStatus.MENTIONED]
+    lines: list[str] = []
+    if established:
+        lines.append("ESTABLISHED NPCs IN SCENE:")
+        for p in established:
+            name_state = "named" if p.name_known else "unnamed"
+            label = p.display_name if p.name_known else p.description
+            lines.append(
+                f"- {label} [{name_state}] ({p.status.value}) — actor_id: {p.actor_id}"
+            )
+            if p.interaction_summaries:
+                for i, summary in enumerate(p.interaction_summaries, 1):
+                    lines.append(f"  Prior exchanges: ({i}) {summary}")
+    if mentioned:
+        lines.append("KNOWN BUT NOT PRESENT:")
+        for p in mentioned:
+            label = p.display_name if p.name_known else p.description
+            lines.append(f"- {label} (mentioned) — actor_id: {p.actor_id}")
     return "\n".join(lines)
 
 
@@ -165,6 +187,7 @@ class NarratorAgent:
             encounter_complete=result.encounter_complete,
             completion_reason=result.completion_reason,
             next_location_hint=result.next_location_hint,
+            npc_interaction_summary=result.npc_interaction_summary,
         )
 
     def open_scene(self, frame: NarrationFrame) -> SceneOpeningResponse:

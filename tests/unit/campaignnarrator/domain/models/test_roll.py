@@ -195,7 +195,9 @@ def test_roll_request_roll_calls_roll_with_resolved_expression(
     mocker: object,
 ) -> None:
     """roll() passes the resolved (token-substituted) expression to _roll."""
-    mock_roll = mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=10)
+    mock_roll = mocker.patch(
+        "campaignnarrator.domain.models.roll._roll", return_value=10
+    )
     actor = _roll_actor(wisdom=16, proficiency_bonus=3)
     req = RollRequest(
         owner="player",

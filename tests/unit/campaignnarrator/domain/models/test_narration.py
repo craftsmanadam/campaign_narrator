@@ -10,6 +10,7 @@ from campaignnarrator.domain.models import (
     NarrationResponse,
     NpcPresence,
     NpcPresenceStatus,
+    SceneOpeningResponse,
 )
 from pydantic import ValidationError
 
@@ -169,8 +170,39 @@ def test_narration_accepts_encounter_complete_fields() -> None:
 
 
 def test_scene_opening_response_stores_text_and_tone() -> None:
-    from campaignnarrator.domain.models import SceneOpeningResponse
-
     r = SceneOpeningResponse(text="The ruins loom.", scene_tone="eerie and quiet")
     assert r.text == "The ruins loom."
     assert r.scene_tone == "eerie and quiet"
+
+
+def test_narration_response_defaults_npc_interaction_summary_to_none() -> None:
+    response = NarrationResponse(text="hello", current_location="the square")
+    assert response.npc_interaction_summary is None
+
+
+def test_narration_response_accepts_npc_interaction_summary() -> None:
+    response = NarrationResponse(
+        text="hello",
+        current_location="the square",
+        npc_interaction_summary="Player asked about the children; Elder denied knowledge.",
+    )
+    assert (
+        response.npc_interaction_summary
+        == "Player asked about the children; Elder denied knowledge."
+    )
+
+
+def test_narration_defaults_npc_interaction_summary_to_none() -> None:
+    narration = Narration(text="hello")
+    assert narration.npc_interaction_summary is None
+
+
+def test_narration_accepts_npc_interaction_summary() -> None:
+    narration = Narration(
+        text="hello",
+        npc_interaction_summary="Player asked about the children; Elder denied knowledge.",
+    )
+    assert (
+        narration.npc_interaction_summary
+        == "Player asked about the children; Elder denied knowledge."
+    )
