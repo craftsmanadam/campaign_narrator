@@ -2133,7 +2133,7 @@ def test_roll_request_roll_resolves_tokens_and_returns_result(
     mocker: object,
 ) -> None:
     """roll() substitutes actor tokens, calls _roll, and returns a RollResult."""
-    mocker.patch("campaignnarrator.domain.models._roll", return_value=14)
+    mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=14)
     actor = _roll_actor(wisdom=16, proficiency_bonus=3)
     req = RollRequest(
         owner="player",
@@ -2154,7 +2154,7 @@ def test_roll_request_roll_negative_modifier_collapses_sign(
     mocker: object,
 ) -> None:
     """Negative modifier produces 1d20-2 not 1d20+-2."""
-    mocker.patch("campaignnarrator.domain.models._roll", return_value=5)
+    mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=5)
     actor = _roll_actor(charisma=6)
     req = RollRequest(
         owner="player",
@@ -2169,7 +2169,7 @@ def test_roll_request_roll_carries_difficulty_class(
     mocker: object,
 ) -> None:
     """RollResult carries difficulty_class from the request."""
-    mocker.patch("campaignnarrator.domain.models._roll", return_value=7)
+    mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=7)
     actor = _roll_actor()
     req = RollRequest(
         owner="player",
@@ -2186,7 +2186,7 @@ def test_roll_request_roll_calls_roll_with_resolved_expression(
     mocker: object,
 ) -> None:
     """roll() passes the resolved (token-substituted) expression to _roll."""
-    mock_roll = mocker.patch("campaignnarrator.domain.models._roll", return_value=10)
+    mock_roll = mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=10)
     actor = _roll_actor(wisdom=16, proficiency_bonus=3)
     req = RollRequest(
         owner="player",

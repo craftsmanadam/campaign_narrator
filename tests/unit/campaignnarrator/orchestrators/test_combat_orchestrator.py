@@ -1245,7 +1245,7 @@ def test_attack_hit_applies_damage_to_target(mocker: object) -> None:
     """Player attack that hits (roll >= AC) applies damage and kills the goblin."""
     # Goblin AC=15, HP=7. roll_dice=20 → attack total=20 ≥ 15 → hit → damage=20 → dead
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=20
+        "campaignnarrator.domain.models.roll._roll", return_value=20
     )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
@@ -1272,7 +1272,7 @@ def test_attack_miss_does_not_apply_damage(mocker: object) -> None:
     """Player attack that misses (roll < AC) leaves target HP unchanged."""
     # Goblin AC=15. roll_dice=1 → attack total=1 < 15 → miss → no damage
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=1
+        "campaignnarrator.domain.models.roll._roll", return_value=1
     )
     initial_hp = make_goblin_scout("npc:goblin-1", "G").hp_max
     state = _make_combat_state(goblin_hp=initial_hp)
@@ -1301,7 +1301,7 @@ def test_nonzero_change_hp_with_attack_hit_applies_direct_damage(
     """Non-zero change_hp is gated on AC: a hit applies the LLM-specified value."""
     # Goblin AC=15, HP=7. roll_dice=20 → attack total=20 ≥ 15 → hit → -5 applied
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=20
+        "campaignnarrator.domain.models.roll._roll", return_value=20
     )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
@@ -1328,7 +1328,7 @@ def test_nonzero_change_hp_with_attack_miss_no_damage(mocker: object) -> None:
     """Non-zero change_hp is gated on AC: a miss drops the effect, HP unchanged."""
     # Goblin AC=15, HP=7. roll_dice=1 → attack total=1 < 15 → miss → no damage
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=1
+        "campaignnarrator.domain.models.roll._roll", return_value=1
     )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
@@ -1383,7 +1383,7 @@ def test_attack_purpose_matching_is_case_insensitive_hit(mocker: object) -> None
     """Lowercase 'attack roll' and 'damage' purposes are recognised on a hit."""
     # Goblin AC=15, HP=7. roll_dice=20 → 20 ≥ 15 → hit → damage_total=20 → hp=0
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=20
+        "campaignnarrator.domain.models.roll._roll", return_value=20
     )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
@@ -1409,7 +1409,7 @@ def test_attack_purpose_matching_is_case_insensitive_miss(mocker: object) -> Non
     """Lowercase 'attack roll' purpose is recognised on a miss — no damage applied."""
     # Goblin AC=15, HP=7. roll_dice=1 → 1 < 15 → miss → no damage
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=1
+        "campaignnarrator.domain.models.roll._roll", return_value=1
     )
     state = _make_combat_state(goblin_hp=7)
     orc, _, _, _ = _orchestrator(
@@ -1436,7 +1436,7 @@ def test_npc_attack_hit_applies_damage_to_player(mocker: object) -> None:
     """NPC attack that hits applies damage to the player via hidden dice rolls."""
     # Talia AC=20, HP=44. roll_dice=20 → attack total=20 ≥ 20 → hit → damage=20
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=20
+        "campaignnarrator.domain.models.roll._roll", return_value=20
     )
     goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
     state = EncounterState(
@@ -1472,7 +1472,7 @@ def test_npc_attack_miss_does_not_apply_damage(mocker: object) -> None:
     """NPC attack that misses leaves target HP unchanged."""
     # Talia AC=20. roll_dice=1 → attack total=1 < 20 → miss → no damage
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=1
+        "campaignnarrator.domain.models.roll._roll", return_value=1
     )
     goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
     state = EncounterState(
@@ -1566,7 +1566,7 @@ def _legal_attack_with_roll(
 def test_public_roll_request_is_displayed_to_player(mocker: object) -> None:
     """A PUBLIC roll_request must produce a 'Roll:' line in io output."""
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=12
+        "campaignnarrator.domain.models.roll._roll", return_value=12
     )
     state = _make_combat_state(goblin_hp=5)
     orc, io, _, _ = _orchestrator(
@@ -1592,7 +1592,7 @@ def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes(
 ) -> None:
     """Roll events from PUBLIC roll_requests must appear in the narrator frame."""
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=12
+        "campaignnarrator.domain.models.roll._roll", return_value=12
     )
     state = _make_combat_state(goblin_hp=5)
     orc, _, _, narrator = _orchestrator(
@@ -1618,7 +1618,7 @@ def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes(
 def test_hidden_roll_request_is_not_displayed_to_player(mocker: object) -> None:
     """A HIDDEN roll_request must not produce any 'Roll:' output to the player."""
     mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", return_value=12
+        "campaignnarrator.domain.models.roll._roll", return_value=12
     )
     state = _make_combat_state(goblin_hp=5)
     orc, io, _, _ = _orchestrator(

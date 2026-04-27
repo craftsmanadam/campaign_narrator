@@ -476,7 +476,7 @@ def test_social_check_uses_rules_agent_and_applies_effects(
         ]
     )
     mock_roll = mocker.patch(  # type: ignore[attr-defined]
-        "campaignnarrator.domain.models._roll", side_effect=[16]
+        "campaignnarrator.domain.models.roll._roll", side_effect=[16]
     )
     narrator_agent = FakeNarratorAgent()
     orchestrator = _orchestrator(
@@ -1686,7 +1686,7 @@ class TestDCResolution:
             ]
         )
         mocker.patch(  # type: ignore[attr-defined]
-            "campaignnarrator.domain.models._roll",
+            "campaignnarrator.domain.models.roll._roll",
             side_effect=[18],  # above DC 15
         )
         narrator_agent = FakeNarratorAgent()
@@ -1751,7 +1751,7 @@ class TestDCResolution:
             ]
         )
         mocker.patch(  # type: ignore[attr-defined]
-            "campaignnarrator.domain.models._roll",
+            "campaignnarrator.domain.models.roll._roll",
             side_effect=[8],  # below DC 15
         )
         narrator_agent = FakeNarratorAgent()
@@ -1809,7 +1809,7 @@ class TestDCResolution:
             ]
         )
         mocker.patch(  # type: ignore[attr-defined]
-            "campaignnarrator.domain.models._roll", side_effect=[12]
+            "campaignnarrator.domain.models.roll._roll", side_effect=[12]
         )
         narrator_agent = FakeNarratorAgent()
         orchestrator = _orchestrator(
