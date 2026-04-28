@@ -2366,6 +2366,51 @@ def test_narrate_filters_invalid_traveling_actor_ids_on_completion() -> None:
     assert repo.staged_game_state.encounter.traveling_actor_ids == ("npc:elara",)
 
 
+def test_narrate_excludes_player_from_traveling_actor_ids() -> None:
+    """The player's own actor_id is never included in traveling_actor_ids even if the narrator returns it."""
+    elara = make_goblin_scout("npc:elara", "Elara")
+    encounter = replace(
+        EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="A forest glade.",
+            actors={TALIA.actor_id: TALIA, "npc:elara": elara},
+        ),
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:elara",
+                display_name="Elara",
+                description="the herbalist",
+                name_known=True,
+                status=NpcPresenceStatus.INTERACTED,
+            ),
+        ),
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    narrator = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint="The road north",
+        completion_reason="Departed.",
+        traveling_actor_ids=(
+            TALIA.actor_id,
+            "npc:elara",
+        ),  # player ID included by narrator
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator),
+        io=ScriptedIO(["go north"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(category=IntentCategory.SCENE_OBSERVATION, reason="go")
+            ]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    assert TALIA.actor_id not in repo.staged_game_state.encounter.traveling_actor_ids
+    assert repo.staged_game_state.encounter.traveling_actor_ids == ("npc:elara",)
+
+
 def test_narrate_logs_warning_for_invalid_traveling_actor_ids(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
