@@ -953,3 +953,45 @@ def test_base_narrate_instructions_references_established_npcs_block() -> None:
 
 def test_base_narrate_instructions_references_prior_exchanges() -> None:
     assert "Prior exchanges" in BASE_NARRATE_INSTRUCTIONS
+
+
+# ---------------------------------------------------------------------------
+# traveling_actor_ids propagation (Phase 2B-Narrator)
+# ---------------------------------------------------------------------------
+
+
+def test_narrate_propagates_traveling_actor_ids() -> None:
+    """traveling_actor_ids from NarrationResponse is present in the returned Narration."""
+    narrator, _, __ = _make_narrator()
+    narrator._narrate_agent.run_sync.return_value.output = NarrationResponse(
+        text="You step onto the road, Elara at your side.",
+        current_location="the northern road",
+        encounter_complete=True,
+        completion_reason="Player departed the grove.",
+        next_location_hint="Cave of Whispers",
+        traveling_actor_ids=("npc:elara",),
+    )
+    result = narrator.narrate(_frame("scene_response"))
+    assert result.traveling_actor_ids == ("npc:elara",)
+
+
+def test_narrate_traveling_actor_ids_defaults_to_empty_when_not_set() -> None:
+    """When NarrationResponse returns no traveling_actor_ids, Narration has empty tuple."""
+    narrator, _, __ = _make_narrator()
+    # _make_narrator's default NarrationResponse has no traveling_actor_ids → defaults to ()
+    result = narrator.narrate(_frame())
+    assert result.traveling_actor_ids == ()
+
+
+def test_base_narrate_instructions_includes_traveling_actor_ids_field() -> None:
+    """BASE_NARRATE_INSTRUCTIONS describes the traveling_actor_ids structured output field."""
+    assert "traveling_actor_ids" in BASE_NARRATE_INSTRUCTIONS
+    assert "explicitly committed to accompany" in BASE_NARRATE_INSTRUCTIONS
+
+
+def test_base_narrate_instructions_rule_16_includes_travel_commitment_sentence() -> (
+    None
+):
+    """Rule 16 explains that traveling_actor_ids causes NPC injection in the next scene."""
+    assert "traveling_actor_ids" in BASE_NARRATE_INSTRUCTIONS
+    assert "system injects" in BASE_NARRATE_INSTRUCTIONS

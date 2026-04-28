@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from campaignnarrator.domain.models import (
@@ -16,6 +17,7 @@ from campaignnarrator.domain.models import (
     CombatOutcome,
     EncounterPhase,
     EncounterState,
+    GameState,
     InitiativeTurn,
     IntentCategory,
     Narration,
@@ -135,12 +137,14 @@ class FakeNarratorAgent:
         encounter_complete: bool = False,
         next_location_hint: str | None = None,
         completion_reason: str | None = None,
+        traveling_actor_ids: tuple[str, ...] = (),
     ) -> None:
         self.frames: list[NarrationFrame] = []
         self._scene_tone = scene_tone
         self._encounter_complete = encounter_complete
         self._next_location_hint = next_location_hint
         self._completion_reason = completion_reason
+        self._traveling_actor_ids = traveling_actor_ids
 
     def narrate(self, frame: NarrationFrame) -> Narration:
         self.frames.append(frame)
@@ -153,6 +157,7 @@ class FakeNarratorAgent:
             encounter_complete=self._encounter_complete,
             next_location_hint=self._next_location_hint,
             completion_reason=self._completion_reason,
+            traveling_actor_ids=self._traveling_actor_ids,
         )
 
     def summarize_encounter_partial(self, encounter: object) -> str:
@@ -2274,3 +2279,260 @@ def test_npc_dialogue_skips_update_when_no_target_npc_id(make_state) -> None:
         p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.AVAILABLE
+
+
+def test_narrate_sets_traveling_actor_ids_on_encounter_complete() -> None:
+    """Valid INTERACTED NPC committed to travel is captured in encounter state."""
+    elara = make_goblin_scout("npc:elara", "Elara")
+    encounter = replace(
+        EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="A forest glade.",
+            actors={TALIA.actor_id: TALIA, "npc:elara": elara},
+        ),
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:elara",
+                display_name="Elara",
+                description="the herbalist",
+                name_known=True,
+                status=NpcPresenceStatus.INTERACTED,
+            ),
+        ),
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    narrator = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint="The cave entrance",
+        completion_reason="Player departed.",
+        traveling_actor_ids=("npc:elara",),
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator),
+        io=ScriptedIO(["look around"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(
+                    category=IntentCategory.SCENE_OBSERVATION, reason="looks around"
+                )
+            ]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    assert repo.staged_game_state.encounter.traveling_actor_ids == ("npc:elara",)
+    assert repo.staged_game_state.encounter.next_location_hint == "The cave entrance"
+
+
+def test_narrate_filters_invalid_traveling_actor_ids_on_completion() -> None:
+    """IDs not in active NPC presences are dropped; only valid INTERACTED/AVAILABLE IDs kept."""
+    elara = make_goblin_scout("npc:elara", "Elara")
+    encounter = replace(
+        EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="A forest glade.",
+            actors={TALIA.actor_id: TALIA, "npc:elara": elara},
+        ),
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:elara",
+                display_name="Elara",
+                description="the herbalist",
+                name_known=True,
+                status=NpcPresenceStatus.INTERACTED,
+            ),
+        ),
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    narrator = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint="The road north",
+        completion_reason="Left.",
+        traveling_actor_ids=("npc:elara", "npc:nonexistent"),
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator),
+        io=ScriptedIO(["go north"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(category=IntentCategory.SCENE_OBSERVATION, reason="go")
+            ]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    assert repo.staged_game_state.encounter.traveling_actor_ids == ("npc:elara",)
+
+
+def test_narrate_logs_warning_for_invalid_traveling_actor_ids(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A warning is emitted when the narrator returns an actor_id not in active presences."""
+    elara = make_goblin_scout("npc:elara", "Elara")
+    encounter = replace(
+        EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="A forest glade.",
+            actors={TALIA.actor_id: TALIA, "npc:elara": elara},
+        ),
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:elara",
+                display_name="Elara",
+                description="the herbalist",
+                name_known=True,
+                status=NpcPresenceStatus.INTERACTED,
+            ),
+        ),
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    narrator = FakeNarratorAgent(
+        encounter_complete=True,
+        next_location_hint="The road north",
+        completion_reason="Left.",
+        traveling_actor_ids=("npc:elara", "npc:nonexistent"),
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator),
+        io=ScriptedIO(["go north"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(category=IntentCategory.SCENE_OBSERVATION, reason="go")
+            ]
+        ),
+    )
+    with caplog.at_level(logging.WARNING):
+        orch.run_encounter(encounter_id="enc-001")
+    assert any("npc:nonexistent" in r.message for r in caplog.records), (
+        "Expected warning mentioning the ignored actor_id"
+    )
+
+
+def test_narrate_does_not_set_traveling_fields_when_encounter_not_complete() -> None:
+    """traveling_actor_ids and next_location_hint stay at defaults when encounter_complete=False."""
+    elara = make_goblin_scout("npc:elara", "Elara")
+    encounter = replace(
+        EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="A forest glade.",
+            actors={TALIA.actor_id: TALIA, "npc:elara": elara},
+        ),
+        npc_presences=(
+            NpcPresence(
+                actor_id="npc:elara",
+                display_name="Elara",
+                description="the herbalist",
+                name_known=True,
+                status=NpcPresenceStatus.INTERACTED,
+            ),
+        ),
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    # Narrator signals travel intent but does NOT complete the encounter — fields must be ignored.
+    narrator = FakeNarratorAgent(
+        encounter_complete=False,
+        traveling_actor_ids=("npc:elara",),
+        next_location_hint="The cave entrance",
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator),
+        io=ScriptedIO(["look around"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(
+                    category=IntentCategory.SCENE_OBSERVATION, reason="looks around"
+                ),
+                # Second intent exhausts to SAVE_EXIT, ending the encounter without completing it.
+            ]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    assert repo.staged_game_state.encounter.traveling_actor_ids == ()
+    assert repo.staged_game_state.encounter.next_location_hint is None
+
+
+def test_apply_action_syncs_dead_actor_to_registry() -> None:
+    """When a rules adjudication kills an NPC, the dead actor is written to the registry."""
+    alive_goblin = replace(
+        make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=1
+    )
+    encounter = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The docks.",
+        actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin},
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    rules_agent = FakeRulesAgent(
+        adjudications=[
+            RulesAdjudication(
+                is_legal=True,
+                action_type="success",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(effect_type="change_hp", target="npc:goblin", value=-5),
+                ),
+                summary="You strike the goblin dead.",
+            )
+        ]
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=rules_agent, narrator=FakeNarratorAgent()),
+        io=ScriptedIO(["attack goblin"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[PlayerIntent(category=IntentCategory.SKILL_CHECK, reason="attack")]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    assert repo.staged_game_state is not None
+    assert "npc:goblin" in repo.staged_game_state.actor_registry.actors
+    assert repo.staged_game_state.actor_registry.actors["npc:goblin"].hp_current == 0
+
+
+def test_run_combat_syncs_dead_actor_to_registry() -> None:
+    """After combat kills an NPC, the dead actor is written to the registry."""
+    alive_goblin = replace(
+        make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=5
+    )
+    dead_goblin = replace(make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=0)
+
+    encounter = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.COMBAT,
+        setting="The battlefield.",
+        actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin},
+    )
+    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+
+    post_combat_encounter = replace(
+        encounter,
+        phase=EncounterPhase.ENCOUNTER_COMPLETE,
+        actors={TALIA.actor_id: TALIA, "npc:goblin": dead_goblin},
+    )
+    mock_combat_result = MagicMock()
+    mock_combat_result.final_state = post_combat_encounter
+    mock_combat_result.status = None  # not SAVED_AND_QUIT
+
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
+        io=ScriptedIO([]),
+        _player_intent_agent=FakePlayerIntentAgent(),
+    )
+
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
+    ) as mock_cls:
+        mock_cls.return_value.run.return_value = mock_combat_result
+        orch.run_encounter(encounter_id="enc-001")
+
+    assert repo.staged_game_state is not None
+    assert "npc:goblin" in repo.staged_game_state.actor_registry.actors
+    assert repo.staged_game_state.actor_registry.actors["npc:goblin"].hp_current == 0

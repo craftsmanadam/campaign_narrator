@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .encounter_state import EncounterPhase
 from .npc_presence import NpcPresence
@@ -41,6 +41,7 @@ class Narration:
     completion_reason: str | None = None
     next_location_hint: str | None = None
     npc_interaction_summary: str | None = None
+    traveling_actor_ids: tuple[str, ...] = field(default_factory=tuple)
 
 
 class _MissingCompletionHint(ValueError):
@@ -68,6 +69,7 @@ class NarrationResponse(BaseModel):
     completion_reason: str | None = None
     next_location_hint: str | None = None
     npc_interaction_summary: str | None = None
+    traveling_actor_ids: tuple[str, ...] = Field(default_factory=tuple)
 
     @model_validator(mode="after")
     def _validate_completion_fields(self) -> Self:

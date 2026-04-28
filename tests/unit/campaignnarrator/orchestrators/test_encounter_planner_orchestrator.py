@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -17,9 +18,12 @@ from campaignnarrator.domain.models import (
     EncounterReady,
     EncounterRecoveryResult,
     EncounterTemplate,
+    EncounterTransition,
     Milestone,
     MilestoneAchieved,
     ModuleState,
+    NpcPresence,
+    NpcPresenceStatus,
 )
 from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     EncounterPlannerOrchestrator,
@@ -32,6 +36,8 @@ from campaignnarrator.repositories.compendium_repository import CompendiumReposi
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
+
+from tests.fixtures.goblin_scout import make_goblin_scout
 
 # ─── Shared fixtures ─────────────────────────────────────────────────────────
 
@@ -121,6 +127,55 @@ def _make_template(
         prerequisites=(),
         expected_outcomes=(),
         downstream_dependencies=(),
+    )
+
+
+def _make_simple_npc_template(
+    npc_template_id: str = "goblin-scout",
+) -> EncounterTemplate:
+    """Template backed by a simple_npc stat source (no monster compendium needed)."""
+    return EncounterTemplate(
+        template_id=f"enc-{npc_template_id}",
+        order=0,
+        setting="A dark alley.",
+        purpose="Intro.",
+        npcs=(
+            EncounterNpc(
+                template_npc_id=npc_template_id,
+                display_name="Goblin Scout",
+                role="scout",
+                description="a small goblin",
+                monster_name=None,
+                stat_source="simple_npc",
+                cr=0.25,
+                name_known=False,
+            ),
+        ),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+
+
+def _make_transition(
+    actor_id: str = "npc:elara",
+    display_name: str = "Elara",
+) -> EncounterTransition:
+    """Build a minimal EncounterTransition carrying one traveling actor."""
+    actor = make_goblin_scout(actor_id, display_name)
+    presence = NpcPresence(
+        actor_id=actor_id,
+        display_name=display_name,
+        description="the herbalist",
+        name_known=True,
+        status=NpcPresenceStatus.INTERACTED,
+    )
+    return EncounterTransition(
+        from_encounter_id="enc-001",
+        next_location_hint="Cave of Whispers",
+        traveling_actor_ids=(actor_id,),
+        traveling_actors={actor_id: actor},
+        traveling_presences=(presence,),
     )
 
 
@@ -621,6 +676,7 @@ class TestBuildNpcActor:
 class TestInstantiation:
     def _make_viable_orchestrator(
         self,
+        template: EncounterTemplate | None = None,
     ) -> tuple[
         EncounterPlannerOrchestrator,
         EncounterPlannerOrchestratorRepositories,
@@ -639,7 +695,7 @@ class TestInstantiation:
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
         module = _make_module(
-            planned_encounters=(_make_template(),),
+            planned_encounters=(template or _make_template(),),
             next_encounter_index=0,
         )
         return orchestrator, repos, agents, module
@@ -739,6 +795,126 @@ class TestInstantiation:
         assert isinstance(result, EncounterReady)
         assert result.encounter_state.scene_tone == "dark and ominous"
 
+    def test_prepare_with_transition_adds_traveling_actor(self) -> None:
+        """Traveling actor from transition is present in the resulting encounter actors."""
+        orchestrator, _, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template()
+        )
+        transition = _make_transition(actor_id="npc:elara", display_name="Elara")
+        result = orchestrator.prepare(
+            module=_make_module(
+                planned_encounters=(_make_simple_npc_template(),),
+                next_encounter_index=0,
+            ),
+            campaign=_make_campaign(),
+            player=_make_player(),
+            transition=transition,
+        )
+        assert isinstance(result, EncounterReady)
+        assert "npc:elara" in result.encounter_state.actors
+
+    def test_prepare_with_transition_adds_traveling_presence_as_interacted(
+        self,
+    ) -> None:
+        """Traveling NPC presence arrives with INTERACTED status regardless of original."""
+        orchestrator, _, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template()
+        )
+        transition = _make_transition(actor_id="npc:elara", display_name="Elara")
+        result = orchestrator.prepare(
+            module=_make_module(
+                planned_encounters=(_make_simple_npc_template(),),
+                next_encounter_index=0,
+            ),
+            campaign=_make_campaign(),
+            player=_make_player(),
+            transition=transition,
+        )
+        assert isinstance(result, EncounterReady)
+        presences = {p.actor_id: p for p in result.encounter_state.npc_presences}
+        assert "npc:elara" in presences
+        assert presences["npc:elara"].status == NpcPresenceStatus.INTERACTED
+
+    def test_prepare_without_transition_excludes_traveling_actor(self) -> None:
+        """Without transition, only template actors are present."""
+        orchestrator, _, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template()
+        )
+        result = orchestrator.prepare(
+            module=_make_module(
+                planned_encounters=(_make_simple_npc_template(),),
+                next_encounter_index=0,
+            ),
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
+        assert isinstance(result, EncounterReady)
+        assert "npc:elara" not in result.encounter_state.actors
+
+    def test_prepare_with_transition_skips_colliding_actor_id(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Traveling actor whose ID collides with a template NPC is skipped with a warning."""
+        # Template has template_npc_id="goblin-scout" → actor_id="npc:goblin-scout"
+        # Transition also has actor_id="npc:goblin-scout" → collision; template wins
+        orchestrator, _, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template(npc_template_id="goblin-scout")
+        )
+        collision_transition = _make_transition(
+            actor_id="npc:goblin-scout", display_name="Scout"
+        )
+        with caplog.at_level(
+            logging.WARNING,
+            logger="campaignnarrator.orchestrators.encounter_planner_orchestrator",
+        ):
+            result = orchestrator.prepare(
+                module=_make_module(
+                    planned_encounters=(
+                        _make_simple_npc_template(npc_template_id="goblin-scout"),
+                    ),
+                    next_encounter_index=0,
+                ),
+                campaign=_make_campaign(),
+                player=_make_player(),
+                transition=collision_transition,
+            )
+        assert isinstance(result, EncounterReady)
+        assert "npc:goblin-scout" in result.encounter_state.actors
+        assert "collision" in caplog.text.lower() or "skipping" in caplog.text.lower()
+
+    def test_prepare_with_transition_skips_colliding_presence(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Traveling presence whose actor_id collides with a template presence is skipped."""
+        orchestrator, _, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template(npc_template_id="goblin-scout")
+        )
+        collision_transition = _make_transition(
+            actor_id="npc:goblin-scout", display_name="Scout"
+        )
+        with caplog.at_level(
+            logging.WARNING,
+            logger="campaignnarrator.orchestrators.encounter_planner_orchestrator",
+        ):
+            result = orchestrator.prepare(
+                module=_make_module(
+                    planned_encounters=(
+                        _make_simple_npc_template(npc_template_id="goblin-scout"),
+                    ),
+                    next_encounter_index=0,
+                ),
+                campaign=_make_campaign(),
+                player=_make_player(),
+                transition=collision_transition,
+            )
+        assert isinstance(result, EncounterReady)
+        goblin_presences = [
+            p
+            for p in result.encounter_state.npc_presences
+            if p.actor_id == "npc:goblin-scout"
+        ]
+        assert len(goblin_presences) == 1
+
     def test_cr_scaling_applied_before_instantiation(self) -> None:
         """Over-budget NPCs are trimmed by scale_encounter_npcs before actor creation."""
         repos = _make_repos()
@@ -794,6 +970,36 @@ class TestInstantiation:
 
 
 # ─── Retry logic ─────────────────────────────────────────────────────────────
+
+
+class TestTransitionThreading:
+    """Tests that verify transition is threaded from prepare() all the way to the encounter."""
+
+    def test_prepare_threads_transition_to_instantiate(self) -> None:
+        """prepare() with transition= passes it through to the resulting encounter."""
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.compendium.monster_index_path.return_value = None
+
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+        template = _make_simple_npc_template()
+        module = _make_module(planned_encounters=(template,), next_encounter_index=0)
+        transition = _make_transition(actor_id="npc:elara", display_name="Elara")
+
+        result = orchestrator.prepare(
+            module=module,
+            campaign=_make_campaign(),
+            player=_make_player(),
+            transition=transition,
+        )
+
+        assert isinstance(result, EncounterReady)
+        assert "npc:elara" in result.encounter_state.actors
 
 
 class TestRetryLogic:

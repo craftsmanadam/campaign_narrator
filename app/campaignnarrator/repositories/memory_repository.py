@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 import lancedb
 import pyarrow as pa
 
-from campaignnarrator.domain.models import GameState
+from campaignnarrator.domain.models import ActorRegistry, GameState
 from campaignnarrator.repositories.state_repository import StateRepository
 
 if TYPE_CHECKING:
@@ -93,6 +93,30 @@ class MemoryRepository:
                     self._cache,
                     exchange_buffer=tuple(json.loads(path.read_text(encoding="utf-8"))),
                 )
+
+    def _load_actor_registry(self) -> ActorRegistry:
+        """Load actor registry from disk.
+
+        Returns empty registry when file is absent or corrupt.
+        """
+        path = self._root / "actor_registry.json"
+        if not path.exists():
+            return ActorRegistry()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return ActorRegistry.from_dict(data)
+        except (json.JSONDecodeError, OSError):  # fmt: skip
+            _logger.warning("actor_registry.json is corrupt — using empty registry")
+            return ActorRegistry()
+
+    def _save_actor_registry(self, registry: ActorRegistry) -> None:
+        """Persist actor registry to disk."""
+        self._root.mkdir(parents=True, exist_ok=True)
+        path = self._root / "actor_registry.json"
+        path.write_text(
+            json.dumps(registry.to_dict(), separators=(",", ":")),
+            encoding="utf-8",
+        )
 
     def _init_lancedb(
         self,
@@ -239,7 +263,9 @@ class MemoryRepository:
         """Return cached game state if staged, else read from disk."""
         if self._cache.game_state is not None:
             return self._cache.game_state
-        return self._state_repo.load()
+        base = self._state_repo.load()
+        registry = self._load_actor_registry()
+        return replace(base, actor_registry=registry)
 
     def update_exchange(self, player_input: str, narrator_output: str) -> None:
         """Append player + narrator pair to rolling exchange buffer."""
@@ -267,6 +293,7 @@ class MemoryRepository:
         """
         if self._cache.game_state is not None:
             self._state_repo.save(self._cache.game_state)
+            self._save_actor_registry(self._cache.game_state.actor_registry)
         for text, metadata in self._cache.staged_narrations:
             self.store_narrative(text, metadata)
         exchange_path = self._root / "exchange_buffer.json"

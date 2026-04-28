@@ -6,6 +6,7 @@ from dataclasses import FrozenInstanceError, replace
 
 import pytest
 from campaignnarrator.domain.models import (
+    ActorRegistry,
     ActorState,
     ActorType,
     CampaignState,
@@ -508,6 +509,67 @@ def test_public_actor_summaries_excludes_mentioned_npcs() -> None:
     assert any("pc:talia" in s or "talia" in s.lower() for s in summaries)
 
 
+def test_encounter_state_traveling_actor_ids_defaults_to_empty() -> None:
+    state = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="A forest clearing.",
+        actors={"pc:talia": TALIA},
+    )
+    assert state.traveling_actor_ids == ()
+
+
+def test_encounter_state_next_location_hint_defaults_to_none() -> None:
+    state = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="A forest clearing.",
+        actors={"pc:talia": TALIA},
+    )
+    assert state.next_location_hint is None
+
+
+def test_encounter_state_to_dict_includes_traveling_fields() -> None:
+    state = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="A forest clearing.",
+        actors={"pc:talia": TALIA},
+        traveling_actor_ids=("npc:elara",),
+        next_location_hint="The cave entrance",
+    )
+    data = state.to_dict()
+    assert data["traveling_actor_ids"] == ["npc:elara"]
+    assert data["next_location_hint"] == "The cave entrance"
+
+
+def test_encounter_state_from_dict_round_trips_traveling_fields() -> None:
+    state = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="A forest clearing.",
+        actors={"pc:talia": TALIA},
+        traveling_actor_ids=("npc:elara",),
+        next_location_hint="The cave entrance",
+    )
+    restored = EncounterState.from_dict(state.to_dict())
+    assert restored.traveling_actor_ids == ("npc:elara",)
+    assert restored.next_location_hint == "The cave entrance"
+
+
+def test_encounter_state_from_dict_backward_compat_missing_traveling_fields() -> None:
+    """Old saves without traveling_actor_ids/next_location_hint load cleanly."""
+    data = {
+        "encounter_id": "enc-001",
+        "phase": "social",
+        "setting": "A forest clearing.",
+        "actors": {},
+    }
+    state = EncounterState.from_dict(data)
+    assert state.traveling_actor_ids == ()
+    assert state.next_location_hint is None
+
+
 def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:
     """Fields missing from old encounter serialization (level, class_levels, xp) use defaults."""
     _level = 5
@@ -524,3 +586,14 @@ def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:
     assert loaded_actor.level == _level
     assert loaded_actor.class_levels == (("Fighter", _level),)
     assert loaded_actor.xp == _xp
+
+
+def test_game_state_actor_registry_defaults_to_empty() -> None:
+    state = GameState(player=TALIA)
+    assert len(state.actor_registry.actors) == 0
+
+
+def test_game_state_accepts_actor_registry() -> None:
+    registry = ActorRegistry().with_actor(TALIA)
+    state = GameState(player=TALIA, actor_registry=registry)
+    assert TALIA.actor_id in state.actor_registry.actors

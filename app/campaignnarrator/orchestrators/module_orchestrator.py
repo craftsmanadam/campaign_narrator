@@ -12,6 +12,7 @@ from campaignnarrator.domain.models import (
     CampaignState,
     EncounterPhase,
     EncounterState,
+    EncounterTransition,
     MilestoneAchieved,
     ModuleState,
     PlayerIO,
@@ -106,7 +107,7 @@ class ModuleOrchestrator:
 
         # Encounter already complete — archive then prepare
         if active.phase == EncounterPhase.ENCOUNTER_COMPLETE:
-            module = self._archive_encounter(
+            module, transition = self._archive_encounter(
                 encounter=active, module=module, campaign=campaign
             )
             self._prepare_and_run(
@@ -114,6 +115,7 @@ class ModuleOrchestrator:
                 player=player,
                 module=module,
                 depth=depth,
+                transition=transition,
             )
             return
 
@@ -123,7 +125,7 @@ class ModuleOrchestrator:
         # Reload from cache (not disk) to detect completion vs player quit
         reloaded = self._repos.memory.load_game_state().encounter
         if reloaded is not None and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE:
-            module = self._archive_encounter(
+            module, transition = self._archive_encounter(
                 encounter=reloaded, module=module, campaign=campaign
             )
             self._prepare_and_run(
@@ -131,6 +133,7 @@ class ModuleOrchestrator:
                 player=player,
                 module=module,
                 depth=depth,
+                transition=transition,
             )
         # else: player quit — save state as-is and return
 
@@ -140,8 +143,8 @@ class ModuleOrchestrator:
         encounter: EncounterState,
         module: ModuleState,
         campaign: CampaignState,
-    ) -> ModuleState:
-        """Summarize, store narrative, update module log, clear active encounter."""
+    ) -> tuple[ModuleState, EncounterTransition]:
+        """Summarize, store narrative, update module log, sync registry, clear."""
         summary = self._agents.narrator.summarize_encounter(encounter, module, campaign)
         self._repos.memory.store_narrative(
             summary,
@@ -152,7 +155,41 @@ class ModuleOrchestrator:
                 "encounter_id": encounter.encounter_id,
             },
         )
-        self._repos.memory.clear_encounter_memory()
+
+        # Sync all encounter actors to registry; encounter state wins over stale player.
+        # Must happen BEFORE persist() so load_game_state() still returns the cached
+        # (or last-flushed) state — not the stale on-disk completed encounter that
+        # would reappear if we cleared the cache first.
+        gs = self._repos.memory.load_game_state()
+        updated_registry = gs.actor_registry.with_actor(gs.player)
+        updated_registry = updated_registry.with_actors(encounter.actors)
+        self._repos.memory.update_game_state(
+            replace(gs, actor_registry=updated_registry)
+        )
+        # persist() flushes the registry to disk and resets the in-memory cache.
+        # After this point load_game_state() reads from disk; active.json will be
+        # absent (cleared below) so run_encounter() won't see a stale encounter.
+        self._repos.memory.persist()
+
+        # Build transition payload for traveling companions.
+        traveling_actors = {
+            aid: encounter.actors[aid]
+            for aid in encounter.traveling_actor_ids
+            if aid in encounter.actors
+        }
+        traveling_presences = tuple(
+            p
+            for p in encounter.npc_presences
+            if p.actor_id in encounter.traveling_actor_ids
+        )
+        transition = EncounterTransition(
+            from_encounter_id=encounter.encounter_id,
+            next_location_hint=encounter.next_location_hint,
+            traveling_actor_ids=encounter.traveling_actor_ids,
+            traveling_actors=traveling_actors,
+            traveling_presences=traveling_presences,
+        )
+
         new_ids = (*module.completed_encounter_ids, encounter.encounter_id)
         new_summaries = (*module.completed_encounter_summaries, summary)
         updated_module = replace(
@@ -163,7 +200,7 @@ class ModuleOrchestrator:
         )
         self._repos.module.save(updated_module)
         self._repos.encounter.clear()
-        return updated_module
+        return updated_module, transition
 
     def _prepare_and_run(
         self,
@@ -172,10 +209,11 @@ class ModuleOrchestrator:
         player: ActorState,
         module: ModuleState,
         depth: int = 0,
+        transition: EncounterTransition | None = None,
     ) -> None:
         """Ask the planner to prepare the next encounter, then run it."""
         result = self._agents.encounter_planner.prepare(
-            module=module, campaign=campaign, player=player
+            module=module, campaign=campaign, player=player, transition=transition
         )
         if isinstance(result, MilestoneAchieved):
             self._advance_module(
@@ -198,13 +236,14 @@ class ModuleOrchestrator:
             and reloaded.encounter_id == encounter_id
             and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE
         ):
-            updated_module = self._archive_encounter(
+            updated_module, next_transition = self._archive_encounter(
                 encounter=reloaded, module=module, campaign=campaign
             )
             self._prepare_and_run(
                 campaign=campaign,
                 player=player,
                 module=updated_module,
+                transition=next_transition,
             )
 
     def _advance_module(

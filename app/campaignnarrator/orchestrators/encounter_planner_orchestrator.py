@@ -23,6 +23,7 @@ from campaignnarrator.domain.models import (
     EncounterReady,
     EncounterState,
     EncounterTemplate,
+    EncounterTransition,
     MilestoneAchieved,
     ModuleState,
     NpcPresence,
@@ -138,6 +139,7 @@ class EncounterPlannerOrchestrator:
         module: ModuleState,
         campaign: CampaignState,
         player: ActorState,
+        transition: EncounterTransition | None = None,
     ) -> EncounterReady | MilestoneAchieved:
         """Produce a ready-to-run EncounterState.
 
@@ -150,7 +152,10 @@ class EncounterPlannerOrchestrator:
                     module=module, campaign=campaign, player=player
                 )
                 return self._diverge_and_instantiate(
-                    module=module, campaign=campaign, player=player
+                    module=module,
+                    campaign=campaign,
+                    player=player,
+                    transition=transition,
                 )
             except Exception as exc:
                 last_exc = exc
@@ -207,6 +212,7 @@ class EncounterPlannerOrchestrator:
         module: ModuleState,
         campaign: CampaignState,
         player: ActorState,
+        transition: EncounterTransition | None = None,
     ) -> EncounterReady | MilestoneAchieved:
         """Steps 2-3: divergence check, optional recovery, then instantiation."""
         narrative_context = self._narrative_context(module=module)
@@ -248,7 +254,9 @@ class EncounterPlannerOrchestrator:
             raise _OutOfBoundsTemplateError
 
         # Step 3: instantiation (Plan 3c)
-        return self._instantiate(module=module, template=template, player=player)
+        return self._instantiate(
+            module=module, template=template, player=player, transition=transition
+        )
 
     def _recover_if_needed(
         self,
@@ -318,8 +326,14 @@ class EncounterPlannerOrchestrator:
         module: ModuleState,
         template: EncounterTemplate,
         player: ActorState,
+        transition: EncounterTransition | None = None,
     ) -> EncounterReady:
-        """Build ActorState + NpcPresence for each NPC, assemble EncounterState."""
+        """Build ActorState + NpcPresence for each NPC, assemble EncounterState.
+
+        When transition is provided, merges traveling actors and presences into the
+        new encounter. Traveling presences arrive with INTERACTED status so the
+        narrator sees their history immediately.
+        """
         index_path = self._repos.compendium.monster_index_path()
 
         scaled_npcs = scale_encounter_npcs(template.npcs, player_level=player.level)
@@ -340,6 +354,28 @@ class EncounterPlannerOrchestrator:
                     status=NpcPresenceStatus.PRESENT,
                 )
             )
+
+        if transition:
+            for actor_id, actor_state in transition.traveling_actors.items():
+                if actor_id in actors:
+                    _log.warning(
+                        "Traveling actor ID collision with template actor: %s"
+                        " — skipping",
+                        actor_id,
+                    )
+                    continue
+                actors[actor_id] = actor_state
+            for presence in transition.traveling_presences:
+                if any(p.actor_id == presence.actor_id for p in npc_presences):
+                    _log.warning(
+                        "Traveling NpcPresence collision with template presence:"
+                        " %s — skipping",
+                        presence.actor_id,
+                    )
+                    continue
+                npc_presences.append(
+                    replace(presence, status=NpcPresenceStatus.INTERACTED)
+                )
 
         encounter_id = f"{module.module_id}-enc-{module.next_encounter_index + 1:03d}"
         encounter = EncounterState(

@@ -15,6 +15,7 @@ from campaignnarrator.domain.models import (
     CombatStatus,
     EncounterPhase,
     EncounterState,
+    GameState,
     InitiativeTurn,
     Narration,
     NarrationFrame,
@@ -1755,6 +1756,7 @@ class TestCombatOrchestratorMemoryCalls:
         """update_game_state() must be called each time through the loop."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=0)
+        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
         orc, _, _, _ = _orchestrator(
             inputs=["end turn"],
             intents=["end_turn"],
@@ -1777,6 +1779,7 @@ class TestCombatOrchestratorMemoryCalls:
         """log_combat_round() is called with the narrator's text."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
+        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
         orc, _, _, _ = _orchestrator(
             inputs=["attack goblin", "end turn"],
             intents=["combat_action", "end_turn"],
@@ -1799,6 +1802,7 @@ class TestCombatOrchestratorMemoryCalls:
         """update_exchange() receives the combat action text, not 'end_turn'."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
+        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
         orc, _, _, _ = _orchestrator(
             inputs=["attack goblin", "end turn"],
             intents=["combat_action", "end_turn"],
@@ -1823,6 +1827,7 @@ class TestCombatOrchestratorMemoryCalls:
         """clear_combat_memory() is called regardless of how combat ends."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=0)
+        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
         orc, _, _, _ = _orchestrator(
             inputs=["end turn"],
             intents=["end_turn"],

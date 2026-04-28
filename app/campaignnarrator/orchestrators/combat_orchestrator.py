@@ -19,7 +19,6 @@ from campaignnarrator.domain.models import (
     CombatStatus,
     EncounterPhase,
     EncounterState,
-    GameState,
     InitiativeTurn,
     Narration,
     NarrationFrame,
@@ -234,8 +233,9 @@ class CombatOrchestrator:
         if self._memory_repository is None:
             return
         player = state.actors[state.player_actor_id]
+        gs = self._memory_repository.load_game_state()
         self._memory_repository.update_game_state(
-            GameState(player=player, encounter=state)
+            replace(gs, player=player, encounter=state)
         )
         if result.narration is not None:
             self._memory_repository.log_combat_round(result.narration)

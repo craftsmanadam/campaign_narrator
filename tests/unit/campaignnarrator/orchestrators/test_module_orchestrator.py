@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import replace
 from unittest.mock import MagicMock
 
@@ -20,6 +21,8 @@ from campaignnarrator.domain.models import (
     Milestone,
     MilestoneAchieved,
     ModuleState,
+    NpcPresence,
+    NpcPresenceStatus,
 )
 from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     EncounterPlannerOrchestrator,
@@ -38,6 +41,7 @@ from campaignnarrator.repositories.module_repository import ModuleRepository
 
 from tests.conftest import ScriptedIO
 from tests.fixtures.fighter_talia import TALIA
+from tests.fixtures.goblin_scout import make_goblin_scout
 
 
 def _make_player() -> ActorState:
@@ -445,15 +449,15 @@ def test_run_with_scripted_io_module_not_found_no_crash() -> None:
     mock_encounter_planner.prepare.assert_not_called()
 
 
-def test_archive_encounter_calls_clear_encounter_memory() -> None:
-    """_archive_encounter() must call clear_encounter_memory() after store_narrative()."""
+def test_archive_encounter_calls_persist() -> None:
+    """_archive_encounter() must call persist() to flush registry and reset cache."""
     active = _make_active_encounter(
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="victory",
     )
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
     orch.run(campaign=_make_campaign(), player=_make_player())
-    mock_memory_repo.clear_encounter_memory.assert_called_once()
+    mock_memory_repo.persist.assert_called_once()
 
 
 def test_run_player_quits_mid_encounter_does_not_archive() -> None:
@@ -487,3 +491,200 @@ def test_run_encounter_completes_during_run_triggers_archive() -> None:
     orch.run(campaign=_make_campaign(), player=_make_player())
     mock_narrator.summarize_encounter.assert_called_once()
     mock_enc_repo.clear.assert_called_once()
+
+
+# ─── _archive_encounter registry sync and transition ─────────────────────────
+
+
+def _make_completed_encounter(
+    *,
+    traveling_actor_ids: tuple[str, ...] = (),
+    next_location_hint: str | None = None,
+) -> EncounterState:
+    """ENCOUNTER_COMPLETE state with the player + one NPC actor."""
+    player = _make_player()
+    goblin = make_goblin_scout("npc:goblin", "Goblin Scout")
+    presence = NpcPresence(
+        actor_id="npc:goblin",
+        display_name="Goblin Scout",
+        description="a goblin",
+        name_known=False,
+        status=NpcPresenceStatus.AVAILABLE,
+    )
+    return dataclasses.replace(
+        _make_active_encounter(
+            phase=EncounterPhase.ENCOUNTER_COMPLETE,
+            outcome="goblin fled",
+        ),
+        actors={player.actor_id: player, "npc:goblin": goblin},
+        npc_presences=(presence,),
+        traveling_actor_ids=traveling_actor_ids,
+        next_location_hint=next_location_hint,
+    )
+
+
+def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
+    """_archive_encounter writes all encounter actors (player + NPCs) into the registry."""
+    player = _make_player()
+    active = _make_completed_encounter()
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=player, encounter=None
+    )
+
+    orch.run(campaign=_make_campaign(), player=player)
+
+    registry_gs = None
+    for call in mock_memory_repo.update_game_state.call_args_list:
+        gs = call.args[0]
+        if hasattr(gs, "actor_registry") and len(gs.actor_registry.actors) > 0:
+            registry_gs = gs
+            break
+    assert registry_gs is not None, (
+        "update_game_state never called with non-empty registry"
+    )
+    assert player.actor_id in registry_gs.actor_registry.actors
+    assert "npc:goblin" in registry_gs.actor_registry.actors
+
+
+def test_archive_encounter_encounter_actors_win_over_stale_player() -> None:
+    """If player is in encounter.actors, that version (not gs.player) ends up in registry."""
+    player = _make_player()
+    wounded_player = dataclasses.replace(player, hp_current=1)
+    active = dataclasses.replace(
+        _make_completed_encounter(),
+        actors={player.actor_id: wounded_player, "npc:goblin": wounded_player},
+    )
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=player, encounter=None
+    )
+
+    orch.run(campaign=_make_campaign(), player=player)
+
+    for call in mock_memory_repo.update_game_state.call_args_list:
+        gs = call.args[0]
+        if (
+            hasattr(gs, "actor_registry")
+            and player.actor_id in gs.actor_registry.actors
+        ):
+            assert gs.actor_registry.actors[player.actor_id].hp_current == 1
+            break
+
+
+def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
+    """When encounter has traveling_actor_ids, transition passed to planner contains them."""
+    player = _make_player()
+    elara = make_goblin_scout("npc:elara", "Elara")
+    elara_presence = NpcPresence(
+        actor_id="npc:elara",
+        display_name="Elara",
+        description="the herbalist",
+        name_known=True,
+        status=NpcPresenceStatus.INTERACTED,
+    )
+    active = dataclasses.replace(
+        _make_active_encounter(phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="done"),
+        actors={player.actor_id: player, "npc:elara": elara},
+        npc_presences=(elara_presence,),
+        traveling_actor_ids=("npc:elara",),
+        next_location_hint="Cave of Whispers",
+    )
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=player, encounter=None
+    )
+
+    orch.run(campaign=_make_campaign(), player=player)
+
+    call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
+    transition = call_kwargs.get("transition")
+    assert transition is not None
+    assert transition.from_encounter_id == active.encounter_id
+    assert "npc:elara" in transition.traveling_actors
+    assert transition.next_location_hint == "Cave of Whispers"
+
+
+def test_run_loop_call_site_1_threads_transition_to_prepare() -> None:
+    """When active encounter is ENCOUNTER_COMPLETE on entry, transition reaches prepare."""
+    player = _make_player()
+    elara = make_goblin_scout("npc:elara", "Elara")
+    elara_presence = NpcPresence(
+        actor_id="npc:elara",
+        display_name="Elara",
+        description="the herbalist",
+        name_known=True,
+        status=NpcPresenceStatus.INTERACTED,
+    )
+    active = dataclasses.replace(
+        _make_active_encounter(phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="done"),
+        actors={player.actor_id: player, "npc:elara": elara},
+        npc_presences=(elara_presence,),
+        traveling_actor_ids=("npc:elara",),
+        next_location_hint="The cave",
+    )
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=player, encounter=None
+    )
+
+    orch.run(campaign=_make_campaign(), player=player)
+
+    call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
+    transition = call_kwargs.get("transition")
+    assert transition is not None
+    assert transition.from_encounter_id == active.encounter_id
+
+
+def test_run_loop_call_site_2_threads_transition_to_prepare() -> None:
+    """When encounter completes during run_encounter, transition reaches prepare."""
+    player = _make_player()
+    elara = make_goblin_scout("npc:elara", "Elara")
+    elara_presence = NpcPresence(
+        actor_id="npc:elara",
+        display_name="Elara",
+        description="the herbalist",
+        name_known=True,
+        status=NpcPresenceStatus.INTERACTED,
+    )
+    # Start with an in-progress encounter
+    active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
+    # After run_encounter, memory returns a completed encounter with traveling actors
+    completed = dataclasses.replace(
+        _make_active_encounter(
+            phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="victory"
+        ),
+        actors={player.actor_id: player, "npc:elara": elara},
+        npc_presences=(elara_presence,),
+        traveling_actor_ids=("npc:elara",),
+        next_location_hint="The harbor",
+    )
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=player, encounter=completed
+    )
+
+    orch.run(campaign=_make_campaign(), player=player)
+
+    call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
+    transition = call_kwargs.get("transition")
+    assert transition is not None
+    assert transition.from_encounter_id == completed.encounter_id
+
+
+def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
+    """When traveling_actor_ids is empty, transition is passed but has no traveling actors."""
+    player = _make_player()
+    active = _make_completed_encounter(traveling_actor_ids=())
+    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    mock_memory_repo.load_game_state.return_value = GameState(
+        player=player, encounter=None
+    )
+
+    orch.run(campaign=_make_campaign(), player=player)
+
+    call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
+    transition = call_kwargs.get("transition")
+    assert transition is not None
+    assert len(transition.traveling_actors) == 0
+    assert transition.traveling_actor_ids == ()

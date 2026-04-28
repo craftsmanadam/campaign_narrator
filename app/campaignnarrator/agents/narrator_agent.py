@@ -188,6 +188,7 @@ class NarratorAgent:
             completion_reason=result.completion_reason,
             next_location_hint=result.next_location_hint,
             npc_interaction_summary=result.npc_interaction_summary,
+            traveling_actor_ids=result.traveling_actor_ids,
         )
 
     def open_scene(self, frame: NarrationFrame) -> SceneOpeningResponse:

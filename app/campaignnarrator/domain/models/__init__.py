@@ -13,6 +13,7 @@ from .actor_components import (
     ResourceState,
     WeaponState,
 )
+from .actor_registry import ActorRegistry, EncounterTransition
 from .actor_state import ActorState, ActorType, TurnResources
 from .campaign_state import CampaignEvent, CampaignState, Milestone, ModuleState
 from .combat import (
@@ -52,6 +53,7 @@ from .rules import (
 
 __all__ = [
     "Action",
+    "ActorRegistry",
     "ActorState",
     "ActorType",
     "Adjudication",
@@ -70,6 +72,7 @@ __all__ = [
     "EncounterRecoveryResult",
     "EncounterState",
     "EncounterTemplate",
+    "EncounterTransition",
     "FeatState",
     "GameState",
     "InitiativeTurn",

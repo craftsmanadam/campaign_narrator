@@ -14,7 +14,6 @@ from campaignnarrator.domain.models import (
     CombatStatus,
     EncounterPhase,
     EncounterState,
-    GameState,
     InitiativeTurn,
     IntentCategory,
     Narration,
@@ -107,7 +106,7 @@ class EncounterOrchestrator:
             self._io.display(opening.text)
             output.append(opening.text)
             self._memory_repository.update_game_state(
-                GameState(player=player, encounter=state)
+                replace(game_state, player=player, encounter=state)
             )
             self._memory_repository.update_exchange("", opening.text)
         elif self._memory_repository.get_exchange_buffer():
@@ -173,8 +172,9 @@ class EncounterOrchestrator:
                             "module_id": "",
                         },
                     )
+                    gs = self._memory_repository.load_game_state()
                     self._memory_repository.update_game_state(
-                        GameState(player=player, encounter=state)
+                        replace(gs, player=player, encounter=state)
                     )
                     msg = "Game saved. You can resume this encounter later."
                     self._io.display(msg)
@@ -239,6 +239,7 @@ class EncounterOrchestrator:
         output: list[str],
     ) -> EncounterState:
         """Apply a non-combat player action; display narration; return updated state."""
+        before_state = state
         try:
             state, narration = self._handle_non_combat_action(
                 state, player_input, intent, player
@@ -254,10 +255,26 @@ class EncounterOrchestrator:
 
         self._io.display(narration.text)
         output.append(narration.text)
+        gs = self._memory_repository.load_game_state()
         self._memory_repository.update_game_state(
-            GameState(player=player, encounter=state)
+            replace(gs, player=player, encounter=state)
         )
         self._memory_repository.update_exchange(player_input.raw_text, narration.text)
+
+        # Death sync: write newly dead actors to registry immediately.
+        # Primary registry sync happens at encounter boundaries; this is a crash guard.
+        dead_actors = {
+            aid: actor
+            for aid, actor in state.actors.items()
+            if actor.hp_current <= 0
+            and before_state.actors.get(aid, actor).hp_current > 0
+        }
+        if dead_actors:
+            gs = self._memory_repository.load_game_state()
+            self._memory_repository.update_game_state(
+                replace(gs, actor_registry=gs.actor_registry.with_actors(dead_actors))
+            )
+
         return state
 
     def _run_combat(self, state: EncounterState, player: ActorState) -> CombatResult:
@@ -271,9 +288,24 @@ class EncounterOrchestrator:
             memory_repository=self._memory_repository,
         )
         result = orchestrator.run(state)
+        gs = self._memory_repository.load_game_state()
         self._memory_repository.update_game_state(
-            GameState(player=player, encounter=result.final_state)
+            replace(gs, player=player, encounter=result.final_state)
         )
+
+        # Death sync: write newly dead actors to registry immediately.
+        # Primary registry sync happens at encounter boundaries; this is a crash guard.
+        dead_actors = {
+            aid: actor
+            for aid, actor in result.final_state.actors.items()
+            if actor.hp_current <= 0 and state.actors.get(aid, actor).hp_current > 0
+        }
+        if dead_actors:
+            gs = self._memory_repository.load_game_state()
+            self._memory_repository.update_game_state(
+                replace(gs, actor_registry=gs.actor_registry.with_actors(dead_actors))
+            )
+
         if result.status is CombatStatus.SAVED_AND_QUIT:
             self._io.display("Game saved. You can resume this encounter later.")
             self._append_event(
@@ -506,6 +538,14 @@ class EncounterOrchestrator:
                 narration.completion_reason,
                 narration.next_location_hint,
             )
+            validated_traveling = _validate_traveling_actor_ids(
+                narration.traveling_actor_ids, state
+            )
+            state = replace(
+                state,
+                traveling_actor_ids=validated_traveling,
+                next_location_hint=narration.next_location_hint,
+            )
             state = apply_state_effects(
                 state,
                 (
@@ -644,3 +684,26 @@ def _clear_player_hidden(state: EncounterState) -> EncounterState:
         effect_type="remove_condition", target=player_id, value="hidden"
     )
     return apply_state_effects(state, (effect,))
+
+
+def _validate_traveling_actor_ids(
+    requested_ids: tuple[str, ...],
+    state: EncounterState,
+) -> tuple[str, ...]:
+    """Validate narrator-returned actor IDs against active NpcPresences. Exclude player.
+
+    Only AVAILABLE and INTERACTED NPCs are eligible to travel with the player.
+    IDs not found in active presences or matching the player are silently dropped
+    with a warning log.
+    """
+    valid_ids = {
+        p.actor_id
+        for p in state.npc_presences
+        if p.status in {NpcPresenceStatus.AVAILABLE, NpcPresenceStatus.INTERACTED}
+    }
+    valid_ids.discard(state.player_actor_id)
+    validated = tuple(aid for aid in requested_ids if aid in valid_ids)
+    ignored = tuple(aid for aid in requested_ids if aid not in valid_ids)
+    if ignored:
+        _log.warning("Ignoring invalid traveling_actor_ids: %s", ignored)
+    return validated

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from types import MappingProxyType
 
+from .actor_registry import ActorRegistry
 from .actor_state import ActorState, ActorType
 from .campaign_state import CampaignState, ModuleState
 from .npc_presence import NpcPresence, NpcPresenceStatus
@@ -72,6 +73,8 @@ class EncounterState:
     scene_tone: str | None = None
     npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
     current_location: str | None = None
+    traveling_actor_ids: tuple[str, ...] = field(default_factory=tuple)
+    next_location_hint: str | None = None
 
     def __post_init__(self) -> None:
         """Snapshot mutable mappings so encounter state cannot be mutated externally."""
@@ -135,6 +138,8 @@ class EncounterState:
             "actors": {
                 actor_id: actor.to_dict() for actor_id, actor in self.actors.items()
             },
+            "traveling_actor_ids": list(self.traveling_actor_ids),
+            "next_location_hint": self.next_location_hint,
         }
 
     @classmethod
@@ -189,6 +194,16 @@ class EncounterState:
         outcome = data.get("outcome")
         scene_tone = data.get("scene_tone")
         current_location = data.get("current_location")
+        traveling_actor_ids_raw = data.get("traveling_actor_ids", ())
+        traveling_actor_ids: tuple[str, ...] = (
+            tuple(str(i) for i in traveling_actor_ids_raw if isinstance(i, str))
+            if isinstance(traveling_actor_ids_raw, list | tuple)
+            else ()
+        )
+        next_location_hint_raw = data.get("next_location_hint")
+        next_location_hint = (
+            next_location_hint_raw if isinstance(next_location_hint_raw, str) else None
+        )
         return cls(
             encounter_id=encounter_id,
             phase=EncounterPhase(phase_raw),
@@ -203,10 +218,12 @@ class EncounterState:
             current_location=(
                 current_location if isinstance(current_location, str) else None
             ),
+            traveling_actor_ids=traveling_actor_ids,
+            next_location_hint=next_location_hint,
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class GameState:
     """Top-level game state: player + optional campaign/module/encounter."""
 
@@ -214,6 +231,7 @@ class GameState:
     campaign: CampaignState | None = None
     module: ModuleState | None = None
     encounter: EncounterState | None = None
+    actor_registry: ActorRegistry = field(default_factory=ActorRegistry)
 
 
 @dataclass(frozen=True)

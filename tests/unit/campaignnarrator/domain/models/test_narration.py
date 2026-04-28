@@ -206,3 +206,33 @@ def test_narration_accepts_npc_interaction_summary() -> None:
         narration.npc_interaction_summary
         == "Player asked about the children; Elder denied knowledge."
     )
+
+
+def test_narration_response_traveling_actor_ids_defaults_to_empty() -> None:
+    response = NarrationResponse(text="You step forward.", current_location="the road")
+    assert response.traveling_actor_ids == ()
+
+
+def test_narration_response_accepts_traveling_actor_ids() -> None:
+    response = NarrationResponse(
+        text="You leave the grove.",
+        current_location="the road north",
+        encounter_complete=True,
+        completion_reason="Player departed.",
+        next_location_hint="Cave of Whispers",
+        traveling_actor_ids=("npc:elara",),
+    )
+    assert response.traveling_actor_ids == ("npc:elara",)
+
+
+def test_narration_traveling_actor_ids_defaults_to_empty() -> None:
+    narration = Narration(text="The grove is quiet.")
+    assert narration.traveling_actor_ids == ()
+
+
+def test_narration_accepts_traveling_actor_ids() -> None:
+    narration = Narration(
+        text="You depart.",
+        traveling_actor_ids=("npc:elara",),
+    )
+    assert narration.traveling_actor_ids == ("npc:elara",)
