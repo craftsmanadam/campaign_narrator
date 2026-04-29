@@ -232,10 +232,10 @@ class CombatOrchestrator:
         """Stage per-turn game state and exchange in memory repository."""
         if self._memory_repository is None:
             return
-        player = state.actors[state.player_actor_id]
         gs = self._memory_repository.load_game_state()
+        updated_registry = gs.actor_registry.with_actors(state.actors)
         self._memory_repository.update_game_state(
-            replace(gs, player=player, encounter=state)
+            replace(gs, encounter=state, actor_registry=updated_registry)
         )
         if result.narration is not None:
             self._memory_repository.log_combat_round(result.narration)

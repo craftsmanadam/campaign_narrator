@@ -26,6 +26,7 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
+    get_player,
 )
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.memory_repository import MemoryRepository
@@ -94,7 +95,9 @@ class EncounterOrchestrator:
         game_state = self._memory_repository.load_game_state()
         if game_state.encounter is None:
             raise ValueError("no active encounter")  # noqa: TRY003
-        player = game_state.player
+        player = get_player(
+            game_state.actor_registry, game_state.encounter.player_actor_id
+        )
         output: list[str] = []
         state = game_state.encounter
 
@@ -106,7 +109,7 @@ class EncounterOrchestrator:
             self._io.display(opening.text)
             output.append(opening.text)
             self._memory_repository.update_game_state(
-                replace(game_state, player=player, encounter=state)
+                replace(game_state, encounter=state)
             )
             self._memory_repository.update_exchange("", opening.text)
         elif self._memory_repository.get_exchange_buffer():
@@ -174,7 +177,7 @@ class EncounterOrchestrator:
                     )
                     gs = self._memory_repository.load_game_state()
                     self._memory_repository.update_game_state(
-                        replace(gs, player=player, encounter=state)
+                        replace(gs, encounter=state)
                     )
                     msg = "Game saved. You can resume this encounter later."
                     self._io.display(msg)
@@ -230,6 +233,22 @@ class EncounterOrchestrator:
         )
         return result
 
+    def _sync_all_actors_to_registry(self, state: EncounterState) -> None:
+        """Full sync: write all encounter.actors into the registry.
+
+        Called after every apply_state_effects mutation. This is a complete
+        overwrite, not a diff — keeps the registry current without tracking
+        which actors changed.
+
+        Caller must persist the encounter update via update_game_state() before
+        calling this method — the internal load_game_state() will read back the
+        updated encounter, and the registry merge is applied on top of that.
+        """
+        gs = self._memory_repository.load_game_state()
+        self._memory_repository.update_game_state(
+            replace(gs, actor_registry=gs.actor_registry.with_actors(state.actors))
+        )
+
     def _apply_action(
         self,
         state: EncounterState,
@@ -239,7 +258,6 @@ class EncounterOrchestrator:
         output: list[str],
     ) -> EncounterState:
         """Apply a non-combat player action; display narration; return updated state."""
-        before_state = state
         try:
             state, narration = self._handle_non_combat_action(
                 state, player_input, intent, player
@@ -256,24 +274,9 @@ class EncounterOrchestrator:
         self._io.display(narration.text)
         output.append(narration.text)
         gs = self._memory_repository.load_game_state()
-        self._memory_repository.update_game_state(
-            replace(gs, player=player, encounter=state)
-        )
+        self._memory_repository.update_game_state(replace(gs, encounter=state))
+        self._sync_all_actors_to_registry(state)
         self._memory_repository.update_exchange(player_input.raw_text, narration.text)
-
-        # Death sync: write newly dead actors to registry immediately.
-        # Primary registry sync happens at encounter boundaries; this is a crash guard.
-        dead_actors = {
-            aid: actor
-            for aid, actor in state.actors.items()
-            if actor.hp_current <= 0
-            and before_state.actors.get(aid, actor).hp_current > 0
-        }
-        if dead_actors:
-            gs = self._memory_repository.load_game_state()
-            self._memory_repository.update_game_state(
-                replace(gs, actor_registry=gs.actor_registry.with_actors(dead_actors))
-            )
 
         return state
 
@@ -290,21 +293,9 @@ class EncounterOrchestrator:
         result = orchestrator.run(state)
         gs = self._memory_repository.load_game_state()
         self._memory_repository.update_game_state(
-            replace(gs, player=player, encounter=result.final_state)
+            replace(gs, encounter=result.final_state)
         )
-
-        # Death sync: write newly dead actors to registry immediately.
-        # Primary registry sync happens at encounter boundaries; this is a crash guard.
-        dead_actors = {
-            aid: actor
-            for aid, actor in result.final_state.actors.items()
-            if actor.hp_current <= 0 and state.actors.get(aid, actor).hp_current > 0
-        }
-        if dead_actors:
-            gs = self._memory_repository.load_game_state()
-            self._memory_repository.update_game_state(
-                replace(gs, actor_registry=gs.actor_registry.with_actors(dead_actors))
-            )
+        self._sync_all_actors_to_registry(result.final_state)
 
         if result.status is CombatStatus.SAVED_AND_QUIT:
             self._io.display("Game saved. You can resume this encounter later.")

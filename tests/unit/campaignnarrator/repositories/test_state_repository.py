@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 
 from campaignnarrator.domain.models import (
@@ -70,7 +69,6 @@ def test_load_returns_game_state_with_player_and_encounter(tmp_path: Path) -> No
 
     game_state = repo.load()
 
-    assert game_state.player.actor_id == "pc:talia"
     assert game_state.encounter is not None
     assert game_state.encounter.encounter_id == "goblin-camp"
 
@@ -103,9 +101,9 @@ def test_load_enriches_player_references_when_compendium_provided(
         compendium=compendium,
     )
 
-    game_state = repo.load()
+    player = repo.load_player()
 
-    assert "Alert feat text" in game_state.player.references
+    assert "Alert feat text" in player.references
 
 
 def test_load_returns_empty_references_when_no_compendium(tmp_path: Path) -> None:
@@ -114,24 +112,23 @@ def test_load_returns_empty_references_when_no_compendium(tmp_path: Path) -> Non
     encounter_repo = EncounterRepository(tmp_path)
     repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
 
-    game_state = repo.load()
+    player = repo.load_player()
 
-    assert game_state.player.references == ()
+    assert player.references == ()
 
 
 def test_save_strips_references_from_player_before_persisting(tmp_path: Path) -> None:
-    actor_with_refs = replace(TALIA, references=("feat text",))
     actor_repo = ActorRepository(tmp_path)
     actor_repo.save(TALIA)
     encounter_repo = EncounterRepository(tmp_path)
     encounter_repo.save(_minimal_encounter())
     repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
 
-    game_state = GameState(player=actor_with_refs, encounter=_minimal_encounter())
+    game_state = GameState(encounter=_minimal_encounter())
     repo.save(game_state)
 
-    reloaded = repo.load()
-    assert reloaded.player.references == ()
+    reloaded_player = repo.load_player()
+    assert reloaded_player.references == ()
 
 
 def test_save_with_none_encounter_does_not_write_encounter_file(
@@ -142,7 +139,7 @@ def test_save_with_none_encounter_does_not_write_encounter_file(
     encounter_repo = EncounterRepository(tmp_path)
     repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
 
-    game_state = GameState(player=_minimal_actor(), encounter=None)
+    game_state = GameState(encounter=None)
     repo.save(game_state)
 
     assert encounter_repo.load_active() is None
@@ -159,6 +156,41 @@ def test_enrich_skips_missing_compendium_references(tmp_path: Path) -> None:
         compendium=compendium,
     )
 
-    game_state = repo.load()
+    player = repo.load_player()
 
-    assert game_state.player.references == ()
+    assert player.references == ()
+
+
+def test_load_player_returns_actor_from_actor_repo(tmp_path: Path) -> None:
+    """load_player() reads from actor_repo and returns the player ActorState."""
+    actor_repo = ActorRepository(tmp_path)
+    actor_repo.save(_minimal_actor())
+    repo = StateRepository(actor_repo, EncounterRepository(tmp_path))
+    player = repo.load_player()
+    assert player.actor_id == _minimal_actor().actor_id
+
+
+def test_load_encounter_returns_none_when_no_active_encounter(tmp_path: Path) -> None:
+    """load_encounter() returns None when there is no active.json."""
+    repo = StateRepository(ActorRepository(tmp_path), EncounterRepository(tmp_path))
+    assert repo.load_encounter() is None
+
+
+def test_save_player_persists_actor(tmp_path: Path) -> None:
+    """save_player() writes the actor to actor_repo."""
+    actor_repo = ActorRepository(tmp_path)
+    repo = StateRepository(actor_repo, EncounterRepository(tmp_path))
+    repo.save_player(_minimal_actor())
+    loaded = actor_repo.load_player()
+    assert loaded.actor_id == _minimal_actor().actor_id
+
+
+def test_save_encounter_persists_encounter(tmp_path: Path) -> None:
+    """save_encounter() writes the encounter to encounter_repo."""
+    enc_repo = EncounterRepository(tmp_path)
+    repo = StateRepository(ActorRepository(tmp_path), enc_repo)
+    enc = _minimal_encounter()
+    repo.save_encounter(enc)
+    loaded = enc_repo.load_active()
+    assert loaded is not None
+    assert loaded.encounter_id == enc.encounter_id

@@ -161,8 +161,7 @@ class ModuleOrchestrator:
         # (or last-flushed) state — not the stale on-disk completed encounter that
         # would reappear if we cleared the cache first.
         gs = self._repos.memory.load_game_state()
-        updated_registry = gs.actor_registry.with_actor(gs.player)
-        updated_registry = updated_registry.with_actors(encounter.actors)
+        updated_registry = gs.actor_registry.with_actors(encounter.actors)
         self._repos.memory.update_game_state(
             replace(gs, actor_registry=updated_registry)
         )

@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from campaignnarrator.domain.models import (
+    ActorRegistry,
     ActorState,
     ActorType,
     CombatAssessment,
@@ -315,6 +316,19 @@ def _combat_repository(tmp_path: Path, goblin_hp: int = 0) -> StateRepository:
     return StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
 
 
+def _load_game_state(state_repo: StateRepository) -> GameState:
+    """Build GameState with player bootstrapped into registry.
+
+    Mirrors MemoryRepository.load_game_state() for test use: loads encounter and
+    seeds the player into the registry so get_player() succeeds in run_encounter().
+    """
+    encounter = state_repo.load_encounter()
+    player = state_repo.load_player()
+    return GameState(
+        encounter=encounter, actor_registry=ActorRegistry().with_actor(player)
+    )
+
+
 def _mock_combat_intent_agent(
     intents: list[str] | None = None,
 ) -> MagicMock:
@@ -343,7 +357,7 @@ def _orchestrator(
     combat_intents: list[str] | None = None,
 ) -> EncounterOrchestrator:
     repo = state_repository or _scene_opening_repository(tmp_path)
-    initial_game_state = repo.load()
+    initial_game_state = _load_game_state(repo)
     fake_memory = FakeMemoryRepository(game_state=initial_game_state)
     return EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -519,7 +533,7 @@ def test_social_check_uses_rules_agent_and_applies_effects(
 def test_social_check_with_outcome_emits_encounter_completed_event(
     tmp_path: Path,
 ) -> None:
-    initial_state = _social_repository(tmp_path).load()
+    initial_state = _load_game_state(_social_repository(tmp_path))
     memory = FakeMemoryRepository(game_state=initial_state)
     rules_agent = FakeRulesAgent(
         [
@@ -563,7 +577,7 @@ def test_social_check_with_outcome_emits_encounter_completed_event(
 def test_social_check_without_outcome_does_not_emit_encounter_completed_event(
     tmp_path: Path,
 ) -> None:
-    initial_state = _social_repository(tmp_path).load()
+    initial_state = _load_game_state(_social_repository(tmp_path))
     memory = FakeMemoryRepository(game_state=initial_state)
     rules_agent = FakeRulesAgent(
         [
@@ -662,7 +676,7 @@ def test_enter_combat_emits_encounter_completed_event(
     tmp_path: Path, mocker: object
 ) -> None:
     # goblin_hp=0 so combat ends after Talia passes, event fires before that.
-    initial_state = _social_repository(tmp_path, goblin_hp=0).load()
+    initial_state = _load_game_state(_social_repository(tmp_path, goblin_hp=0))
     memory = FakeMemoryRepository(game_state=initial_state)
     # Actors rolled in sorted(actor_id) order: goblin first, Talia second.
     # Goblin gets 12, Talia gets 18 → Talia wins initiative and goes first.
@@ -736,7 +750,7 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
     tmp_path: Path,
 ) -> None:
     repository = _social_repository(tmp_path)
-    initial_state = repository.load()
+    initial_state = _load_game_state(repository)
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -767,7 +781,7 @@ def test_save_and_quit_persists_active_encounter_and_records_event(
 def test_save_and_quit_completes_without_raising(
     tmp_path: Path,
 ) -> None:
-    initial_state = _social_repository(tmp_path).load()
+    initial_state = _load_game_state(_social_repository(tmp_path))
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -788,7 +802,7 @@ def test_save_and_quit_completes_without_raising(
 
 
 def test_completed_encounter_records_durable_event(tmp_path: Path) -> None:
-    initial_state = _social_repository(tmp_path).load()
+    initial_state = _load_game_state(_social_repository(tmp_path))
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     rules_agent = FakeRulesAgent(
         [
@@ -870,7 +884,7 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
 ) -> None:
     """save and quit in combat should persist state and record encounter_saved."""
     repository = _combat_repository(tmp_path, goblin_hp=7)
-    initial_state = repository.load()
+    initial_state = _load_game_state(repository)
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -899,7 +913,7 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
 
 def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
     """'exit' in combat must persist state via memory repository."""
-    initial_state = _combat_repository(tmp_path, goblin_hp=7).load()
+    initial_state = _load_game_state(_combat_repository(tmp_path, goblin_hp=7))
     memory_repository = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -1039,7 +1053,7 @@ def test_actor_summary_includes_name_and_injury_status(tmp_path: Path) -> None:
                 npc_presences=npc_presences,
             )
 
-    initial_state = _social_repository(tmp_path).load()
+    initial_state = _load_game_state(_social_repository(tmp_path))
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
             memory=FakeMemoryRepository(game_state=initial_state),
@@ -1178,7 +1192,7 @@ def test_encounter_orchestrator_raises_if_neither_adapter_nor_player_intent_agen
     tmp_path: Path,
 ) -> None:
     """EncounterOrchestrator without adapter= or _player_intent_agent= must raise."""
-    initial_state = _scene_opening_repository(tmp_path).load()
+    initial_state = _load_game_state(_scene_opening_repository(tmp_path))
     with pytest.raises(ValueError, match="EncounterOrchestrator requires adapter="):
         EncounterOrchestrator(
             repositories=OrchestratorRepositories(
@@ -1227,7 +1241,7 @@ def test_resume_encounter_displays_recap_before_prompt(tmp_path: Path) -> None:
     io = ScriptedIO(["exit"])
     state_repo = _social_repository(tmp_path)
     memory = FakeMemoryRepository(
-        game_state=state_repo.load(),
+        game_state=_load_game_state(state_repo),
         exchange_buffer=("I spoke to the goblin.", "The goblin eyed you warily."),
     )
     orchestrator = EncounterOrchestrator(
@@ -1254,7 +1268,7 @@ def test_fresh_encounter_does_not_show_recap(tmp_path: Path) -> None:
 
 
 def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
-    initial_state = _social_repository(tmp_path).load()
+    initial_state = _load_game_state(_social_repository(tmp_path))
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -1278,7 +1292,7 @@ def test_save_exit_intent_saves_state_and_breaks_loop(tmp_path: Path) -> None:
 
 def test_narration_stored_to_memory_during_encounter(tmp_path: Path) -> None:
     """Every narrate() call must store a record in the memory repository."""
-    initial_state = _scene_opening_repository(tmp_path).load()
+    initial_state = _load_game_state(_scene_opening_repository(tmp_path))
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -1307,7 +1321,7 @@ def test_narration_stored_to_memory_during_encounter(tmp_path: Path) -> None:
 
 def test_save_exit_stores_partial_summary_in_memory(tmp_path: Path) -> None:
     """save-and-quit must generate and store a partial encounter summary."""
-    initial_state = _scene_opening_repository(tmp_path).load()
+    initial_state = _load_game_state(_scene_opening_repository(tmp_path))
     memory = FakeMemoryRepository(game_state=initial_state)
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -1400,7 +1414,7 @@ def test_resume_recap_populates_prior_narrative_context_from_memory(
     state_repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
     memory_repository = FakeMemoryRepository(
         prior_context=[prior_summary],
-        game_state=state_repo.load(),
+        game_state=_load_game_state(state_repo),
         exchange_buffer=("I searched the camp.",),  # triggers session_resume path
     )
     orchestrator = EncounterOrchestrator(
@@ -1443,7 +1457,7 @@ def test_resume_recap_includes_exchange_buffer_in_prior_context(
     )
     state_repo = StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
     memory_repository = FakeMemoryRepository(
-        game_state=state_repo.load(),
+        game_state=_load_game_state(state_repo),
         exchange_buffer=("I search the camp.", "You find charred goblin bones."),
     )
     orchestrator = EncounterOrchestrator(
@@ -1465,7 +1479,7 @@ class TestSaveExitPath:
     def test_save_exit_stages_partial_summary(self, tmp_path: Path) -> None:
         """SAVE_EXIT must call stage_narration() — not store_narrative() directly."""
         state_repo = _social_repository(tmp_path)
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(memory=fake_memory),
@@ -1487,7 +1501,7 @@ class TestSaveExitPath:
     def test_save_exit_updates_game_state(self, tmp_path: Path) -> None:
         """SAVE_EXIT must call update_game_state() so SIGTERM has current state."""
         state_repo = _social_repository(tmp_path)
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(memory=fake_memory),
@@ -1508,7 +1522,7 @@ class TestApplyAction:
     def test_apply_action_updates_exchange_buffer(self, tmp_path: Path) -> None:
         """After a non-combat action, update_exchange() is called with input + narration."""
         state_repo = _social_repository(tmp_path)
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(memory=fake_memory),
@@ -1530,7 +1544,7 @@ class TestApplyAction:
     def test_scene_opening_updates_exchange_buffer(self, tmp_path: Path) -> None:
         """Scene opening narration is appended with empty player input."""
         state_repo = _scene_opening_repository(tmp_path)
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(memory=fake_memory),
@@ -1566,7 +1580,7 @@ class TestHiddenConditionClearing:
         state_repo = StateRepository(
             actor_repo=actor_repo, encounter_repo=encounter_repo
         )
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         return state_repo, FakeMemoryRepository(game_state=initial_state)
 
     def test_npc_dialogue_clears_hidden_from_player(self, tmp_path: Path) -> None:
@@ -1609,7 +1623,7 @@ class TestHiddenConditionClearing:
         state_repo = StateRepository(
             actor_repo=actor_repo, encounter_repo=encounter_repo
         )
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(memory=fake_memory),
@@ -1631,7 +1645,7 @@ class TestHiddenConditionClearing:
         self, tmp_path: Path
     ) -> None:
         state_repo = _social_repository(tmp_path)
-        initial_state = state_repo.load()
+        initial_state = _load_game_state(state_repo)
         fake_memory = FakeMemoryRepository(game_state=initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(memory=fake_memory),
@@ -2301,7 +2315,11 @@ def test_narrate_sets_traveling_actor_ids_on_encounter_complete() -> None:
             ),
         ),
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
     narrator = FakeNarratorAgent(
         encounter_complete=True,
         next_location_hint="The cave entrance",
@@ -2345,7 +2363,11 @@ def test_narrate_filters_invalid_traveling_actor_ids_on_completion() -> None:
             ),
         ),
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
     narrator = FakeNarratorAgent(
         encounter_complete=True,
         next_location_hint="The road north",
@@ -2386,7 +2408,11 @@ def test_narrate_excludes_player_from_traveling_actor_ids() -> None:
             ),
         ),
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
     narrator = FakeNarratorAgent(
         encounter_complete=True,
         next_location_hint="The road north",
@@ -2433,7 +2459,11 @@ def test_narrate_logs_warning_for_invalid_traveling_actor_ids(
             ),
         ),
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
     narrator = FakeNarratorAgent(
         encounter_complete=True,
         next_location_hint="The road north",
@@ -2477,7 +2507,11 @@ def test_narrate_does_not_set_traveling_fields_when_encounter_not_complete() -> 
             ),
         ),
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
     # Narrator signals travel intent but does NOT complete the encounter — fields must be ignored.
     narrator = FakeNarratorAgent(
         encounter_complete=False,
@@ -2513,7 +2547,11 @@ def test_apply_action_syncs_dead_actor_to_registry() -> None:
         setting="The docks.",
         actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin},
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
     rules_agent = FakeRulesAgent(
         adjudications=[
             RulesAdjudication(
@@ -2554,7 +2592,11 @@ def test_run_combat_syncs_dead_actor_to_registry() -> None:
         setting="The battlefield.",
         actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin},
     )
-    repo = FakeMemoryRepository(game_state=GameState(player=TALIA, encounter=encounter))
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
 
     post_combat_encounter = replace(
         encounter,
@@ -2581,3 +2623,137 @@ def test_run_combat_syncs_dead_actor_to_registry() -> None:
     assert repo.staged_game_state is not None
     assert "npc:goblin" in repo.staged_game_state.actor_registry.actors
     assert repo.staged_game_state.actor_registry.actors["npc:goblin"].hp_current == 0
+
+
+def test_apply_action_syncs_living_actors_to_registry() -> None:
+    """After a non-combat action, ALL encounter actors appear in the registry — not just dead ones."""
+    goblin = replace(make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=5)
+    encounter = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The docks.",
+        actors={TALIA.actor_id: TALIA, "npc:goblin": goblin},
+    )
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
+    rules_agent = FakeRulesAgent(
+        adjudications=[
+            RulesAdjudication(
+                is_legal=True,
+                action_type="success",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(effect_type="change_hp", target="npc:goblin", value=-2),
+                ),
+                summary="You graze the goblin.",
+            )
+        ]
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=rules_agent, narrator=FakeNarratorAgent()),
+        io=ScriptedIO(["attack goblin"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[PlayerIntent(category=IntentCategory.SKILL_CHECK, reason="attack")]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    registry = repo.staged_game_state.actor_registry
+    assert "npc:goblin" in registry.actors
+    assert registry.actors["npc:goblin"].hp_current == goblin.hp_current - 2
+    assert TALIA.actor_id in registry.actors
+
+
+def test_run_combat_syncs_all_actors_to_registry() -> None:
+    """After combat, all post-combat actors (living and dead) are in the registry."""
+    alive_goblin = replace(
+        make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=5
+    )
+    wounded_goblin = replace(
+        make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=2
+    )
+
+    encounter = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.COMBAT,
+        setting="The battlefield.",
+        actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin},
+    )
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
+
+    post_combat_encounter = replace(
+        encounter,
+        phase=EncounterPhase.ENCOUNTER_COMPLETE,
+        actors={TALIA.actor_id: TALIA, "npc:goblin": wounded_goblin},
+    )
+    mock_combat_result = MagicMock()
+    mock_combat_result.final_state = post_combat_encounter
+    mock_combat_result.status = None
+
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
+        io=ScriptedIO([]),
+        _player_intent_agent=FakePlayerIntentAgent(),
+    )
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
+    ) as mock_cls:
+        mock_cls.return_value.run.return_value = mock_combat_result
+        orch.run_encounter(encounter_id="enc-001")
+
+    registry = repo.staged_game_state.actor_registry
+    assert "npc:goblin" in registry.actors
+    assert registry.actors["npc:goblin"].hp_current == wounded_goblin.hp_current
+    assert TALIA.actor_id in registry.actors
+
+
+def test_save_exit_preserves_registry_synced_by_prior_action() -> None:
+    """Registry updated by a preceding action is not discarded on SAVE_EXIT."""
+    goblin = replace(make_goblin_scout("npc:goblin", "Goblin Scout"), hp_current=5)
+    encounter = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The docks.",
+        actors={TALIA.actor_id: TALIA, "npc:goblin": goblin},
+    )
+    repo = FakeMemoryRepository(
+        game_state=GameState(
+            encounter=encounter, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+    )
+    rules_agent = FakeRulesAgent(
+        adjudications=[
+            RulesAdjudication(
+                is_legal=True,
+                action_type="success",
+                roll_requests=(),
+                state_effects=(
+                    StateEffect(effect_type="change_hp", target="npc:goblin", value=-2),
+                ),
+                summary="You graze the goblin.",
+            )
+        ]
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=repo),
+        agents=OrchestratorAgents(rules=rules_agent, narrator=FakeNarratorAgent()),
+        io=ScriptedIO(["attack goblin", "save and exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(category=IntentCategory.SKILL_CHECK, reason="attack"),
+                PlayerIntent(category=IntentCategory.SAVE_EXIT, reason="quit"),
+            ]
+        ),
+    )
+    orch.run_encounter(encounter_id="enc-001")
+    registry = repo.staged_game_state.actor_registry
+    assert "npc:goblin" in registry.actors
+    assert registry.actors["npc:goblin"].hp_current == goblin.hp_current - 2

@@ -23,6 +23,28 @@ _ACTIVE_NPC_STATUSES = frozenset(
 )
 
 
+class _PlayerNotFoundError(RuntimeError):
+    """Player actor was not found in the registry."""
+
+    def __init__(self, player_actor_id: str) -> None:
+        super().__init__(
+            f"Player actor '{player_actor_id}' not found in registry. "
+            "Registry may not have been bootstrapped before this call."
+        )
+
+
+def get_player(registry: ActorRegistry, player_actor_id: str) -> ActorState:
+    """Look up the player actor from the registry.
+
+    Raises RuntimeError (not KeyError) so callers get a readable message
+    rather than a raw dict miss.
+    """
+    player = registry.actors.get(player_actor_id)
+    if player is None:
+        raise _PlayerNotFoundError(player_actor_id)
+    return player
+
+
 class EncounterPhase(StrEnum):
     """High-level phases for encounter progression."""
 
@@ -225,9 +247,8 @@ class EncounterState:
 
 @dataclass(frozen=True)
 class GameState:
-    """Top-level game state: player + optional campaign/module/encounter."""
+    """Top-level game state. Player lives in actor_registry."""
 
-    player: ActorState
     campaign: CampaignState | None = None
     module: ModuleState | None = None
     encounter: EncounterState | None = None

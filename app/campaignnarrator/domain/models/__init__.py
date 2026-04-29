@@ -30,6 +30,7 @@ from .encounter_state import (
     GameState,
     InitiativeTurn,
     MilestoneAchieved,
+    get_player,
 )
 from .encounter_template import EncounterNpc, EncounterTemplate
 from .intent import IntentCategory, PlayerInput, PlayerIntent, PlayerIO
@@ -101,4 +102,5 @@ __all__ = [
     "StateEffect",
     "TurnResources",
     "WeaponState",
+    "get_player",
 ]

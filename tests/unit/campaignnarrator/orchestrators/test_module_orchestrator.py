@@ -154,9 +154,7 @@ def _make_orchestrator(
     mock_encounter_orch.run_encounter.return_value = None
     mock_actor_repo.load_player.return_value = _make_player()
     # Default: post-run memory read returns no active encounter (player quit, no completion)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=_make_player(), encounter=None
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=None)
 
     repos = ModuleOrchestratorRepositories(
         campaign=mock_campaign_repo,
@@ -467,9 +465,7 @@ def test_run_player_quits_mid_encounter_does_not_archive() -> None:
         _make_orchestrator(active_encounter=active)
     )
     # After run_encounter, memory returns COMBAT phase (player quit, not complete)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=_make_player(), encounter=active
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=active)
     orch.run(campaign=_make_campaign(), player=_make_player())
     mock_narrator.summarize_encounter.assert_not_called()
     mock_enc_repo.clear.assert_not_called()
@@ -485,9 +481,7 @@ def test_run_encounter_completes_during_run_triggers_archive() -> None:
         active_encounter=active
     )
     # After run_encounter, memory cache holds the completed encounter
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=_make_player(), encounter=completed
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=completed)
     orch.run(campaign=_make_campaign(), player=_make_player())
     mock_narrator.summarize_encounter.assert_called_once()
     mock_enc_repo.clear.assert_called_once()
@@ -528,9 +522,7 @@ def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
     player = _make_player()
     active = _make_completed_encounter()
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=player, encounter=None
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=None)
 
     orch.run(campaign=_make_campaign(), player=player)
 
@@ -548,7 +540,7 @@ def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
 
 
 def test_archive_encounter_encounter_actors_win_over_stale_player() -> None:
-    """If player is in encounter.actors, that version (not gs.player) ends up in registry."""
+    """If player is in encounter.actors, that version ends up in the registry."""
     player = _make_player()
     wounded_player = dataclasses.replace(player, hp_current=1)
     active = dataclasses.replace(
@@ -556,9 +548,7 @@ def test_archive_encounter_encounter_actors_win_over_stale_player() -> None:
         actors={player.actor_id: wounded_player, "npc:goblin": wounded_player},
     )
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=player, encounter=None
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=None)
 
     orch.run(campaign=_make_campaign(), player=player)
 
@@ -591,9 +581,7 @@ def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
         next_location_hint="Cave of Whispers",
     )
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=player, encounter=None
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=None)
 
     orch.run(campaign=_make_campaign(), player=player)
 
@@ -624,9 +612,7 @@ def test_run_loop_call_site_1_threads_transition_to_prepare() -> None:
         next_location_hint="The cave",
     )
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=player, encounter=None
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=None)
 
     orch.run(campaign=_make_campaign(), player=player)
 
@@ -660,9 +646,7 @@ def test_run_loop_call_site_2_threads_transition_to_prepare() -> None:
         next_location_hint="The harbor",
     )
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=player, encounter=completed
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=completed)
 
     orch.run(campaign=_make_campaign(), player=player)
 
@@ -677,9 +661,7 @@ def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
     player = _make_player()
     active = _make_completed_encounter(traveling_actor_ids=())
     orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        player=player, encounter=None
-    )
+    mock_memory_repo.load_game_state.return_value = GameState(encounter=None)
 
     orch.run(campaign=_make_campaign(), player=player)
 

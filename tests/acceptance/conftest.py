@@ -428,6 +428,12 @@ def game_state_player_no_campaign(
     """Set up player-only state (no campaign) for returning-without-campaign."""
     fixture_dir = STARTUP_FIXTURE_ROOT / _STARTUP_FIXTURE_DIR[scenario_name]
     _copy_fixture_tree(fixture_dir, runtime_data_root)
+    # Clear any active encounter inherited from EXAMPLES_ROOT. A player-only
+    # scenario must start with no in-progress encounter so the planner creates
+    # a fresh one keyed to the correct player actor_id.
+    active_encounter = runtime_data_root / "state" / "encounters" / "active.json"
+    if active_encounter.exists():
+        active_encounter.unlink()
     wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)

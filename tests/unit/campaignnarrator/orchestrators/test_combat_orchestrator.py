@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from campaignnarrator.domain.models import (
+    ActorRegistry,
     ActorType,
     CombatAssessment,
     CombatIntent,
@@ -1756,7 +1757,9 @@ class TestCombatOrchestratorMemoryCalls:
         """update_game_state() must be called each time through the loop."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=0)
-        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
+        memory.load_game_state.return_value = GameState(
+            encounter=state, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
         orc, _, _, _ = _orchestrator(
             inputs=["end turn"],
             intents=["end_turn"],
@@ -1779,7 +1782,9 @@ class TestCombatOrchestratorMemoryCalls:
         """log_combat_round() is called with the narrator's text."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
-        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
+        memory.load_game_state.return_value = GameState(
+            encounter=state, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
         orc, _, _, _ = _orchestrator(
             inputs=["attack goblin", "end turn"],
             intents=["combat_action", "end_turn"],
@@ -1802,7 +1807,9 @@ class TestCombatOrchestratorMemoryCalls:
         """update_exchange() receives the combat action text, not 'end_turn'."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
-        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
+        memory.load_game_state.return_value = GameState(
+            encounter=state, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
         orc, _, _, _ = _orchestrator(
             inputs=["attack goblin", "end turn"],
             intents=["combat_action", "end_turn"],
@@ -1827,7 +1834,9 @@ class TestCombatOrchestratorMemoryCalls:
         """clear_combat_memory() is called regardless of how combat ends."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=0)
-        memory.load_game_state.return_value = GameState(player=TALIA, encounter=state)
+        memory.load_game_state.return_value = GameState(
+            encounter=state, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
         orc, _, _, _ = _orchestrator(
             inputs=["end turn"],
             intents=["end_turn"],
@@ -1845,3 +1854,31 @@ class TestCombatOrchestratorMemoryCalls:
         )
         orc.run(state)
         memory.clear_combat_memory.assert_called_once()
+
+    def test_run_updates_registry_after_player_combat_turn(self) -> None:
+        """During combat, update_game_state is called with actor_registry containing encounter actors."""
+        memory = MagicMock()
+        state = _make_combat_state(goblin_hp=7)
+        memory.load_game_state.return_value = GameState(
+            encounter=state, actor_registry=ActorRegistry().with_actor(TALIA)
+        )
+        orc, _, _, _ = _orchestrator(
+            inputs=["attack goblin", "end turn"],
+            intents=["combat_action", "end_turn"],
+            adjudications=[_legal_attack()],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            memory_repository=memory,
+        )
+        orc.run(state)
+        calls = memory.update_game_state.call_args_list
+        assert any(
+            "npc:goblin-1" in call.args[0].actor_registry.actors for call in calls
+        )

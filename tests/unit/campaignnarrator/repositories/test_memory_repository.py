@@ -4,14 +4,23 @@ from __future__ import annotations
 
 import json
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import lancedb
 import pytest
 from campaignnarrator.adapters.embedding_adapter import StubEmbeddingAdapter
-from campaignnarrator.domain.models import ActorRegistry, GameState
+from campaignnarrator.domain.models import (
+    ActorRegistry,
+    EncounterPhase,
+    EncounterState,
+    GameState,
+)
+from campaignnarrator.repositories.actor_repository import ActorRepository
+from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.state_repository import StateRepository
 
 from tests.fixtures.fighter_talia import TALIA
 
@@ -304,11 +313,13 @@ def test_load_game_state_delegates_to_state_repo_when_cache_empty(
 ) -> None:
     """load_game_state() reads from StateRepository when no game state is cached."""
     mock_state_repo = MagicMock()
-    mock_state_repo.load.return_value = GameState(player=TALIA)
+    mock_state_repo.load_encounter.return_value = None
+    mock_state_repo.load_player.return_value = TALIA
     repo = MemoryRepository(str(tmp_path), state_repo=mock_state_repo)
     result = repo.load_game_state()
-    mock_state_repo.load.assert_called_once()
-    assert result.player is TALIA
+    mock_state_repo.load_player.assert_called_once()
+    mock_state_repo.load_encounter.assert_called_once()
+    assert TALIA.actor_id in result.actor_registry.actors
 
 
 def test_load_game_state_returns_cached_state_when_staged(tmp_path: Path) -> None:
@@ -362,13 +373,20 @@ def test_log_combat_round_does_not_write_disk(tmp_path: Path) -> None:
 
 class TestPersist:
     def test_persist_saves_game_state_via_state_repo(self, tmp_path: Path) -> None:
-        """persist() flushes staged game_state to state_repo.save()."""
+        """persist() saves player from registry and encounter when encounter is active."""
         state_repo = MagicMock()
         repo = MemoryRepository(tmp_path, state_repo=state_repo)
-        gs = GameState(player=TALIA)
+        enc = EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="The docks.",
+            actors={TALIA.actor_id: TALIA},
+        )
+        gs = GameState(encounter=enc, actor_registry=ActorRegistry().with_actor(TALIA))
         repo.update_game_state(gs)
         repo.persist()
-        state_repo.save.assert_called_once_with(gs)
+        state_repo.save_player.assert_called_once_with(TALIA)
+        state_repo.save_encounter.assert_called_once_with(enc)
 
     def test_persist_skips_state_repo_when_no_game_state(self, tmp_path: Path) -> None:
         """persist() must not call state_repo.save() when game_state was never updated."""
@@ -412,14 +430,20 @@ class TestPersist:
         """After persist(), game_state and staged_narrations are cleared; exchange_buffer persists."""
         state_repo = MagicMock()
         repo = MemoryRepository(tmp_path, state_repo=state_repo)
-        gs = GameState(player=TALIA)
+        enc = EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="The docks.",
+            actors={TALIA.actor_id: TALIA},
+        )
+        gs = GameState(encounter=enc, actor_registry=ActorRegistry().with_actor(TALIA))
         repo.update_game_state(gs)
         repo.stage_narration("text", {"source": "narrator"})
         repo.update_exchange("p", "n")
         repo.persist()
         # Calling persist again must not re-save game_state
         repo.persist()
-        assert state_repo.save.call_count == 1
+        assert state_repo.save_player.call_count == 1
         # Exchange buffer survives reset
         assert repo.get_exchange_buffer() == ("p", "n")
 
@@ -436,7 +460,13 @@ class TestClearCombatMemory:
         """clear_combat_memory() must clear combat_round_logs while preserving other cache fields."""
         state_repo = MagicMock()
         repo = MemoryRepository(tmp_path, state_repo=state_repo)
-        gs = GameState(player=TALIA)
+        enc = EncounterState(
+            encounter_id="enc-001",
+            phase=EncounterPhase.SOCIAL,
+            setting="The docks.",
+            actors={TALIA.actor_id: TALIA},
+        )
+        gs = GameState(encounter=enc, actor_registry=ActorRegistry().with_actor(TALIA))
         repo.update_game_state(gs)
         repo.log_combat_round("round 1")
         repo.update_exchange("a", "b")
@@ -445,13 +475,13 @@ class TestClearCombatMemory:
         assert repo.get_exchange_buffer() == ("a", "b")
         # game_state must be unaffected — persist should still save it
         repo.persist()
-        state_repo.save.assert_called_once_with(gs)
+        state_repo.save_player.assert_called_once_with(TALIA)
         # Calling clear_combat_memory() again on an already-cleared cache must be idempotent
         repo.log_combat_round("new round")
         repo.clear_combat_memory()
         repo.persist()
         # game_state was reset by previous persist(), so save should not be called again
-        assert state_repo.save.call_count == 1
+        assert state_repo.save_player.call_count == 1
 
 
 class TestClearEncounterMemory:
@@ -517,7 +547,8 @@ class TestRestoreExchangeBuffer:
 def _make_repo_with_state(tmp_path: Path, game_state: GameState) -> MemoryRepository:
     """Helper: create MemoryRepository with a mock state_repo returning game_state."""
     mock_state_repo = MagicMock()
-    mock_state_repo.load.return_value = game_state
+    mock_state_repo.load_player.return_value = TALIA
+    mock_state_repo.load_encounter.return_value = game_state.encounter
     memory_root = tmp_path / "memory"
     memory_root.mkdir(parents=True, exist_ok=True)
     return MemoryRepository(memory_root, state_repo=mock_state_repo)
@@ -526,15 +557,16 @@ def _make_repo_with_state(tmp_path: Path, game_state: GameState) -> MemoryReposi
 def test_load_game_state_returns_empty_registry_when_file_absent(
     tmp_path: Path,
 ) -> None:
-    gs = GameState(player=TALIA)
+    # When no registry file exists, player is bootstrapped into the registry.
+    gs = GameState()
     repo = _make_repo_with_state(tmp_path, gs)
     loaded = repo.load_game_state()
-    assert len(loaded.actor_registry.actors) == 0
+    assert TALIA.actor_id in loaded.actor_registry.actors
 
 
 def test_persist_writes_actor_registry_json(tmp_path: Path) -> None:
     registry = ActorRegistry().with_actor(TALIA)
-    gs = GameState(player=TALIA, actor_registry=registry)
+    gs = GameState(actor_registry=registry)
     repo = _make_repo_with_state(tmp_path, gs)
     repo.update_game_state(gs)
     repo.persist()
@@ -552,20 +584,21 @@ def test_load_game_state_reads_registry_from_file(tmp_path: Path) -> None:
         json.dumps(registry.to_dict(), separators=(",", ":")),
         encoding="utf-8",
     )
-    gs = GameState(player=TALIA)
+    gs = GameState()
     repo = _make_repo_with_state(tmp_path, gs)
     loaded = repo.load_game_state()
     assert TALIA.actor_id in loaded.actor_registry.actors
 
 
 def test_load_game_state_returns_empty_registry_on_corrupt_file(tmp_path: Path) -> None:
+    # When the registry file is corrupt, player is bootstrapped into the empty registry.
     registry_path = tmp_path / "memory" / "actor_registry.json"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text("not valid json", encoding="utf-8")
-    gs = GameState(player=TALIA)
+    gs = GameState()
     repo = _make_repo_with_state(tmp_path, gs)
     loaded = repo.load_game_state()
-    assert len(loaded.actor_registry.actors) == 0
+    assert TALIA.actor_id in loaded.actor_registry.actors
 
 
 def test_game_state_registry_round_trips_through_memory_repository(
@@ -573,11 +606,68 @@ def test_game_state_registry_round_trips_through_memory_repository(
 ) -> None:
     """Persist a registry then reload from a fresh repo — registry is preserved."""
     registry = ActorRegistry().with_actor(TALIA)
-    gs = GameState(player=TALIA, actor_registry=registry)
+    gs = GameState(actor_registry=registry)
     repo = _make_repo_with_state(tmp_path, gs)
     repo.update_game_state(gs)
     repo.persist()
     # Fresh repo — no cache; verifies disk round-trip, not cache recall
-    repo2 = _make_repo_with_state(tmp_path, GameState(player=TALIA))
+    repo2 = _make_repo_with_state(tmp_path, GameState())
     loaded = repo2.load_game_state()
     assert TALIA.actor_id in loaded.actor_registry.actors
+
+
+# ---------------------------------------------------------------------------
+# load_game_state() — cold-start registry bootstrap
+# ---------------------------------------------------------------------------
+
+
+def test_load_game_state_bootstraps_player_into_registry_on_cold_start(
+    tmp_path: Path,
+) -> None:
+    """On cold start, player is seeded into the registry if not already present."""
+    actor_repo = ActorRepository(tmp_path)
+    actor_repo.save(TALIA)
+    enc_repo = EncounterRepository(tmp_path)
+    state_repo = StateRepository(actor_repo, enc_repo)
+    repo = MemoryRepository(str(tmp_path), state_repo=state_repo)
+    gs = repo.load_game_state()
+    assert TALIA.actor_id in gs.actor_registry.actors
+
+
+def test_load_game_state_does_not_overwrite_registry_player_on_cold_start(
+    tmp_path: Path,
+) -> None:
+    """If player already in registry (from prior encounter), registry version is used."""
+    updated_talia = replace(TALIA, hp_current=7)
+    actor_repo = ActorRepository(tmp_path)
+    actor_repo.save(TALIA)  # disk player has full HP
+    enc_repo = EncounterRepository(tmp_path)
+    state_repo = StateRepository(actor_repo, enc_repo)
+    repo = MemoryRepository(str(tmp_path), state_repo=state_repo)
+    repo._save_actor_registry(
+        ActorRegistry().with_actor(updated_talia)
+    )  # pre-seed registry with damaged player
+    gs = repo.load_game_state()
+    # Registry version (hp=7) wins over actor_repo version (full HP)
+    assert (
+        gs.actor_registry.actors[TALIA.actor_id].hp_current == updated_talia.hp_current
+    )
+
+
+def test_persist_raises_when_player_missing_from_registry_during_encounter(
+    tmp_path: Path,
+) -> None:
+    """persist() raises RuntimeError when encounter is active but player not in registry."""
+    encounter = EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The docks.",
+        actors={TALIA.actor_id: TALIA},
+    )
+    # Registry intentionally empty — player is absent
+    gs = GameState(encounter=encounter, actor_registry=ActorRegistry())
+    state_repo = MagicMock()
+    repo = MemoryRepository(str(tmp_path), state_repo=state_repo)
+    repo.update_game_state(gs)
+    with pytest.raises(RuntimeError, match=TALIA.actor_id):
+        repo.persist()

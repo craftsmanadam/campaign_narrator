@@ -20,6 +20,7 @@ from campaignnarrator.domain.models import (
     ModuleState,
     NpcPresence,
     NpcPresenceStatus,
+    get_player,
 )
 
 from tests.fixtures.fighter_talia import TALIA
@@ -203,33 +204,14 @@ def test_game_state_holds_player_with_no_encounter() -> None:
         action_options=(),
         ac_breakdown=(),
     )
-    game_state = GameState(player=actor)
+    registry = ActorRegistry().with_actor(actor)
+    game_state = GameState(actor_registry=registry)
     assert game_state.encounter is None
-    assert game_state.player is actor
+    assert actor.actor_id in game_state.actor_registry.actors
 
 
 def test_game_state_is_frozen() -> None:
-    actor = ActorState(
-        actor_id="pc:talia",
-        name="Talia",
-        actor_type=ActorType.PC,
-        hp_current=12,
-        hp_max=12,
-        armor_class=15,
-        strength=10,
-        dexterity=10,
-        constitution=10,
-        intelligence=10,
-        wisdom=10,
-        charisma=10,
-        proficiency_bonus=2,
-        initiative_bonus=0,
-        speed=30,
-        attacks_per_action=1,
-        action_options=(),
-        ac_breakdown=(),
-    )
-    game_state = GameState(player=actor)
+    game_state = GameState()
     with pytest.raises(FrozenInstanceError):
         game_state.encounter = None  # type: ignore[misc]
 
@@ -400,7 +382,7 @@ def test_encounter_state_public_actor_summaries_includes_concealed() -> None:
 def test_game_state_includes_campaign_and_module() -> None:
     campaign = _make_campaign_state_for_game_state()
     module = _make_module()
-    state = GameState(player=TALIA, campaign=campaign, module=module)  # type: ignore[arg-type]
+    state = GameState(campaign=campaign, module=module)  # type: ignore[arg-type]
     assert state.campaign is campaign
     assert state.module is module
     assert state.encounter is None
@@ -589,11 +571,25 @@ def test_encounter_state_from_dict_round_trips_actor_level_fields() -> None:
 
 
 def test_game_state_actor_registry_defaults_to_empty() -> None:
-    state = GameState(player=TALIA)
+    state = GameState()
     assert len(state.actor_registry.actors) == 0
 
 
 def test_game_state_accepts_actor_registry() -> None:
     registry = ActorRegistry().with_actor(TALIA)
-    state = GameState(player=TALIA, actor_registry=registry)
+    state = GameState(actor_registry=registry)
     assert TALIA.actor_id in state.actor_registry.actors
+
+
+def test_get_player_returns_actor_from_registry() -> None:
+    """get_player looks up the player by actor_id from the registry."""
+    registry = ActorRegistry().with_actor(TALIA)
+    result = get_player(registry, TALIA.actor_id)
+    assert result is TALIA
+
+
+def test_get_player_raises_runtime_error_when_absent() -> None:
+    """get_player raises RuntimeError with a readable message when player not in registry."""
+    registry = ActorRegistry()
+    with pytest.raises(RuntimeError, match="pc:talia"):
+        get_player(registry, "pc:talia")

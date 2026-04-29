@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from campaignnarrator.domain.models import (
+    ActorRegistry,
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
@@ -128,7 +129,12 @@ class FakeMemoryRepository:
 
     def load_game_state(self) -> GameState:
         if self._state_repo is not None:
-            return self._state_repo.load()
+            encounter = self._state_repo.load_encounter()
+            player = self._state_repo.load_player()
+            return GameState(
+                encounter=encounter,
+                actor_registry=ActorRegistry().with_actor(player),
+            )
         raise ValueError("no state_repo configured")  # noqa: TRY003
 
     def update_game_state(self, game_state: GameState) -> None:
@@ -300,7 +306,7 @@ def player_inputs_with_hostile_intent(
     updated_actors = dict(game_state.encounter.actors)
     updated_actors["npc:goblin-scout"] = goblin_dead
     updated_encounter = replace(game_state.encounter, actors=updated_actors)
-    state_repo.save(GameState(player=game_state.player, encounter=updated_encounter))
+    state_repo.save(GameState(encounter=updated_encounter))
 
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repo),

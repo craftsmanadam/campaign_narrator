@@ -23,6 +23,16 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
+class _RegistryBootstrapError(RuntimeError):
+    """Player not in registry when persist() is called during an active encounter."""
+
+    def __init__(self, player_actor_id: str) -> None:
+        super().__init__(
+            f"Player actor {player_actor_id!r} not found in registry. "
+            "Registry must be bootstrapped before persist is called."
+        )
+
+
 def _build_schema(dimensions: int) -> pa.Schema:
     return pa.schema(
         [
@@ -260,12 +270,19 @@ class MemoryRepository:
         self._cache = replace(self._cache, game_state=game_state)
 
     def load_game_state(self) -> GameState:
-        """Return cached game state if staged, else read from disk."""
+        """Return cached game state if staged, else read from disk.
+
+        On cold start, seeds the player into the registry if not already present
+        so callers can always find the player via get_player(registry, id).
+        """
         if self._cache.game_state is not None:
             return self._cache.game_state
-        base = self._state_repo.load()
+        encounter = self._state_repo.load_encounter()
         registry = self._load_actor_registry()
-        return replace(base, actor_registry=registry)
+        player = self._state_repo.load_player()
+        if player.actor_id not in registry.actors:
+            registry = registry.with_actor(player)
+        return GameState(encounter=encounter, actor_registry=registry)
 
     def update_exchange(self, player_input: str, narrator_output: str) -> None:
         """Append player + narrator pair to rolling exchange buffer."""
@@ -287,13 +304,16 @@ class MemoryRepository:
         self._cache.combat_round_logs.append(entry)
 
     def persist(self) -> None:
-        """Flush all staged session state to disk.
-
-        Only caller: _LazyGameOrchestrator.save_state().
-        """
+        """Flush all staged session state to disk."""
         if self._cache.game_state is not None:
-            self._state_repo.save(self._cache.game_state)
-            self._save_actor_registry(self._cache.game_state.actor_registry)
+            gs = self._cache.game_state
+            if gs.encounter is not None:
+                player = gs.actor_registry.actors.get(gs.encounter.player_actor_id)
+                if player is None:
+                    raise _RegistryBootstrapError(gs.encounter.player_actor_id)
+                self._state_repo.save_player(player)
+                self._state_repo.save_encounter(gs.encounter)
+            self._save_actor_registry(gs.actor_registry)
         for text, metadata in self._cache.staged_narrations:
             self.store_narrative(text, metadata)
         exchange_path = self._root / "exchange_buffer.json"
