@@ -759,6 +759,29 @@ def test_combat_intent_exit_session_returns_saved_and_quit(mocker: object) -> No
     assert result.status == CombatStatus.SAVED_AND_QUIT
 
 
+def test_player_hp_displayed_at_turn_start() -> None:
+    """Player HP must appear in IO output at the start of their combat turn."""
+    state = _make_combat_state(goblin_hp=0)
+    registry = _make_combat_registry(goblin_hp=0)
+    orc, io, _, _ = _orchestrator(
+        inputs=["end turn"],
+        intents=["end_turn"],
+        adjudications=[],
+        assessments=[
+            CombatAssessment(
+                combat_active=False,
+                outcome=CombatOutcome(
+                    short_description="End",
+                    full_description="Combat over.",
+                ),
+            )
+        ],
+    )
+    orc.run(state, registry)
+    hp_display = f"HP: {TALIA.hp_current}/{TALIA.hp_max}"
+    assert any(hp_display in line for line in io.displayed)
+
+
 # ---------------------------------------------------------------------------
 # NPC turn, attack resolution, materialize effects
 # ---------------------------------------------------------------------------

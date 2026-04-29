@@ -302,6 +302,7 @@ class CombatOrchestrator:
 
         resources = TurnResources(movement_remaining=actor.speed)
         self._io.display(f"--- {actor.name}'s turn ---")
+        self._io.display(f"HP: {actor.hp_current}/{actor.hp_max}")
         self._io.display(self._format_resources(resources))
 
         last_narration = ""
