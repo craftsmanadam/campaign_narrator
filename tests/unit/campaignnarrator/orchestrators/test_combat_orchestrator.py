@@ -1574,6 +1574,83 @@ def test_npc_attack_miss_does_not_apply_damage(mocker: object) -> None:
     assert talia.hp_current == TALIA.hp_current
 
 
+def _npc_attack_adj_public_roll(target: str = "pc:talia") -> RulesAdjudication:
+    """NPC attack adjudication with a PUBLIC roll request."""
+    return RulesAdjudication(
+        is_legal=True,
+        action_type="attack",
+        summary="Goblin slashes at Talia.",
+        roll_requests=(
+            RollRequest(
+                owner="npc",
+                visibility=RollVisibility.PUBLIC,
+                expression="1d20+4",
+                purpose="Attack roll vs Talia",
+            ),
+        ),
+        state_effects=(StateEffect(effect_type="change_hp", target=target, value=0),),
+        rule_references=(),
+        reasoning_summary="NPC attack with public roll.",
+    )
+
+
+def _npc_combat_state() -> tuple[EncounterState, ActorRegistry]:
+    goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
+    state = EncounterState(
+        encounter_id="test-npc-public",
+        phase=EncounterPhase.COMBAT,
+        setting="Forest",
+        actor_ids=("npc:goblin-1", "pc:talia"),
+        player_actor_id="pc:talia",
+        combat_turns=(
+            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
+            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
+        ),
+    )
+    registry = ActorRegistry(actors={"npc:goblin-1": goblin, "pc:talia": TALIA})
+    return state, registry
+
+
+_END_COMBAT = [
+    CombatAssessment(combat_active=True, outcome=None),
+    CombatAssessment(
+        combat_active=False,
+        outcome=CombatOutcome(short_description="End", full_description="Combat ends."),
+    ),
+]
+
+
+def test_npc_public_roll_is_displayed_to_player(mocker: object) -> None:
+    """NPC PUBLIC roll results must appear in the player's IO output."""
+    mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=15)  # type: ignore[attr-defined]
+    state, registry = _npc_combat_state()
+    orc, io, _, _ = _orchestrator(
+        inputs=["end turn"],
+        adjudications=[_npc_attack_adj_public_roll()],
+        assessments=list(_END_COMBAT),
+    )
+    orc.run(state, registry)
+    assert any("Attack roll vs Talia" in line for line in io.displayed)
+
+
+def test_npc_public_roll_events_appear_in_narrator_frame(mocker: object) -> None:
+    """NPC PUBLIC roll results must be in the narrator frame's resolved_outcomes."""
+    mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=15)  # type: ignore[attr-defined]
+    state, registry = _npc_combat_state()
+    orc, _, _, narrator = _orchestrator(
+        inputs=["end turn"],
+        adjudications=[_npc_attack_adj_public_roll()],
+        assessments=list(_END_COMBAT),
+    )
+    orc.run(state, registry)
+    npc_frame = next(
+        f for f in narrator.frames_seen if f.purpose == "npc_combat_action"
+    )
+    assert any(
+        "Attack roll vs Talia" in outcome for outcome in npc_frame.resolved_outcomes
+    )
+
+
 def test_direct_change_hp_without_roll_requests_passes_through_unchanged() -> None:
     """Existing change_hp effects with non-zero value pass through _resolve_attack_effects."""
     # _npc_attack_adjudication has roll_requests=() and direct change_hp(-4).

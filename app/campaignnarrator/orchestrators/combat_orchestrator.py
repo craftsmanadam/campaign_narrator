@@ -612,12 +612,18 @@ class CombatOrchestrator:
             )
         )
 
+        roll_event_strings: list[str] = []
         roll_totals_by_purpose: dict[str, int] = {}
         for rr in adjudication.roll_requests:
             result = rr.roll(actor)
             _logger.info("%s", result)
             if result.purpose:
                 roll_totals_by_purpose[result.purpose] = result.roll_total
+            if rr.visibility is RollVisibility.PUBLIC:
+                roll_event_strings.append(str(result))
+        for event in roll_event_strings:
+            self._io.display(event)
+        roll_events = tuple(roll_event_strings)
 
         resolved_effects = self._resolve_attack_effects(
             registry, adjudication.state_effects, roll_totals_by_purpose
@@ -631,6 +637,7 @@ class CombatOrchestrator:
                 actor,
                 adjudication.summary,
                 purpose="npc_combat_action",
+                roll_events=roll_events,
             )
         )
         self._io.display(narration.text)
