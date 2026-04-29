@@ -163,7 +163,8 @@ class EncounterOrchestrator:
         """Main interaction loop — runs until combat, quit, or encounter complete."""
         while True:
             if state.phase is EncounterPhase.COMBAT:
-                self._run_combat(state, registry, player)
+                combat_result = self._run_combat(state, registry, player)
+                state = combat_result.final_state
                 break
 
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
@@ -303,9 +304,25 @@ class EncounterOrchestrator:
         )
         result = orchestrator.run(state, registry)
         final_registry = result.final_registry
+        final_state = result.final_state
+        if result.status is CombatStatus.COMPLETE:
+            final_state, final_registry = apply_state_effects(
+                final_state,
+                final_registry,
+                (
+                    StateEffect(
+                        effect_type="set_phase",
+                        target=f"encounter:{final_state.encounter_id}",
+                        value="encounter_complete",
+                    ),
+                ),
+            )
+            result = replace(
+                result, final_state=final_state, final_registry=final_registry
+            )
         gs = self._memory_repository.load_game_state()
         self._memory_repository.update_game_state(
-            replace(gs, encounter=result.final_state, actor_registry=final_registry)
+            replace(gs, encounter=final_state, actor_registry=final_registry)
         )
 
         if result.status is CombatStatus.SAVED_AND_QUIT:

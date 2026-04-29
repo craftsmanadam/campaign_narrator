@@ -16,6 +16,7 @@ from campaignnarrator.domain.models import (
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
+    CombatResult,
     CombatStatus,
     EncounterPhase,
     EncounterState,
@@ -988,6 +989,37 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
             "outcome": "combat",
         }
     ]
+
+
+def test_combat_complete_transitions_encounter_to_encounter_complete(
+    tmp_path: Path,
+) -> None:
+    """CombatStatus.COMPLETE must set phase=ENCOUNTER_COMPLETE and mark run as done."""
+    initial_state = _load_game_state(_combat_repository(tmp_path, goblin_hp=7))
+    memory_repository = FakeMemoryRepository(game_state=initial_state)
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=memory_repository),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
+        io=ScriptedIO([]),
+        _player_intent_agent=FakePlayerIntentAgent(),
+        _combat_intent_agent=_mock_combat_intent_agent([]),
+    )
+
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
+    ) as mock_cls:
+        mock_cls.return_value.run.return_value = CombatResult(
+            status=CombatStatus.COMPLETE,
+            final_state=initial_state.encounter,  # still COMBAT phase
+            final_registry=initial_state.actor_registry,
+            death_saves_remaining=None,
+        )
+        result = orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    assert result.completed is True
+    staged = memory_repository.staged_game_state
+    assert staged is not None
+    assert staged.encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE
 
 
 def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
