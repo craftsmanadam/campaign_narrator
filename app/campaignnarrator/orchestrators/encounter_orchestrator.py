@@ -484,6 +484,7 @@ class EncounterOrchestrator:
             outcome="combat",
             public_events=(*state.public_events, event),
         )
+        self._io.display(event)
         self._append_event(
             {
                 "type": "encounter_completed",

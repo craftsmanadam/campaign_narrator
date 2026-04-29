@@ -752,6 +752,48 @@ def test_enter_combat_emits_encounter_completed_event(
     assert completed_events[0]["encounter_id"] == "goblin-camp"
 
 
+def test_enter_combat_displays_initiative_rolls_to_player(
+    tmp_path: Path, mocker: object
+) -> None:
+    """_enter_combat must display the initiative roll event string to the player."""
+    initial_state = _load_game_state(_social_repository(tmp_path, goblin_hp=0))
+    memory = FakeMemoryRepository(game_state=initial_state)
+    mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.encounter_orchestrator.roll",
+        side_effect=[18, 12],
+    )
+    io = ScriptedIO(["I draw steel and rush the goblin."])
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(memory=memory),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(),
+            narrator=FakeNarratorAgent(),
+        ),
+        io=io,
+        _player_intent_agent=FakePlayerIntentAgent(
+            [_intent(IntentCategory.HOSTILE_ACTION)]
+        ),
+    )
+
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
+    ) as mock_cls:
+        combat_state = replace(
+            initial_state.encounter,
+            phase=EncounterPhase.COMBAT,
+            outcome="combat",
+        )
+        mock_result = MagicMock()
+        mock_result.final_state = combat_state
+        mock_result.final_registry = initial_state.actor_registry
+        mock_result.status = None
+        mock_cls.return_value.run.return_value = mock_result
+        orchestrator.run_encounter(encounter_id="goblin-camp")
+
+    # The raw event string must appear as its own display call, not embedded in narration
+    assert "Initiative: Talia 18, Goblin Scout 12." in io.displayed
+
+
 def test_combat_orchestrator_is_invoked_when_phase_is_combat(tmp_path: Path) -> None:
     """CombatOrchestrator takes over when EncounterState is already in COMBAT phase."""
     rules_agent = FakeRulesAgent(
