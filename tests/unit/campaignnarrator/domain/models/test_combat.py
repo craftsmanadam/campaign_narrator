@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 from campaignnarrator.domain.models import (
-    ActorState,
-    ActorType,
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
@@ -23,31 +21,12 @@ def test_combat_status_has_expected_values() -> None:
 
 
 def test_combat_result_carries_final_state_and_status() -> None:
-    actor = ActorState(
-        actor_id="pc:talia",
-        name="Talia",
-        actor_type=ActorType.PC,
-        hp_max=44,
-        hp_current=44,
-        armor_class=20,
-        strength=16,
-        dexterity=14,
-        constitution=16,
-        intelligence=10,
-        wisdom=12,
-        charisma=8,
-        proficiency_bonus=3,
-        initiative_bonus=5,
-        speed=30,
-        attacks_per_action=2,
-        action_options=(),
-        ac_breakdown=(),
-    )
     state = EncounterState(
         encounter_id="test",
         phase=EncounterPhase.COMBAT,
         setting="Forest",
-        actors={"pc:talia": actor},
+        actor_ids=("pc:talia",),
+        player_actor_id="pc:talia",
     )
     result = CombatResult(
         status=CombatStatus.COMPLETE,
@@ -59,31 +38,12 @@ def test_combat_result_carries_final_state_and_status() -> None:
 
 
 def test_combat_result_player_down_carries_death_saves() -> None:
-    actor = ActorState(
-        actor_id="pc:talia",
-        name="Talia",
-        actor_type=ActorType.PC,
-        hp_max=44,
-        hp_current=0,
-        armor_class=20,
-        strength=16,
-        dexterity=14,
-        constitution=16,
-        intelligence=10,
-        wisdom=12,
-        charisma=8,
-        proficiency_bonus=3,
-        initiative_bonus=5,
-        speed=30,
-        attacks_per_action=2,
-        action_options=(),
-        ac_breakdown=(),
-    )
     state = EncounterState(
         encounter_id="test",
         phase=EncounterPhase.COMBAT,
         setting="Forest",
-        actors={"pc:talia": actor},
+        actor_ids=("pc:talia",),
+        player_actor_id="pc:talia",
     )
     result = CombatResult(
         status=CombatStatus.PLAYER_DOWN_NO_ALLIES,

@@ -6,9 +6,9 @@ import contextlib
 from dataclasses import replace
 
 from campaignnarrator.domain.models import ActorState, EncounterState, GameState
-from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
+from campaignnarrator.repositories.player_repository import PlayerRepository
 
 
 class StateRepository:
@@ -16,11 +16,11 @@ class StateRepository:
 
     def __init__(
         self,
-        actor_repo: ActorRepository,
+        player_repo: PlayerRepository,
         encounter_repo: EncounterRepository,
         compendium: CompendiumRepository | None = None,
     ) -> None:
-        self._actor_repo = actor_repo
+        self._player_repo = player_repo
         self._encounter_repo = encounter_repo
         self._compendium = compendium
 
@@ -34,8 +34,8 @@ class StateRepository:
             self.save_encounter(state.encounter)
 
     def load_player(self) -> ActorState:
-        """Load player from actor_repo, enriching references if compendium is set."""
-        player = self._actor_repo.load_player()
+        """Load player from player_repo, enriching references if compendium is set."""
+        player = self._player_repo.load()
         if self._compendium is not None:
             player = _enrich_actor_references(player, self._compendium)
         return player
@@ -45,8 +45,8 @@ class StateRepository:
         return self._encounter_repo.load_active()
 
     def save_player(self, player: ActorState) -> None:
-        """Persist player to actor_repo, stripping transient references."""
-        self._actor_repo.save(_strip_actor_references(player))
+        """Persist player to player_repo, stripping transient references."""
+        self._player_repo.save(_strip_actor_references(player))
 
     def save_encounter(self, encounter: EncounterState) -> None:
         """Persist encounter to encounter_repo."""

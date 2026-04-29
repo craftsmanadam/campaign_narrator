@@ -17,9 +17,9 @@ from campaignnarrator.domain.models import (
     EncounterState,
     GameState,
 )
-from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.player_repository import PlayerRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 
 from tests.fixtures.fighter_talia import TALIA
@@ -380,7 +380,8 @@ class TestPersist:
             encounter_id="enc-001",
             phase=EncounterPhase.SOCIAL,
             setting="The docks.",
-            actors={TALIA.actor_id: TALIA},
+            actor_ids=(TALIA.actor_id,),
+            player_actor_id=TALIA.actor_id,
         )
         gs = GameState(encounter=enc, actor_registry=ActorRegistry().with_actor(TALIA))
         repo.update_game_state(gs)
@@ -434,7 +435,8 @@ class TestPersist:
             encounter_id="enc-001",
             phase=EncounterPhase.SOCIAL,
             setting="The docks.",
-            actors={TALIA.actor_id: TALIA},
+            actor_ids=(TALIA.actor_id,),
+            player_actor_id=TALIA.actor_id,
         )
         gs = GameState(encounter=enc, actor_registry=ActorRegistry().with_actor(TALIA))
         repo.update_game_state(gs)
@@ -464,7 +466,8 @@ class TestClearCombatMemory:
             encounter_id="enc-001",
             phase=EncounterPhase.SOCIAL,
             setting="The docks.",
-            actors={TALIA.actor_id: TALIA},
+            actor_ids=(TALIA.actor_id,),
+            player_actor_id=TALIA.actor_id,
         )
         gs = GameState(encounter=enc, actor_registry=ActorRegistry().with_actor(TALIA))
         repo.update_game_state(gs)
@@ -625,7 +628,7 @@ def test_load_game_state_bootstraps_player_into_registry_on_cold_start(
     tmp_path: Path,
 ) -> None:
     """On cold start, player is seeded into the registry if not already present."""
-    actor_repo = ActorRepository(tmp_path)
+    actor_repo = PlayerRepository(tmp_path)
     actor_repo.save(TALIA)
     enc_repo = EncounterRepository(tmp_path)
     state_repo = StateRepository(actor_repo, enc_repo)
@@ -639,7 +642,7 @@ def test_load_game_state_does_not_overwrite_registry_player_on_cold_start(
 ) -> None:
     """If player already in registry (from prior encounter), registry version is used."""
     updated_talia = replace(TALIA, hp_current=7)
-    actor_repo = ActorRepository(tmp_path)
+    actor_repo = PlayerRepository(tmp_path)
     actor_repo.save(TALIA)  # disk player has full HP
     enc_repo = EncounterRepository(tmp_path)
     state_repo = StateRepository(actor_repo, enc_repo)
@@ -662,7 +665,8 @@ def test_persist_raises_when_player_missing_from_registry_during_encounter(
         encounter_id="enc-001",
         phase=EncounterPhase.SOCIAL,
         setting="The docks.",
-        actors={TALIA.actor_id: TALIA},
+        actor_ids=(TALIA.actor_id,),
+        player_actor_id=TALIA.actor_id,
     )
     # Registry intentionally empty — player is absent
     gs = GameState(encounter=encounter, actor_registry=ActorRegistry())

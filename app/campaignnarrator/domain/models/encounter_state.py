@@ -45,6 +45,43 @@ def get_player(registry: ActorRegistry, player_actor_id: str) -> ActorState:
     return player
 
 
+def visible_actor_names(
+    state: EncounterState, registry: ActorRegistry
+) -> tuple[str, ...]:
+    """Return visible actor names for actors in encounter (actor_ids order)."""
+    return tuple(
+        registry.actors[aid].name
+        for aid in state.actor_ids
+        if aid in registry.actors and registry.actors[aid].is_visible
+    )
+
+
+def public_actor_summaries(
+    state: EncounterState, registry: ActorRegistry
+) -> tuple[str, ...]:
+    """Return narration-safe summaries for actors visible in the current scene.
+
+    When npc_presences is empty (old encounters or bare test fixtures) all
+    encounter actors are included. When populated, only PCs and actively
+    present NPCs appear. MENTIONED and DEPARTED NPCs are excluded.
+    """
+    if not state.npc_presences:
+        return tuple(
+            registry.actors[aid].narrative_summary()
+            for aid in state.actor_ids
+            if aid in registry.actors
+        )
+    present_ids = {
+        p.actor_id for p in state.npc_presences if p.status in _ACTIVE_NPC_STATUSES
+    }
+    return tuple(
+        registry.actors[aid].narrative_summary()
+        for aid in state.actor_ids
+        if aid in registry.actors
+        and (registry.actors[aid].actor_type == ActorType.PC or aid in present_ids)
+    )
+
+
 class EncounterPhase(StrEnum):
     """High-level phases for encounter progression."""
 
@@ -70,9 +107,11 @@ class InitiativeTurn:
         actor_id = data.get("actor_id")
         roll = data.get("initiative_roll")
         if not isinstance(actor_id, str):
-            raise TypeError("InitiativeTurn: actor_id must be str")  # noqa: TRY003
+            msg = "InitiativeTurn: actor_id must be str"
+            raise TypeError(msg)
         if type(roll) is not int:
-            raise TypeError("InitiativeTurn: initiative_roll must be int")  # noqa: TRY003
+            msg = "InitiativeTurn: initiative_roll must be int"
+            raise TypeError(msg)
         return cls(actor_id=actor_id, initiative_roll=roll)
 
 
@@ -83,7 +122,8 @@ class EncounterState:
     encounter_id: str
     phase: EncounterPhase
     setting: str
-    actors: Mapping[str, ActorState]
+    actor_ids: tuple[str, ...] = field(default_factory=tuple)
+    player_actor_id: str = ""
     public_events: tuple[str, ...] = field(default_factory=tuple)
     hidden_facts: Mapping[str, object] = field(default_factory=dict)
     # TODO: combat_turns is a smell — combat-specific state embedded in the general
@@ -100,49 +140,14 @@ class EncounterState:
 
     def __post_init__(self) -> None:
         """Snapshot mutable mappings so encounter state cannot be mutated externally."""
-
-        object.__setattr__(self, "actors", MappingProxyType(dict(self.actors)))
         object.__setattr__(
             self, "hidden_facts", MappingProxyType(dict(self.hidden_facts))
         )
         if self.current_location is None:
             object.__setattr__(self, "current_location", self.setting)
 
-    @property
-    def player_actor_id(self) -> str:
-        """Return the first player character actor in insertion order."""
-
-        for actor in self.actors.values():
-            if actor.actor_type == ActorType.PC:
-                return actor.actor_id
-        raise ValueError("missing player actor")  # noqa: TRY003
-
-    def visible_actor_names(self) -> tuple[str, ...]:
-        """Return visible actor names in encounter insertion order."""
-
-        return tuple(actor.name for actor in self.actors.values() if actor.is_visible)
-
-    def public_actor_summaries(self) -> tuple[str, ...]:
-        """Return narration-safe summaries for actors visible in the current scene.
-
-        When npc_presences is empty (old encounters or bare test fixtures) all actors
-        are included. When populated, only PCs and actively present NPCs appear.
-        MENTIONED and DEPARTED NPCs are excluded.
-        """
-        if not self.npc_presences:
-            return tuple(actor.narrative_summary() for actor in self.actors.values())
-        present_ids = {
-            p.actor_id for p in self.npc_presences if p.status in _ACTIVE_NPC_STATUSES
-        }
-        return tuple(
-            actor.narrative_summary()
-            for actor in self.actors.values()
-            if actor.actor_type == ActorType.PC or actor.actor_id in present_ids
-        )
-
     def with_phase(self, phase: EncounterPhase) -> EncounterState:
         """Return a copy of the state with an updated phase."""
-
         return replace(self, phase=phase)
 
     def to_dict(self) -> dict[str, object]:
@@ -151,15 +156,14 @@ class EncounterState:
             "phase": self.phase.value,
             "setting": self.setting,
             "current_location": self.current_location,
+            "actor_ids": list(self.actor_ids),
+            "player_actor_id": self.player_actor_id,
             "public_events": list(self.public_events),
             "hidden_facts": dict(self.hidden_facts),
             "combat_turns": [t.to_dict() for t in self.combat_turns],
             "outcome": self.outcome,
             "scene_tone": self.scene_tone,
             "npc_presences": [p.to_dict() for p in self.npc_presences],
-            "actors": {
-                actor_id: actor.to_dict() for actor_id, actor in self.actors.items()
-            },
             "traveling_actor_ids": list(self.traveling_actor_ids),
             "next_location_hint": self.next_location_hint,
         }
@@ -168,21 +172,41 @@ class EncounterState:
     def from_dict(cls, data: Mapping[str, object]) -> EncounterState:
         encounter_id = data.get("encounter_id")
         if not isinstance(encounter_id, str):
-            raise TypeError("EncounterState: encounter_id must be str")  # noqa: TRY003
+            msg = "EncounterState: encounter_id must be str"
+            raise TypeError(msg)
         phase_raw = data.get("phase")
         if not isinstance(phase_raw, str):
-            raise TypeError("EncounterState: phase must be str")  # noqa: TRY003
+            msg = "EncounterState: phase must be str"
+            raise TypeError(msg)
         setting = data.get("setting")
         if not isinstance(setting, str):
-            raise TypeError("EncounterState: setting must be str")  # noqa: TRY003
-        actors_raw = data.get("actors", {})
-        if not isinstance(actors_raw, Mapping):
-            raise TypeError("EncounterState: actors must be a mapping")  # noqa: TRY003
-        actors = {
-            str(k): ActorState.from_dict(v)
-            for k, v in actors_raw.items()
-            if isinstance(v, Mapping)
-        }
+            msg = "EncounterState: setting must be str"
+            raise TypeError(msg)
+
+        # Backward compat: old saves have actors dict instead of actor_ids list.
+        actor_ids: tuple[str, ...]
+        player_actor_id: str
+        if "actor_ids" in data:
+            actor_ids_raw = data.get("actor_ids", ())
+            actor_ids = (
+                tuple(str(i) for i in actor_ids_raw if isinstance(i, str))
+                if isinstance(actor_ids_raw, list | tuple)
+                else ()
+            )
+            player_actor_id_raw = data.get("player_actor_id", "")
+            player_actor_id = (
+                player_actor_id_raw if isinstance(player_actor_id_raw, str) else ""
+            )
+        else:
+            # Old format: actors dict — extract keys; find PC for player_actor_id.
+            actors_raw = data.get("actors", {})
+            if isinstance(actors_raw, Mapping):
+                actor_ids = tuple(str(k) for k in actors_raw)
+                player_actor_id = _derive_player_actor_id(actors_raw)
+            else:
+                actor_ids = ()
+                player_actor_id = ""
+
         public_events_raw = data.get("public_events", ())
         public_events: tuple[str, ...] = (
             tuple(str(e) for e in public_events_raw if isinstance(e, str))
@@ -230,7 +254,8 @@ class EncounterState:
             encounter_id=encounter_id,
             phase=EncounterPhase(phase_raw),
             setting=setting,
-            actors=actors,
+            actor_ids=actor_ids,
+            player_actor_id=player_actor_id,
             public_events=public_events,
             hidden_facts=hidden_facts,
             combat_turns=combat_turns,
@@ -243,6 +268,14 @@ class EncounterState:
             traveling_actor_ids=traveling_actor_ids,
             next_location_hint=next_location_hint,
         )
+
+
+def _derive_player_actor_id(actors_raw: Mapping[object, object]) -> str:
+    """Scan an old-format actors dict to find the PC actor_id."""
+    for k, v in actors_raw.items():
+        if isinstance(v, Mapping) and v.get("actor_type") == "pc":
+            return str(k)
+    return ""
 
 
 @dataclass(frozen=True)

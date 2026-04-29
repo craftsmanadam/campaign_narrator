@@ -60,11 +60,11 @@ class _FakeGameOrchestrator:
 # ---------------------------------------------------------------------------
 
 
-class _FakeActorRepository:
+class _FakePlayerRepository:
     captured_paths: ClassVar[list[Path]] = []
 
     def __init__(self, path: Path) -> None:
-        _FakeActorRepository.captured_paths.append(path)
+        _FakePlayerRepository.captured_paths.append(path)
 
 
 class _FakeEncounterRepository:
@@ -80,11 +80,11 @@ class _FakeStateRepository:
     def __init__(
         self,
         *,
-        actor_repo: object,
+        player_repo: object,
         encounter_repo: object,
         compendium: object = None,
     ) -> None:
-        self.actor_repo = actor_repo
+        self.player_repo = player_repo
         self.encounter_repo = encounter_repo
         self.compendium = compendium
         _FakeStateRepository.instances.append(self)
@@ -227,13 +227,13 @@ def test_build_application_graph_wires_repository_paths(
     rules_paths: list[Path] = []
     compendium_paths: list[Path] = []
     memory_paths: list[Path] = []
-    _FakeActorRepository.captured_paths.clear()
+    _FakePlayerRepository.captured_paths.clear()
     _FakeEncounterRepository.captured_paths.clear()
     _FakeStateRepository.instances.clear()
 
     af_ns = "campaignnarrator.application_factory"
     monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", object)
-    monkeypatch.setattr(f"{af_ns}.ActorRepository", _FakeActorRepository)
+    monkeypatch.setattr(f"{af_ns}.PlayerRepository", _FakePlayerRepository)
     monkeypatch.setattr(f"{af_ns}.EncounterRepository", _FakeEncounterRepository)
     monkeypatch.setattr(f"{af_ns}.StateRepository", _FakeStateRepository)
     monkeypatch.setattr(
@@ -269,7 +269,7 @@ def test_build_application_graph_wires_repository_paths(
 
     ApplicationFactory(tmp_path, stdin=StringIO(), stdout=StringIO()).build()
 
-    assert _FakeActorRepository.captured_paths == [tmp_path / "state"]
+    assert _FakePlayerRepository.captured_paths == [tmp_path / "state"]
     assert _FakeEncounterRepository.captured_paths == [tmp_path / "state"]
     assert rules_paths == [tmp_path / "rules"]
     assert compendium_paths == [tmp_path / "compendium"]
@@ -283,13 +283,13 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     """The application graph should pass shared adapter through all components."""
 
     adapter = object()
-    _FakeActorRepository.captured_paths.clear()
+    _FakePlayerRepository.captured_paths.clear()
     _FakeEncounterRepository.captured_paths.clear()
     _FakeStateRepository.instances.clear()
 
     af_ns = "campaignnarrator.application_factory"
     monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", lambda: adapter)
-    monkeypatch.setattr(f"{af_ns}.ActorRepository", _FakeActorRepository)
+    monkeypatch.setattr(f"{af_ns}.PlayerRepository", _FakePlayerRepository)
     monkeypatch.setattr(f"{af_ns}.EncounterRepository", _FakeEncounterRepository)
     monkeypatch.setattr(f"{af_ns}.StateRepository", _FakeStateRepository)
     monkeypatch.setattr(f"{af_ns}.RulesRepository", lambda _path: object())
@@ -322,7 +322,7 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     assert isinstance(result, ApplicationGraph)
     assert result.game_orchestrator is not None
     state_repo = _FakeStateRepository.instances[0]
-    assert isinstance(state_repo.actor_repo, _FakeActorRepository)
+    assert isinstance(state_repo.player_repo, _FakePlayerRepository)
     assert isinstance(state_repo.encounter_repo, _FakeEncounterRepository)
     assert state_repo.compendium is compendium_instance
 
@@ -388,7 +388,7 @@ def test_application_factory_build_returns_application_graph(
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", _noop_agent)
-    monkeypatch.setattr(f"{af_ns}.ActorRepository", _noop_repo)
+    monkeypatch.setattr(f"{af_ns}.PlayerRepository", _noop_repo)
     monkeypatch.setattr(f"{af_ns}.EncounterRepository", _noop_repo)
     monkeypatch.setattr(f"{af_ns}.CampaignRepository", _noop_repo)
     monkeypatch.setattr(f"{af_ns}.ModuleRepository", _noop_repo)

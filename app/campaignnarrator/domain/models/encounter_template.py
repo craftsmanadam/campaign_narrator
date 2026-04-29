@@ -25,6 +25,7 @@ class EncounterNpc(BaseModel):
     stat_source: Literal["monster_compendium", "simple_npc"]
     cr: float
     name_known: bool = False
+    persistent: bool = False
 
     @field_validator("cr", mode="before")
     @classmethod

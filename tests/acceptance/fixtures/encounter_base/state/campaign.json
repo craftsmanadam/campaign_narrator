@@ -14,7 +14,7 @@
   "starting_level": 1,
   "target_level": 3,
   "player_brief": "Frontier adventure against goblins.",
-  "player_actor_id": "pc:player",
+  "player_actor_id": "pc:talia",
   "bbeg_actor_id": null,
   "current_module_id": "module-001"
 }

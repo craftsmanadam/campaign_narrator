@@ -338,13 +338,22 @@ class EncounterPlannerOrchestrator:
 
         scaled_npcs = scale_encounter_npcs(template.npcs, player_level=player.level)
 
-        actors: dict[str, ActorState] = {player.actor_id: player}
+        # encounter_id must be known before the NPC loop so non-persistent IDs
+        # can be scoped to this encounter.
+        encounter_id = f"{module.module_id}-enc-{module.next_encounter_index + 1:03d}"
+
+        actor_ids: list[str] = [player.actor_id]
+        registry_updates: dict[str, ActorState] = {player.actor_id: player}
         npc_presences: list[NpcPresence] = []
 
         for npc in scaled_npcs:
-            actor_id = f"npc:{npc.template_npc_id}"
+            if npc.persistent:
+                actor_id = f"npc:{npc.template_npc_id}"
+            else:
+                actor_id = f"npc:{encounter_id}:{npc.template_npc_id}"
             npc_actor = _build_npc_actor(npc, actor_id=actor_id, index_path=index_path)
-            actors[actor_id] = npc_actor
+            actor_ids.append(actor_id)
+            registry_updates[actor_id] = npc_actor
             npc_presences.append(
                 NpcPresence(
                     actor_id=actor_id,
@@ -357,14 +366,15 @@ class EncounterPlannerOrchestrator:
 
         if transition:
             for actor_id, actor_state in transition.traveling_actors.items():
-                if actor_id in actors:
+                if actor_id in registry_updates:
                     _log.warning(
                         "Traveling actor ID collision with template actor: %s"
                         " — skipping",
                         actor_id,
                     )
                     continue
-                actors[actor_id] = actor_state
+                actor_ids.append(actor_id)
+                registry_updates[actor_id] = actor_state
             for presence in transition.traveling_presences:
                 if any(p.actor_id == presence.actor_id for p in npc_presences):
                     _log.warning(
@@ -377,16 +387,27 @@ class EncounterPlannerOrchestrator:
                     replace(presence, status=NpcPresenceStatus.INTERACTED)
                 )
 
-        encounter_id = f"{module.module_id}-enc-{module.next_encounter_index + 1:03d}"
         encounter = EncounterState(
             encounter_id=encounter_id,
             phase=EncounterPhase.SCENE_OPENING,
             setting=template.setting,
             scene_tone=template.scene_tone,
-            actors=actors,
+            actor_ids=tuple(actor_ids),
+            player_actor_id=player.actor_id,
             npc_presences=tuple(npc_presences),
         )
         self._repos.encounter.save(encounter)
+
+        # Seed all encounter actors into the registry and link the new encounter
+        # in one write, so run_encounter() sees both when it loads game state.
+        gs = self._repos.memory.load_game_state()
+        self._repos.memory.update_game_state(
+            replace(
+                gs,
+                actor_registry=gs.actor_registry.with_actors(registry_updates),
+                encounter=encounter,
+            )
+        )
 
         return EncounterReady(encounter_state=encounter, module=module)
 

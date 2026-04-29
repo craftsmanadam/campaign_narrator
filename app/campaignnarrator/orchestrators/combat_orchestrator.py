@@ -11,6 +11,7 @@ from typing import Protocol
 from pydantic_ai import Agent
 
 from campaignnarrator.domain.models import (
+    ActorRegistry,
     ActorState,
     ActorType,
     CombatAssessment,
@@ -48,6 +49,7 @@ class _TurnResult:
     """
 
     state: EncounterState
+    registry: ActorRegistry
     narration: str | None
     session_ended: bool = False
     player_input: str = ""
@@ -119,13 +121,13 @@ def _extract_roll_totals(
 
 
 def _resolve_hp_effect(
-    state: EncounterState,
+    registry: ActorRegistry,
     effect: StateEffect,
     attack_total: int,
     damage_total: int | None,
 ) -> StateEffect | None:
     """Resolve one change_hp effect against target AC; return None to drop it."""
-    target_actor = state.actors.get(effect.target)
+    target_actor = registry.actors.get(effect.target)
     if target_actor is None:
         return None
     if attack_total < target_actor.armor_class:
@@ -187,13 +189,14 @@ class CombatOrchestrator:
                 "CombatOrchestrator requires adapter= or _intent_agent= to be set"
             )
 
-    def run(self, state: EncounterState) -> CombatResult:
+    def run(self, state: EncounterState, registry: ActorRegistry) -> CombatResult:
         """Run the combat loop until an end condition is reached."""
         while state.combat_turns:
             turn = state.combat_turns[0]
-            result = self._process_turn(state, turn)
+            result = self._process_turn(state, registry, turn)
             state = result.state
-            self._stage_turn_in_memory(state, result)
+            registry = result.registry
+            self._stage_turn_in_memory(state, registry, result)
 
             if result.session_ended:
                 self._flush_combat_memory()
@@ -201,17 +204,18 @@ class CombatOrchestrator:
                     status=CombatStatus.SAVED_AND_QUIT,
                     final_state=state,
                     death_saves_remaining=None,
+                    final_registry=registry,
                 )
 
             if result.narration is None:
                 continue
 
-            down_result = self._check_player_down_no_allies(state)
+            down_result = self._check_player_down_no_allies(state, registry)
             if down_result is not None:
                 self._flush_combat_memory()
                 return down_result
 
-            assessment = self._assess_combat(state, result.narration)
+            assessment = self._assess_combat(state, registry, result.narration)
             if not assessment.combat_active:
                 self._io.display(assessment.outcome.full_description)  # type: ignore[union-attr]
                 self._flush_combat_memory()
@@ -219,6 +223,7 @@ class CombatOrchestrator:
                     status=CombatStatus.COMPLETE,
                     final_state=state,
                     death_saves_remaining=None,
+                    final_registry=registry,
                 )
 
         self._flush_combat_memory()
@@ -226,16 +231,18 @@ class CombatOrchestrator:
             status=CombatStatus.COMPLETE,
             final_state=state,
             death_saves_remaining=None,
+            final_registry=registry,
         )
 
-    def _stage_turn_in_memory(self, state: EncounterState, result: _TurnResult) -> None:
+    def _stage_turn_in_memory(
+        self, state: EncounterState, registry: ActorRegistry, result: _TurnResult
+    ) -> None:
         """Stage per-turn game state and exchange in memory repository."""
         if self._memory_repository is None:
             return
         gs = self._memory_repository.load_game_state()
-        updated_registry = gs.actor_registry.with_actors(state.actors)
         self._memory_repository.update_game_state(
-            replace(gs, encounter=state, actor_registry=updated_registry)
+            replace(gs, encounter=state, actor_registry=registry)
         )
         if result.narration is not None:
             self._memory_repository.log_combat_round(result.narration)
@@ -248,35 +255,50 @@ class CombatOrchestrator:
         if self._memory_repository is not None:
             self._memory_repository.clear_combat_memory()
 
-    def _process_turn(self, state: EncounterState, turn: InitiativeTurn) -> _TurnResult:
-        actor = state.actors[turn.actor_id]
+    def _process_turn(
+        self, state: EncounterState, registry: ActorRegistry, turn: InitiativeTurn
+    ) -> _TurnResult:
+        actor = registry.actors.get(turn.actor_id)
+        if actor is None:
+            return _TurnResult(
+                state=self._rotate_turns(state),
+                registry=registry,
+                narration=None,
+            )
 
         if "dead" in actor.conditions or "incapacitated" in actor.conditions:
-            return _TurnResult(state=self._rotate_turns(state), narration=None)
+            return _TurnResult(
+                state=self._rotate_turns(state), registry=registry, narration=None
+            )
 
         if "unconscious" in actor.conditions:
-            state = self._auto_death_save(state, actor)
-            return _TurnResult(state=self._rotate_turns(state), narration=None)
+            state, registry = self._auto_death_save(state, registry, actor)
+            return _TurnResult(
+                state=self._rotate_turns(state), registry=registry, narration=None
+            )
 
         if actor.actor_type == ActorType.PC:
-            result = self._run_player_turn(state, actor)
+            result = self._run_player_turn(state, registry, actor)
         elif actor.actor_type == ActorType.ALLY:
-            return _TurnResult(state=self._rotate_turns(state), narration=None)
+            return _TurnResult(
+                state=self._rotate_turns(state), registry=registry, narration=None
+            )
         else:
-            result = self._run_npc_turn(state, actor)
+            result = self._run_npc_turn(state, registry, actor)
 
         return _TurnResult(
             state=self._rotate_turns(result.state),
+            registry=result.registry,
             narration=result.narration,
             session_ended=result.session_ended,
             player_input=result.player_input,
         )
 
-    def _run_player_turn(self, state: EncounterState, actor: ActorState) -> _TurnResult:
+    def _run_player_turn(
+        self, state: EncounterState, registry: ActorRegistry, actor: ActorState
+    ) -> _TurnResult:
         actor = self._reset_actor_per_turn_resources(actor)
-        updated_actors = dict(state.actors)
-        updated_actors[actor.actor_id] = actor
-        state = replace(state, actors=updated_actors)
+        registry = registry.with_actor(actor)
 
         resources = TurnResources(movement_remaining=actor.speed)
         self._io.display(f"--- {actor.name}'s turn ---")
@@ -292,46 +314,56 @@ class CombatOrchestrator:
                 break
 
             if intent == "exit_session":
-                return _TurnResult(state=state, narration="", session_ended=True)
+                return _TurnResult(
+                    state=state, registry=registry, narration="", session_ended=True
+                )
 
             if intent == "query_status":
-                self._io.display(self._format_combat_status(state))
+                self._io.display(self._format_combat_status(state, registry))
                 continue
 
             # intent == "combat_action"
-            state, resources, narration_text = self._handle_combat_action(
-                state, actor, raw_input, resources
+            state, registry, resources, narration_text = self._handle_combat_action(
+                state, registry, actor, raw_input, resources
             )
             last_narration = narration_text
             last_player_input = raw_input
 
         return _TurnResult(
-            state=state, narration=last_narration, player_input=last_player_input
+            state=state,
+            registry=registry,
+            narration=last_narration,
+            player_input=last_player_input,
         )
 
     def _handle_combat_action(
         self,
         state: EncounterState,
+        registry: ActorRegistry,
         actor: ActorState,
         raw_input: str,
         resources: TurnResources,
-    ) -> tuple[EncounterState, TurnResources, str]:
-        request = self._build_rules_request(state, actor, raw_input)
+    ) -> tuple[EncounterState, ActorRegistry, TurnResources, str]:
+        request = self._build_rules_request(state, registry, actor, raw_input)
         self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
 
         if not adjudication.is_legal:
             narration = self._narrator_agent.narrate(
                 self._build_narrator_frame(
-                    state, actor, adjudication.summary, purpose="clarification"
+                    state,
+                    registry,
+                    actor,
+                    adjudication.summary,
+                    purpose="clarification",
                 )
             )
             self._io.display(narration.text)
-            return state, resources, narration.text
+            return state, registry, resources, narration.text
 
         resources, overspent = self._deduct_movement(adjudication, resources)
         if overspent:
-            return state, resources, ""
+            return state, registry, resources, ""
 
         roll_event_strings: list[str] = []
         roll_totals_by_purpose: dict[str, int] = {}
@@ -350,13 +382,14 @@ class CombatOrchestrator:
             e for e in adjudication.state_effects if e.effect_type != "movement"
         )
         resolved_effects = self._resolve_attack_effects(
-            state, actor_effects, roll_totals_by_purpose
+            registry, actor_effects, roll_totals_by_purpose
         )
-        state = self._materialize_effects(state, resolved_effects)
+        state, registry = self._materialize_effects(state, registry, resolved_effects)
         resources = self._consume_resource(resources, adjudication.action_type)
         narration = self._narrator_agent.narrate(
             self._build_narrator_frame(
                 state,
+                registry,
                 actor,
                 adjudication.summary,
                 purpose="combat_turn_result",
@@ -365,7 +398,7 @@ class CombatOrchestrator:
         )
         self._io.display(narration.text)
         self._io.display(self._format_resources(resources))
-        return state, resources, narration.text
+        return state, registry, resources, narration.text
 
     def _deduct_movement(
         self, adjudication: RulesAdjudication, resources: TurnResources
@@ -384,7 +417,7 @@ class CombatOrchestrator:
 
     def _resolve_attack_effects(
         self,
-        state: EncounterState,
+        registry: ActorRegistry,
         effects: tuple[StateEffect, ...],
         roll_totals_by_purpose: dict[str, int],
     ) -> tuple[StateEffect, ...]:
@@ -407,7 +440,7 @@ class CombatOrchestrator:
             if effect.effect_type != "change_hp":
                 resolved.append(effect)
                 continue
-            hp_effect = _resolve_hp_effect(state, effect, attack_total, damage_total)
+            hp_effect = _resolve_hp_effect(registry, effect, attack_total, damage_total)
             if hp_effect is not None:
                 resolved.append(hp_effect)
         return tuple(resolved)
@@ -420,6 +453,7 @@ class CombatOrchestrator:
     def _build_rules_request(
         self,
         state: EncounterState,
+        registry: ActorRegistry,
         actor: ActorState,
         intent: str,
         allowed_outcomes: tuple[str, ...] = _COMBAT_ALLOWED_OUTCOMES,
@@ -433,7 +467,9 @@ class CombatOrchestrator:
         )
         weapon_context = tuple(_format_weapon(w) for w in actor.equipped_weapons)
         visible_actors_context = tuple(
-            _format_visible_actor(a) for a in state.actors.values()
+            _format_visible_actor(registry.actors[aid])
+            for aid in state.actor_ids
+            if aid in registry.actors
         )
         return RulesAdjudicationRequest(
             actor_id=actor.actor_id,
@@ -449,6 +485,7 @@ class CombatOrchestrator:
     def _build_narrator_frame(
         self,
         state: EncounterState,
+        registry: ActorRegistry,
         actor: ActorState,
         summary: str,
         purpose: str,
@@ -459,7 +496,9 @@ class CombatOrchestrator:
             phase=EncounterPhase.COMBAT,
             setting=state.setting,
             public_actor_summaries=tuple(
-                a.narrative_summary() for a in state.actors.values()
+                registry.actors[aid].narrative_summary()
+                for aid in state.actor_ids
+                if aid in registry.actors
             ),
             recent_public_events=(),
             resolved_outcomes=(*roll_events, summary),
@@ -475,11 +514,14 @@ class CombatOrchestrator:
         return replace(actor, resources=updated)
 
     @staticmethod
-    def _apply_zero_hp_conditions(state: EncounterState) -> EncounterState:
-        updated_actors = dict(state.actors)
+    def _apply_zero_hp_conditions(
+        state: EncounterState, registry: ActorRegistry
+    ) -> tuple[EncounterState, ActorRegistry]:
+        updated_actors = dict(registry.actors)
         changed = False
-        for actor_id, actor in updated_actors.items():
-            if actor.hp_current > 0:
+        for actor_id in state.actor_ids:
+            actor = updated_actors.get(actor_id)
+            if actor is None or actor.hp_current > 0:
                 continue
             if actor.actor_type in (ActorType.NPC, ActorType.ALLY):
                 if "dead" not in actor.conditions:
@@ -497,21 +539,23 @@ class CombatOrchestrator:
                 )
                 changed = True
         if not changed:
-            return state
-        return replace(state, actors=updated_actors)
+            return state, registry
+        return state, registry.with_actors(updated_actors)
 
     def _materialize_effects(
         self,
         state: EncounterState,
+        registry: ActorRegistry,
         effects: tuple[StateEffect, ...],
-    ) -> EncounterState:
+    ) -> tuple[EncounterState, ActorRegistry]:
         materialized: list[StateEffect] = []
         for effect in effects:
             if effect.effect_type == "heal":
                 expression = str(effect.value)
                 match = re.match(r"^(\d+)d(\d+)([+-]\d+)?$", expression)
                 if not match:
-                    raise ValueError(f"Invalid dice expression: {expression!r}")  # noqa: TRY003
+                    msg = f"Invalid dice expression: {expression!r}"
+                    raise ValueError(msg)
                 num_dice = int(match.group(1))
                 die_size = int(match.group(2))
                 modifier = int(match.group(3) or "0")
@@ -523,14 +567,16 @@ class CombatOrchestrator:
                 )
             else:
                 materialized.append(effect)
-        updated_state = apply_state_effects(state, tuple(materialized))
-        return self._apply_zero_hp_conditions(updated_state)
+        updated_state, updated_registry = apply_state_effects(
+            state, registry, tuple(materialized)
+        )
+        return self._apply_zero_hp_conditions(updated_state, updated_registry)
 
-    def _run_npc_turn(self, state: EncounterState, actor: ActorState) -> _TurnResult:
+    def _run_npc_turn(
+        self, state: EncounterState, registry: ActorRegistry, actor: ActorState
+    ) -> _TurnResult:
         actor = self._reset_actor_per_turn_resources(actor)
-        updated_actors = dict(state.actors)
-        updated_actors[actor.actor_id] = actor
-        state = replace(state, actors=updated_actors)
+        registry = registry.with_actor(actor)
 
         intent_payload = {
             "actor_id": actor.actor_id,
@@ -540,15 +586,15 @@ class CombatOrchestrator:
             "conditions": list(actor.conditions),
             "visible_actors": [
                 {
-                    "actor_id": a.actor_id,
-                    "name": a.name,
-                    "hp_current": a.hp_current,
-                    "hp_max": a.hp_max,
-                    "actor_type": a.actor_type.value,
-                    "conditions": list(a.conditions),
+                    "actor_id": registry.actors[aid].actor_id,
+                    "name": registry.actors[aid].name,
+                    "hp_current": registry.actors[aid].hp_current,
+                    "hp_max": registry.actors[aid].hp_max,
+                    "actor_type": registry.actors[aid].actor_type.value,
+                    "conditions": list(registry.actors[aid].conditions),
                 }
-                for a in state.actors.values()
-                if a.actor_id != actor.actor_id
+                for aid in state.actor_ids
+                if aid in registry.actors and aid != actor.actor_id
             ],
             "setting": state.setting,
         }
@@ -559,6 +605,7 @@ class CombatOrchestrator:
         adjudication = self._rules_agent.adjudicate(
             self._build_rules_request(
                 state,
+                registry,
                 actor,
                 intent_prose,
                 allowed_outcomes=_NPC_COMBAT_ALLOWED_OUTCOMES,
@@ -573,17 +620,21 @@ class CombatOrchestrator:
                 roll_totals_by_purpose[result.purpose] = result.roll_total
 
         resolved_effects = self._resolve_attack_effects(
-            state, adjudication.state_effects, roll_totals_by_purpose
+            registry, adjudication.state_effects, roll_totals_by_purpose
         )
-        state = self._materialize_effects(state, resolved_effects)
+        state, registry = self._materialize_effects(state, registry, resolved_effects)
 
         narration = self._narrator_agent.narrate(
             self._build_narrator_frame(
-                state, actor, adjudication.summary, purpose="npc_combat_action"
+                state,
+                registry,
+                actor,
+                adjudication.summary,
+                purpose="npc_combat_action",
             )
         )
         self._io.display(narration.text)
-        return _TurnResult(state=state, narration=narration.text)
+        return _TurnResult(state=state, registry=registry, narration=narration.text)
 
     def _consume_resource(
         self, resources: TurnResources, action_type: str
@@ -608,8 +659,14 @@ class CombatOrchestrator:
             f"Movement: {movement} | Reaction: {reaction}"
         )
 
-    def _format_combat_status(self, state: EncounterState) -> str:
-        summaries = [a.narrative_summary() for a in state.actors.values()]
+    def _format_combat_status(
+        self, state: EncounterState, registry: ActorRegistry
+    ) -> str:
+        summaries = [
+            registry.actors[aid].narrative_summary()
+            for aid in state.actor_ids
+            if aid in registry.actors
+        ]
         return " | ".join(summaries)
 
     def _rotate_turns(self, state: EncounterState) -> EncounterState:
@@ -619,12 +676,15 @@ class CombatOrchestrator:
         return replace(state, combat_turns=(*turns[1:], turns[0]))
 
     def _check_player_down_no_allies(
-        self, state: EncounterState
+        self, state: EncounterState, registry: ActorRegistry
     ) -> CombatResult | None:
-        pc_actors = [a for a in state.actors.values() if a.actor_type == ActorType.PC]
+        encounter_actors = [
+            registry.actors[aid] for aid in state.actor_ids if aid in registry.actors
+        ]
+        pc_actors = [a for a in encounter_actors if a.actor_type == ActorType.PC]
         conscious_allies = [
             a
-            for a in state.actors.values()
+            for a in encounter_actors
             if a.actor_type in (ActorType.PC, ActorType.ALLY)
             and a.hp_current > 0
             and "dead" not in a.conditions
@@ -644,22 +704,24 @@ class CombatOrchestrator:
                 status=CombatStatus.PLAYER_DOWN_NO_ALLIES,
                 final_state=state,
                 death_saves_remaining=saves_remaining,
+                final_registry=registry,
             )
         return None
 
     def _assess_combat(
-        self, state: EncounterState, last_narration: str
+        self, state: EncounterState, registry: ActorRegistry, last_narration: str
     ) -> CombatAssessment:
         actor_summaries = [
             {
-                "actor_id": a.actor_id,
-                "name": a.name,
-                "actor_type": a.actor_type.value,
-                "hp_current": a.hp_current,
-                "hp_max": a.hp_max,
-                "conditions": list(a.conditions),
+                "actor_id": registry.actors[aid].actor_id,
+                "name": registry.actors[aid].name,
+                "actor_type": registry.actors[aid].actor_type.value,
+                "hp_current": registry.actors[aid].hp_current,
+                "hp_max": registry.actors[aid].hp_max,
+                "conditions": list(registry.actors[aid].conditions),
             }
-            for a in state.actors.values()
+            for aid in state.actor_ids
+            if aid in registry.actors
         ]
         payload = {
             "actor_summaries": actor_summaries,
@@ -672,8 +734,8 @@ class CombatOrchestrator:
         )
 
     def _auto_death_save(
-        self, state: EncounterState, actor: ActorState
-    ) -> EncounterState:
+        self, state: EncounterState, registry: ActorRegistry, actor: ActorState
+    ) -> tuple[EncounterState, ActorRegistry]:
         roll_result = roll("1d20")
         successes = actor.death_save_successes
         failures = actor.death_save_failures
@@ -722,6 +784,4 @@ class CombatOrchestrator:
                 f" {outcome} (rolled {roll_result})."
             )
 
-        updated_actors = dict(state.actors)
-        updated_actors[actor.actor_id] = updated
-        return replace(state, actors=updated_actors)
+        return state, registry.with_actor(updated)

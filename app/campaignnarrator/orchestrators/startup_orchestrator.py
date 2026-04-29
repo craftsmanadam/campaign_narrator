@@ -53,7 +53,7 @@ class StartupOrchestrator:
         intent = self._interpreter.interpret(raw, has_campaign=True)
 
         if intent == "load_campaign":
-            self._module_orchestrator.run(campaign=campaign, player=self._player)
+            self._module_orchestrator.run(campaign=campaign)
         elif intent == "new_campaign":
             self._io.display(_DESTRUCTION_WARNING)
             confirm_raw = self._io.prompt("> ")

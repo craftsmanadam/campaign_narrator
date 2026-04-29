@@ -50,6 +50,31 @@ def _get_free_port() -> int:
         return int(candidate.getsockname()[1])
 
 
+def _seed_actor_registry_from_encounter(
+    encounter_file: Path,
+    runtime_data_root: Path,
+) -> None:
+    """Populate actor_registry.json from the encounter fixture's old-format actors dict.
+
+    Encounter fixtures pre-dating the registry migration store actor state
+    inside an 'actors' dict. After migration, actors live in ActorRegistry.
+    This helper seeds the registry so the app can find all actors on load.
+    """
+    try:
+        encounter_data = json.loads(encounter_file.read_text(encoding="utf-8"))
+    except OSError, json.JSONDecodeError:
+        return
+    actors = encounter_data.get("actors", {})
+    if not actors:
+        return
+    registry_path = runtime_data_root / "memory" / "actor_registry.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        json.dumps({"actors": actors}, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
 def _overlay_runtime_fixtures(runtime_root: Path) -> None:
     """Copy runtime-specific acceptance fixtures into the temp data root."""
 
@@ -223,6 +248,9 @@ def configure_openai_api_for_scenario_with_encounter(
         active_path = runtime_data_root / "state" / "encounters" / "active.json"
         active_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(named_encounter, active_path)
+        # Populate actor_registry.json from the encounter's actor data so the
+        # registry is consistent with the encounter fixture on first load.
+        _seed_actor_registry_from_encounter(named_encounter, runtime_data_root)
     active_wiremock_scenario = _ENCOUNTER_TO_WIREMOCK_SCENARIO.get(scenario_name, "")
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(

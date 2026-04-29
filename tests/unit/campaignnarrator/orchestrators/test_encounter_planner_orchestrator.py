@@ -19,6 +19,7 @@ from campaignnarrator.domain.models import (
     EncounterRecoveryResult,
     EncounterTemplate,
     EncounterTransition,
+    GameState,
     Milestone,
     MilestoneAchieved,
     ModuleState,
@@ -228,6 +229,7 @@ class TestEmptyPlanDetection:
             milestone_achieved=False,
         )
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -253,6 +255,7 @@ class TestEmptyPlanDetection:
             status="viable", reason="ok", milestone_achieved=False
         )
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -279,6 +282,7 @@ class TestEmptyPlanDetection:
             status="viable", reason="ok", milestone_achieved=False
         )
         repos.memory.retrieve_relevant.return_value = ["A prior narrative entry."]
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -300,6 +304,7 @@ class TestEmptyPlanDetection:
             status="viable", reason="ok", milestone_achieved=False
         )
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -391,6 +396,7 @@ class TestViablePath:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -454,6 +460,7 @@ class TestRecovery:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -572,6 +579,7 @@ class TestRecovery:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -687,6 +695,7 @@ class TestInstantiation:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -714,7 +723,7 @@ class TestInstantiation:
             module=module, campaign=_make_campaign(), player=player
         )
         assert isinstance(result, EncounterReady)
-        assert player.actor_id in result.encounter_state.actors
+        assert player.actor_id in result.encounter_state.actor_ids
 
     def test_encounter_state_has_npc_actor(self) -> None:
         orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
@@ -722,7 +731,9 @@ class TestInstantiation:
             module=module, campaign=_make_campaign(), player=_make_player()
         )
         assert isinstance(result, EncounterReady)
-        assert "npc:goblin-a" in result.encounter_state.actors
+        # Non-persistent NPC gets encounter-scoped ID: npc:{encounter_id}:{template_npc_id}
+        # module_id="module-001", next_encounter_index=0 → encounter_id="module-001-enc-001"
+        assert "npc:module-001-enc-001:goblin-a" in result.encounter_state.actor_ids
 
     def test_encounter_state_has_npc_presence(self) -> None:
         orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
@@ -731,16 +742,16 @@ class TestInstantiation:
         )
         assert isinstance(result, EncounterReady)
         presence_ids = {p.actor_id for p in result.encounter_state.npc_presences}
-        assert "npc:goblin-a" in presence_ids
+        assert "npc:module-001-enc-001:goblin-a" in presence_ids
 
-    def test_npc_actor_id_uses_stable_template_npc_id(self) -> None:
-        """actor_id = f'npc:{template_npc_id}' — not position-based."""
+    def test_npc_actor_id_uses_template_npc_id(self) -> None:
+        """Non-persistent NPC actor_id = f'npc:{encounter_id}:{template_npc_id}' — not position-based."""
         orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
         result = orchestrator.prepare(
             module=module, campaign=_make_campaign(), player=_make_player()
         )
         assert isinstance(result, EncounterReady)
-        assert "npc:goblin-a" in result.encounter_state.actors
+        assert "npc:module-001-enc-001:goblin-a" in result.encounter_state.actor_ids
 
     def test_encounter_state_saved_to_repository(self) -> None:
         orchestrator, repos, _agents, module = self._make_viable_orchestrator()
@@ -771,6 +782,7 @@ class TestInstantiation:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
@@ -811,7 +823,7 @@ class TestInstantiation:
             transition=transition,
         )
         assert isinstance(result, EncounterReady)
-        assert "npc:elara" in result.encounter_state.actors
+        assert "npc:elara" in result.encounter_state.actor_ids
 
     def test_prepare_with_transition_adds_traveling_presence_as_interacted(
         self,
@@ -849,19 +861,46 @@ class TestInstantiation:
             player=_make_player(),
         )
         assert isinstance(result, EncounterReady)
-        assert "npc:elara" not in result.encounter_state.actors
+        assert "npc:elara" not in result.encounter_state.actor_ids
 
     def test_prepare_with_transition_skips_colliding_actor_id(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Traveling actor whose ID collides with a template NPC is skipped with a warning."""
-        # Template has template_npc_id="goblin-scout" → actor_id="npc:goblin-scout"
-        # Transition also has actor_id="npc:goblin-scout" → collision; template wins
-        orchestrator, _, _, _ = self._make_viable_orchestrator(
-            _make_simple_npc_template(npc_template_id="goblin-scout")
+        """Traveling actor whose ID collides with a persistent template NPC is skipped."""
+        # persistent=True → actor_id="npc:elara" (global, not encounter-scoped)
+        # Transition also carries actor_id="npc:elara" → collision; template wins
+        persistent_npc_template = EncounterTemplate(
+            template_id="enc-elara",
+            order=0,
+            setting="The herbalist's grove.",
+            purpose="Encounter the herbalist.",
+            npcs=(
+                EncounterNpc(
+                    template_npc_id="elara",
+                    display_name="Elara",
+                    role="herbalist",
+                    description="A traveling herbalist.",
+                    monster_name=None,
+                    stat_source="simple_npc",
+                    cr=0.0,
+                    persistent=True,
+                ),
+            ),
+            prerequisites=(),
+            expected_outcomes=(),
+            downstream_dependencies=(),
         )
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
+        repos.compendium.monster_index_path.return_value = None
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
         collision_transition = _make_transition(
-            actor_id="npc:goblin-scout", display_name="Scout"
+            actor_id="npc:elara", display_name="Elara"
         )
         with caplog.at_level(
             logging.WARNING,
@@ -869,9 +908,7 @@ class TestInstantiation:
         ):
             result = orchestrator.prepare(
                 module=_make_module(
-                    planned_encounters=(
-                        _make_simple_npc_template(npc_template_id="goblin-scout"),
-                    ),
+                    planned_encounters=(persistent_npc_template,),
                     next_encounter_index=0,
                 ),
                 campaign=_make_campaign(),
@@ -879,18 +916,45 @@ class TestInstantiation:
                 transition=collision_transition,
             )
         assert isinstance(result, EncounterReady)
-        assert "npc:goblin-scout" in result.encounter_state.actors
+        assert "npc:elara" in result.encounter_state.actor_ids
         assert "collision" in caplog.text.lower() or "skipping" in caplog.text.lower()
 
     def test_prepare_with_transition_skips_colliding_presence(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Traveling presence whose actor_id collides with a template presence is skipped."""
-        orchestrator, _, _, _ = self._make_viable_orchestrator(
-            _make_simple_npc_template(npc_template_id="goblin-scout")
+        """Traveling presence whose actor_id collides with a persistent template presence is skipped."""
+        persistent_npc_template = EncounterTemplate(
+            template_id="enc-elara",
+            order=0,
+            setting="The herbalist's grove.",
+            purpose="Encounter the herbalist.",
+            npcs=(
+                EncounterNpc(
+                    template_npc_id="elara",
+                    display_name="Elara",
+                    role="herbalist",
+                    description="A traveling herbalist.",
+                    monster_name=None,
+                    stat_source="simple_npc",
+                    cr=0.0,
+                    persistent=True,
+                ),
+            ),
+            prerequisites=(),
+            expected_outcomes=(),
+            downstream_dependencies=(),
         )
+        repos = _make_repos()
+        agents = _make_agents()
+        repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
+        repos.compendium.monster_index_path.return_value = None
+        agents.planner.assess_divergence.return_value = DivergenceAssessment(
+            status="viable", reason="ok", milestone_achieved=False
+        )
+        orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
         collision_transition = _make_transition(
-            actor_id="npc:goblin-scout", display_name="Scout"
+            actor_id="npc:elara", display_name="Elara"
         )
         with caplog.at_level(
             logging.WARNING,
@@ -898,9 +962,7 @@ class TestInstantiation:
         ):
             result = orchestrator.prepare(
                 module=_make_module(
-                    planned_encounters=(
-                        _make_simple_npc_template(npc_template_id="goblin-scout"),
-                    ),
+                    planned_encounters=(persistent_npc_template,),
                     next_encounter_index=0,
                 ),
                 campaign=_make_campaign(),
@@ -908,18 +970,17 @@ class TestInstantiation:
                 transition=collision_transition,
             )
         assert isinstance(result, EncounterReady)
-        goblin_presences = [
-            p
-            for p in result.encounter_state.npc_presences
-            if p.actor_id == "npc:goblin-scout"
+        elara_presences = [
+            p for p in result.encounter_state.npc_presences if p.actor_id == "npc:elara"
         ]
-        assert len(goblin_presences) == 1
+        assert len(elara_presences) == 1
 
     def test_cr_scaling_applied_before_instantiation(self) -> None:
         """Over-budget NPCs are trimmed by scale_encounter_npcs before actor creation."""
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
@@ -961,12 +1022,126 @@ class TestInstantiation:
         )
         assert isinstance(result, EncounterReady)
         npc_actors = [
-            a
-            for a in result.encounter_state.actors.values()
-            if a.actor_id.startswith("npc:")
+            aid for aid in result.encounter_state.actor_ids if aid.startswith("npc:")
         ]
         expected_npc_count = 1
         assert len(npc_actors) == expected_npc_count
+
+    def test_non_persistent_npc_gets_encounter_scoped_id(self) -> None:
+        """Non-persistent NPC actor_id = npc:{encounter_id}:{template_npc_id}."""
+        orchestrator, _repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        # module_id="module-001", next_encounter_index=0 → encounter_id="module-001-enc-001"
+        assert "npc:module-001-enc-001:goblin-a" in result.encounter_state.actor_ids
+        assert "npc:goblin-a" not in result.encounter_state.actor_ids
+
+    def test_persistent_npc_gets_global_id(self) -> None:
+        """Persistent NPC actor_id = npc:{template_npc_id} (no encounter prefix)."""
+        persistent_template = EncounterTemplate(
+            template_id="enc-001",
+            order=0,
+            setting="The docks.",
+            purpose="Intro.",
+            npcs=(
+                EncounterNpc(
+                    template_npc_id="elara",
+                    display_name="Elara",
+                    role="herbalist",
+                    description="A traveling herbalist.",
+                    monster_name=None,
+                    stat_source="simple_npc",
+                    cr=0.0,
+                    persistent=True,
+                ),
+            ),
+            prerequisites=(),
+            expected_outcomes=(),
+            downstream_dependencies=(),
+        )
+        orchestrator, _repos, _agents, _ = self._make_viable_orchestrator(
+            persistent_template
+        )
+        result = orchestrator.prepare(
+            module=_make_module(
+                planned_encounters=(persistent_template,), next_encounter_index=0
+            ),
+            campaign=_make_campaign(),
+            player=_make_player(),
+        )
+        assert isinstance(result, EncounterReady)
+        assert "npc:elara" in result.encounter_state.actor_ids
+        assert "npc:module-001-enc-001:elara" not in result.encounter_state.actor_ids
+
+    def test_traveling_actor_retains_original_id(self) -> None:
+        """Traveling actor's ID is preserved unchanged — not scoped or renamed."""
+        orchestrator, _, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template()
+        )
+        transition = _make_transition(actor_id="npc:elara", display_name="Elara")
+        result = orchestrator.prepare(
+            module=_make_module(
+                planned_encounters=(_make_simple_npc_template(),),
+                next_encounter_index=0,
+            ),
+            campaign=_make_campaign(),
+            player=_make_player(),
+            transition=transition,
+        )
+        assert isinstance(result, EncounterReady)
+        assert "npc:elara" in result.encounter_state.actor_ids
+
+    def test_instantiate_writes_actors_to_registry(self) -> None:
+        """_instantiate() calls update_game_state with a registry containing the new NPC."""
+        orchestrator, repos, _agents, module = self._make_viable_orchestrator()
+        orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert repos.memory.update_game_state.called
+        updated_state = repos.memory.update_game_state.call_args[0][0]
+        assert "npc:module-001-enc-001:goblin-a" in updated_state.actor_registry.actors
+
+    def test_instantiate_writes_player_to_registry(self) -> None:
+        """_instantiate() includes the player actor in the registry update."""
+        player = _make_player()
+        orchestrator, repos, _agents, module = self._make_viable_orchestrator()
+        orchestrator.prepare(module=module, campaign=_make_campaign(), player=player)
+        updated_state = repos.memory.update_game_state.call_args[0][0]
+        assert player.actor_id in updated_state.actor_registry.actors
+
+    def test_instantiate_writes_traveling_actor_to_registry(self) -> None:
+        """Traveling actors are included in the registry write."""
+        orchestrator, repos, _, _ = self._make_viable_orchestrator(
+            _make_simple_npc_template()
+        )
+        transition = _make_transition(actor_id="npc:elara", display_name="Elara")
+        orchestrator.prepare(
+            module=_make_module(
+                planned_encounters=(_make_simple_npc_template(),),
+                next_encounter_index=0,
+            ),
+            campaign=_make_campaign(),
+            player=_make_player(),
+            transition=transition,
+        )
+        updated_state = repos.memory.update_game_state.call_args[0][0]
+        assert "npc:elara" in updated_state.actor_registry.actors
+
+    def test_instantiate_update_game_state_includes_encounter(self) -> None:
+        """update_game_state must include the new encounter so run_encounter() doesn't see None."""
+        orchestrator, repos, _agents, module = self._make_viable_orchestrator()
+        result = orchestrator.prepare(
+            module=module, campaign=_make_campaign(), player=_make_player()
+        )
+        assert isinstance(result, EncounterReady)
+        updated_state = repos.memory.update_game_state.call_args[0][0]
+        assert updated_state.encounter is not None
+        assert (
+            updated_state.encounter.encounter_id == result.encounter_state.encounter_id
+        )
+        assert "npc:module-001-enc-001:goblin-a" in updated_state.actor_registry.actors
 
 
 # ─── Retry logic ─────────────────────────────────────────────────────────────
@@ -980,6 +1155,7 @@ class TestTransitionThreading:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -999,7 +1175,7 @@ class TestTransitionThreading:
         )
 
         assert isinstance(result, EncounterReady)
-        assert "npc:elara" in result.encounter_state.actors
+        assert "npc:elara" in result.encounter_state.actor_ids
 
 
 class TestRetryLogic:
@@ -1042,6 +1218,7 @@ class TestRetryLogic:
         repos = _make_repos()
         agents = _make_agents()
         repos.memory.retrieve_relevant.return_value = []
+        repos.memory.load_game_state.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.side_effect = [

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from campaignnarrator.domain.models import ActorState
-from campaignnarrator.repositories.actor_repository import actor_state_from_seed
+from campaignnarrator.repositories.player_repository import player_template_from_seed
 
 
 class CharacterTemplateRepository:
@@ -33,10 +33,10 @@ class CharacterTemplateRepository:
             )
         seed = json.loads(path.read_text())
         # Templates use null for name; replace with empty string so
-        # actor_state_from_seed can parse it (name is required in the domain).
+        # player_template_from_seed can parse it (name is required in the domain).
         if seed.get("name") is None:
             seed["name"] = ""
-        return actor_state_from_seed(seed)
+        return player_template_from_seed(seed)
 
     def available_classes(self) -> list[str]:
         """Return class names for all available templates, sorted."""

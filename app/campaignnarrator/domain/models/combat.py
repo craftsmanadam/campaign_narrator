@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from .actor_registry import ActorRegistry
 from .encounter_state import EncounterState
 
 
@@ -19,13 +20,14 @@ class CombatStatus(StrEnum):
     SAVED_AND_QUIT = "saved_and_quit"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class CombatResult:
     """Returned by CombatOrchestrator to EncounterOrchestrator when combat ends."""
 
     status: CombatStatus
     final_state: EncounterState
     death_saves_remaining: int | None  # None unless status is PLAYER_DOWN_NO_ALLIES
+    final_registry: ActorRegistry = field(default_factory=ActorRegistry)
 
 
 class CombatOutcome(BaseModel):

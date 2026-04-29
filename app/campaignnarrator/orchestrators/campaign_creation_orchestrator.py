@@ -143,4 +143,4 @@ class CampaignCreationOrchestrator:
         self._repos.module.save(module)
 
         # Delegate encounter loop to ModuleOrchestrator
-        self._module_orchestrator.run(campaign=campaign, player=self._player)
+        self._module_orchestrator.run(campaign=campaign)

@@ -6,11 +6,11 @@ from dataclasses import dataclass, replace
 
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
 from campaignnarrator.domain.models import ActorState, PlayerIO
-from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.character_template_repository import (
     CharacterTemplateRepository,
 )
 from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.player_repository import PlayerRepository
 
 _HELP_TRIGGERS = {"help", "help me", "assist", "write it for me", "help me write"}
 _ACCEPT_TRIGGERS = {"accept", "yes", "ok", "looks good", "perfect", "use it"}
@@ -20,7 +20,7 @@ _ACCEPT_TRIGGERS = {"accept", "yes", "ok", "looks good", "perfect", "use it"}
 class CharacterCreationRepositories:
     """All repositories required by CharacterCreationOrchestrator."""
 
-    actor: ActorRepository
+    actor: PlayerRepository
     template: CharacterTemplateRepository
     memory: MemoryRepository
 

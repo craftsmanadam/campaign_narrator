@@ -324,7 +324,6 @@ def _make_completed_encounter() -> EncounterState:
         encounter_id="module-001-enc-001",
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         setting="The fog-shrouded docks of Darkholm.",
-        actors={},
         public_events=("Aldric fought a cultist.",),
         outcome=(
             "The cultist was subdued and revealed the location of the Drowned Lady."
@@ -449,7 +448,6 @@ def _make_in_progress_encounter() -> EncounterState:
         encounter_id="goblin-camp",
         phase=EncounterPhase.SOCIAL,
         setting="A ruined roadside camp.",
-        actors={},
         public_events=("The goblin scout eyed you warily.",),
         outcome=None,
     )

@@ -171,3 +171,30 @@ def test_encounter_template_empty_npcs_allowed() -> None:
         downstream_dependencies=(),
     )
     assert template.npcs == ()
+
+
+def test_encounter_npc_persistent_defaults_false() -> None:
+    npc = EncounterNpc(
+        template_npc_id="goblin-scout",
+        display_name="Goblin Scout",
+        role="scout",
+        description="A small goblin.",
+        monster_name="Goblin",
+        stat_source="monster_compendium",
+        cr=0.25,
+    )
+    assert npc.persistent is False
+
+
+def test_encounter_npc_persistent_can_be_set_true() -> None:
+    npc = EncounterNpc(
+        template_npc_id="elara",
+        display_name="Elara",
+        role="herbalist",
+        description="A traveling herbalist.",
+        monster_name=None,
+        stat_source="simple_npc",
+        cr=0.0,
+        persistent=True,
+    )
+    assert npc.persistent is True

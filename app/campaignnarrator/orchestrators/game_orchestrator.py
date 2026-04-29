@@ -9,8 +9,8 @@ from campaignnarrator.orchestrators.character_creation_orchestrator import (
     CharacterCreationOrchestrator,
 )
 from campaignnarrator.orchestrators.startup_orchestrator import StartupOrchestrator
-from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.campaign_repository import CampaignRepository
+from campaignnarrator.repositories.player_repository import PlayerRepository
 
 
 class GameOrchestrator:
@@ -19,7 +19,7 @@ class GameOrchestrator:
     def __init__(
         self,
         *,
-        actor_repository: ActorRepository,
+        actor_repository: PlayerRepository,
         campaign_repository: CampaignRepository,
         character_creation_orchestrator: CharacterCreationOrchestrator,
         campaign_creation_orchestrator: CampaignCreationOrchestrator,
@@ -34,7 +34,7 @@ class GameOrchestrator:
     def run(self) -> None:
         """Detect game state and delegate to the appropriate sub-orchestrator."""
         try:
-            self._actor_repo.load_player()
+            self._actor_repo.load()
             player_exists = True
         except FileNotFoundError:
             player_exists = False

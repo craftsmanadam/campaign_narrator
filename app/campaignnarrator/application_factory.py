@@ -48,7 +48,6 @@ from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestratorRepositories,
 )
 from campaignnarrator.orchestrators.startup_orchestrator import StartupOrchestrator
-from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.campaign_repository import CampaignRepository
 from campaignnarrator.repositories.character_template_repository import (
     CharacterTemplateRepository,
@@ -57,6 +56,7 @@ from campaignnarrator.repositories.compendium_repository import CompendiumReposi
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.memory_repository import MemoryRepository
 from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.repositories.player_repository import PlayerRepository
 from campaignnarrator.repositories.rules_repository import RulesRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.settings import Settings
@@ -74,7 +74,7 @@ class ApplicationGraph:
 class _Repositories:
     """All repositories, built in one place."""
 
-    actor: ActorRepository
+    actor: PlayerRepository
     encounter: EncounterRepository
     campaign: CampaignRepository
     module: ModuleRepository
@@ -102,7 +102,7 @@ class _LazyGameOrchestrator:
     def __init__(
         self,
         *,
-        actor_repository: ActorRepository,
+        actor_repository: PlayerRepository,
         campaign_repository: CampaignRepository,
         memory_repository: MemoryRepository,
         character_creation_orchestrator: CharacterCreationOrchestrator,
@@ -123,7 +123,7 @@ class _LazyGameOrchestrator:
     def run(self) -> None:
         """Detect game state and route to the appropriate sub-orchestrator."""
         try:
-            player = self._actor_repo.load_player()
+            player = self._actor_repo.load()
             player_exists = True
         except FileNotFoundError:
             player_exists = False
@@ -177,14 +177,14 @@ class ApplicationFactory:
             else self._data_root / "memory" / "lancedb"
         )
 
-        actor = ActorRepository(self._data_root / "state")
+        actor = PlayerRepository(self._data_root / "state")
         encounter = EncounterRepository(self._data_root / "state")
         campaign = CampaignRepository(self._data_root)
         module = ModuleRepository(self._data_root)
         rules = RulesRepository(self._data_root / "rules")
         compendium = CompendiumRepository(self._data_root / "compendium")
         state = StateRepository(
-            actor_repo=actor,
+            player_repo=actor,
             encounter_repo=encounter,
             compendium=compendium,
         )

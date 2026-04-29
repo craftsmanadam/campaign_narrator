@@ -22,9 +22,9 @@ def _make_orchestrator(
     mock_startup = MagicMock()
 
     if player_exists:
-        mock_actor_repo.load_player.return_value = replace(TALIA, actor_id="pc:player")
+        mock_actor_repo.load.return_value = replace(TALIA, actor_id="pc:player")
     else:
-        mock_actor_repo.load_player.side_effect = FileNotFoundError("no player")
+        mock_actor_repo.load.side_effect = FileNotFoundError("no player")
 
     mock_campaign_repo.exists.return_value = campaign_exists
 

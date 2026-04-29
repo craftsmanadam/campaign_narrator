@@ -1,0 +1,296 @@
+{
+  "actors": {
+    "npc:goblin-1": {
+      "ac_breakdown": [
+        "Leather: 11",
+        "Shield: +2",
+        "DEX: +2"
+      ],
+      "action_options": [
+        "Attack",
+        "Disengage",
+        "Hide"
+      ],
+      "actor_id": "npc:goblin-1",
+      "actor_type": "npc",
+      "armor_class": 15,
+      "attacks_per_action": 1,
+      "available_spells": [],
+      "bonus_action_options": [],
+      "charisma": 8,
+      "concentration": null,
+      "condition_immunities": [],
+      "conditions": [],
+      "constitution": 10,
+      "damage_immunities": [],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "death_save_failures": 0,
+      "death_save_successes": 0,
+      "dexterity": 14,
+      "equipped_weapons": [
+        {
+          "attack_bonus": 4,
+          "damage_bonus": 2,
+          "damage_dice": "1d6",
+          "damage_type": "slashing",
+          "name": "Scimitar",
+          "properties": []
+        }
+      ],
+      "feats": [],
+      "hp_current": 7,
+      "hp_max": 7,
+      "hp_temp": 0,
+      "initiative_bonus": 2,
+      "intelligence": 10,
+      "inventory": [],
+      "is_visible": true,
+      "name": "Goblin Scout 1",
+      "personality": "Cowardly and cruel. Attacks when it has the advantage. Flees when wounded.",
+      "proficiency_bonus": 2,
+      "reaction_options": [],
+      "resources": [],
+      "saving_throws": [
+        [
+          "dexterity",
+          4
+        ]
+      ],
+      "speed": 30,
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "strength": 8,
+      "wisdom": 8
+    },
+    "npc:goblin-2": {
+      "ac_breakdown": [
+        "Leather: 11",
+        "Shield: +2",
+        "DEX: +2"
+      ],
+      "action_options": [
+        "Attack",
+        "Disengage",
+        "Hide"
+      ],
+      "actor_id": "npc:goblin-2",
+      "actor_type": "npc",
+      "armor_class": 15,
+      "attacks_per_action": 1,
+      "available_spells": [],
+      "bonus_action_options": [],
+      "charisma": 8,
+      "concentration": null,
+      "condition_immunities": [],
+      "conditions": [],
+      "constitution": 10,
+      "damage_immunities": [],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "death_save_failures": 0,
+      "death_save_successes": 0,
+      "dexterity": 14,
+      "equipped_weapons": [
+        {
+          "attack_bonus": 4,
+          "damage_bonus": 2,
+          "damage_dice": "1d6",
+          "damage_type": "slashing",
+          "name": "Scimitar",
+          "properties": []
+        }
+      ],
+      "feats": [],
+      "hp_current": 7,
+      "hp_max": 7,
+      "hp_temp": 0,
+      "initiative_bonus": 2,
+      "intelligence": 10,
+      "inventory": [],
+      "is_visible": true,
+      "name": "Goblin Scout 2",
+      "personality": "Cowardly and cruel. Attacks when it has the advantage. Flees when wounded.",
+      "proficiency_bonus": 2,
+      "reaction_options": [],
+      "resources": [],
+      "saving_throws": [
+        [
+          "dexterity",
+          4
+        ]
+      ],
+      "speed": 30,
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "strength": 8,
+      "wisdom": 8
+    },
+    "npc:goblin-3": {
+      "ac_breakdown": [
+        "Leather: 11",
+        "Shield: +2",
+        "DEX: +2"
+      ],
+      "action_options": [
+        "Attack",
+        "Disengage",
+        "Hide"
+      ],
+      "actor_id": "npc:goblin-3",
+      "actor_type": "npc",
+      "armor_class": 15,
+      "attacks_per_action": 1,
+      "available_spells": [],
+      "bonus_action_options": [],
+      "charisma": 8,
+      "concentration": null,
+      "condition_immunities": [],
+      "conditions": [],
+      "constitution": 10,
+      "damage_immunities": [],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "death_save_failures": 0,
+      "death_save_successes": 0,
+      "dexterity": 14,
+      "equipped_weapons": [
+        {
+          "attack_bonus": 4,
+          "damage_bonus": 2,
+          "damage_dice": "1d6",
+          "damage_type": "slashing",
+          "name": "Scimitar",
+          "properties": []
+        }
+      ],
+      "feats": [],
+      "hp_current": 7,
+      "hp_max": 7,
+      "hp_temp": 0,
+      "initiative_bonus": 2,
+      "intelligence": 10,
+      "inventory": [],
+      "is_visible": true,
+      "name": "Goblin Scout 3",
+      "personality": "Cowardly and cruel. Attacks when it has the advantage. Flees when wounded.",
+      "proficiency_bonus": 2,
+      "reaction_options": [],
+      "resources": [],
+      "saving_throws": [
+        [
+          "dexterity",
+          4
+        ]
+      ],
+      "speed": 30,
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "strength": 8,
+      "wisdom": 8
+    },
+    "npc:goblin-4": {
+      "ac_breakdown": [
+        "Leather: 11",
+        "Shield: +2",
+        "DEX: +2"
+      ],
+      "action_options": [
+        "Attack",
+        "Disengage",
+        "Hide"
+      ],
+      "actor_id": "npc:goblin-4",
+      "actor_type": "npc",
+      "armor_class": 15,
+      "attacks_per_action": 1,
+      "available_spells": [],
+      "bonus_action_options": [],
+      "charisma": 8,
+      "concentration": null,
+      "condition_immunities": [],
+      "conditions": [],
+      "constitution": 10,
+      "damage_immunities": [],
+      "damage_resistances": [],
+      "damage_vulnerabilities": [],
+      "death_save_failures": 0,
+      "death_save_successes": 0,
+      "dexterity": 14,
+      "equipped_weapons": [
+        {
+          "attack_bonus": 4,
+          "damage_bonus": 2,
+          "damage_dice": "1d6",
+          "damage_type": "slashing",
+          "name": "Scimitar",
+          "properties": []
+        }
+      ],
+      "feats": [],
+      "hp_current": 7,
+      "hp_max": 7,
+      "hp_temp": 0,
+      "initiative_bonus": 2,
+      "intelligence": 10,
+      "inventory": [],
+      "is_visible": true,
+      "name": "Goblin Scout 4",
+      "personality": "Cowardly and cruel. Attacks when it has the advantage. Flees when wounded.",
+      "proficiency_bonus": 2,
+      "reaction_options": [],
+      "resources": [],
+      "saving_throws": [
+        [
+          "dexterity",
+          4
+        ]
+      ],
+      "speed": 30,
+      "spell_slots": [],
+      "spell_slots_max": [],
+      "strength": 8,
+      "wisdom": 8
+    },
+    "npc:goblin-scout": {
+      "actor_id": "npc:goblin-scout",
+      "actor_type": "npc",
+      "armor_class": 15,
+      "attacks_per_action": 1,
+      "charisma": 8,
+      "conditions": [],
+      "constitution": 10,
+      "dexterity": 14,
+      "hp_current": 7,
+      "hp_max": 7,
+      "initiative_bonus": 2,
+      "intelligence": 10,
+      "is_visible": true,
+      "name": "Goblin Scout",
+      "proficiency_bonus": 2,
+      "speed": 30,
+      "strength": 8,
+      "wisdom": 8
+    },
+    "pc:talia": {
+      "actor_id": "pc:talia",
+      "actor_type": "pc",
+      "armor_class": 18,
+      "attacks_per_action": 2,
+      "charisma": 8,
+      "conditions": [],
+      "constitution": 16,
+      "dexterity": 14,
+      "hp_current": 12,
+      "hp_max": 12,
+      "initiative_bonus": 5,
+      "intelligence": 10,
+      "is_visible": true,
+      "name": "Talia",
+      "proficiency_bonus": 3,
+      "speed": 30,
+      "strength": 18,
+      "wisdom": 12
+    }
+  }
+}

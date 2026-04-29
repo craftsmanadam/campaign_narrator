@@ -30,8 +30,8 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     OrchestratorAgents,
     OrchestratorRepositories,
 )
-from campaignnarrator.repositories.actor_repository import ActorRepository
 from campaignnarrator.repositories.encounter_repository import EncounterRepository
+from campaignnarrator.repositories.player_repository import PlayerRepository
 from campaignnarrator.repositories.state_repository import StateRepository
 from pytest_bdd import given, parsers, scenario, then, when
 
@@ -123,17 +123,26 @@ class FakeMemoryRepository:
 
     def __init__(self, state_repo: StateRepository | None = None) -> None:
         self._state_repo = state_repo
+        self._registry_override: ActorRegistry | None = None
         self.appended_events: list[dict] = []
         self.stored_narratives: list[tuple[str, dict]] = []
         self.staged_narrations: list[tuple[str, dict]] = []
 
+    def override_registry(self, registry: ActorRegistry) -> None:
+        """Replace the registry used by load_game_state() for test setup."""
+        self._registry_override = registry
+
     def load_game_state(self) -> GameState:
         if self._state_repo is not None:
             encounter = self._state_repo.load_encounter()
-            player = self._state_repo.load_player()
+            if self._registry_override is not None:
+                registry = self._registry_override
+            else:
+                player = self._state_repo.load_player()
+                registry = ActorRegistry().with_actor(player)
             return GameState(
                 encounter=encounter,
-                actor_registry=ActorRegistry().with_actor(player),
+                actor_registry=registry,
             )
         raise ValueError("no state_repo configured")  # noqa: TRY003
 
@@ -195,7 +204,7 @@ def _make_npc() -> object:
 
 
 def _make_social_repository(tmp_path: Path) -> StateRepository:
-    actor_repo = ActorRepository(tmp_path)
+    actor_repo = PlayerRepository(tmp_path)
     actor_repo.save(_make_player())
     encounter_repo = EncounterRepository(tmp_path)
     encounter_repo.save(
@@ -203,13 +212,11 @@ def _make_social_repository(tmp_path: Path) -> StateRepository:
             encounter_id="goblin-camp",
             phase=EncounterPhase.SOCIAL,
             setting="A ruined roadside camp.",
-            actors={
-                "pc:talia": _make_player(),
-                "npc:goblin-scout": _make_npc(),
-            },
+            actor_ids=("pc:talia", "npc:goblin-scout"),
+            player_actor_id="pc:talia",
         )
     )
-    return StateRepository(actor_repo=actor_repo, encounter_repo=encounter_repo)
+    return StateRepository(player_repo=actor_repo, encounter_repo=encounter_repo)
 
 
 # ---------------------------------------------------------------------------
@@ -301,12 +308,11 @@ def player_inputs_with_hostile_intent(
     state_repo: StateRepository = context["state_repo"]
     memory_repo: FakeMemoryRepository = context["memory_repo"]
 
-    # Patch the encounter to have a dead goblin so combat resolves quickly
-    game_state = state_repo.load()
-    updated_actors = dict(game_state.encounter.actors)
-    updated_actors["npc:goblin-scout"] = goblin_dead
-    updated_encounter = replace(game_state.encounter, actors=updated_actors)
-    state_repo.save(GameState(encounter=updated_encounter))
+    # Patch the registry to have a dead goblin so combat resolves quickly.
+    # Actors now live in ActorRegistry, not in EncounterState.
+    player = state_repo.load_player()
+    updated_registry = ActorRegistry().with_actor(player).with_actor(goblin_dead)
+    memory_repo.override_registry(updated_registry)
 
     orchestrator = EncounterOrchestrator(
         repositories=OrchestratorRepositories(memory=memory_repo),
