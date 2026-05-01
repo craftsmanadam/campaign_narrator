@@ -7,78 +7,7 @@ from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from types import MappingProxyType
 
-from .actor_registry import ActorRegistry
-from .actor_state import ActorState, ActorType
 from .npc_presence import NpcPresence, NpcPresenceStatus
-
-# Statuses that mean the NPC is physically in the scene.
-_ACTIVE_NPC_STATUSES = frozenset(
-    {
-        NpcPresenceStatus.AVAILABLE,
-        NpcPresenceStatus.PRESENT,
-        NpcPresenceStatus.INTERACTED,
-        NpcPresenceStatus.CONCEALED,
-    }
-)
-
-
-class _PlayerNotFoundError(RuntimeError):
-    """Player actor was not found in the registry."""
-
-    def __init__(self, player_actor_id: str) -> None:
-        super().__init__(
-            f"Player actor '{player_actor_id}' not found in registry. "
-            "Registry may not have been bootstrapped before this call."
-        )
-
-
-def get_player(registry: ActorRegistry, player_actor_id: str) -> ActorState:
-    """Look up the player actor from the registry.
-
-    Raises RuntimeError (not KeyError) so callers get a readable message
-    rather than a raw dict miss.
-    """
-    player = registry.actors.get(player_actor_id)
-    if player is None:
-        raise _PlayerNotFoundError(player_actor_id)
-    return player
-
-
-def visible_actor_names(
-    state: EncounterState, registry: ActorRegistry
-) -> tuple[str, ...]:
-    """Return visible actor names for actors in encounter (actor_ids order)."""
-    return tuple(
-        registry.actors[aid].name
-        for aid in state.actor_ids
-        if aid in registry.actors and registry.actors[aid].is_visible
-    )
-
-
-def public_actor_summaries(
-    state: EncounterState, registry: ActorRegistry
-) -> tuple[str, ...]:
-    """Return narration-safe summaries for actors visible in the current scene.
-
-    When npc_presences is empty (old encounters or bare test fixtures) all
-    encounter actors are included. When populated, only PCs and actively
-    present NPCs appear. MENTIONED and DEPARTED NPCs are excluded.
-    """
-    if not state.npc_presences:
-        return tuple(
-            registry.actors[aid].narrative_summary()
-            for aid in state.actor_ids
-            if aid in registry.actors
-        )
-    present_ids = {
-        p.actor_id for p in state.npc_presences if p.status in _ACTIVE_NPC_STATUSES
-    }
-    return tuple(
-        registry.actors[aid].narrative_summary()
-        for aid in state.actor_ids
-        if aid in registry.actors
-        and (registry.actors[aid].actor_type == ActorType.PC or aid in present_ids)
-    )
 
 
 class EncounterPhase(StrEnum):

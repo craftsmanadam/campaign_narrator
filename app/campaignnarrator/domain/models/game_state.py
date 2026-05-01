@@ -6,11 +6,31 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 
 from .actor_registry import ActorRegistry
-from .actor_state import ActorState
+from .actor_state import ActorState, ActorType
 from .campaign_state import CampaignState, Milestone, ModuleState
 from .encounter_state import EncounterState
-from .encounter_state import get_player as _get_player
 from .encounter_template import EncounterTemplate
+from .npc_presence import NpcPresenceStatus
+
+
+class _PlayerNotFoundError(RuntimeError):
+    """Player actor was not found in the registry."""
+
+    def __init__(self, player_actor_id: str) -> None:
+        super().__init__(
+            f"Player actor '{player_actor_id}' not found in registry. "
+            "Registry may not have been bootstrapped before this call."
+        )
+
+
+_ACTIVE_NPC_STATUSES = frozenset(
+    {
+        NpcPresenceStatus.AVAILABLE,
+        NpcPresenceStatus.PRESENT,
+        NpcPresenceStatus.INTERACTED,
+        NpcPresenceStatus.CONCEALED,
+    }
+)
 
 
 class _InvalidCampaignSeedError(TypeError):
@@ -56,7 +76,48 @@ class GameState:
 
     def get_player(self) -> ActorState:
         """Look up the player actor from the registry using campaign.player_actor_id."""
-        return _get_player(self.actor_registry, self.campaign.player_actor_id)  # type: ignore[union-attr]
+        player_actor_id = self.campaign.player_actor_id  # type: ignore[union-attr]
+        player = self.actor_registry.actors.get(player_actor_id)
+        if player is None:
+            raise _PlayerNotFoundError(player_actor_id)
+        return player
+
+    def visible_actor_names(self) -> tuple[str, ...]:
+        """Return visible actor names for actors in the current encounter."""
+        state = self.encounter  # type: ignore[assignment]
+        return tuple(
+            self.actor_registry.actors[aid].name
+            for aid in state.actor_ids
+            if aid in self.actor_registry.actors
+            and self.actor_registry.actors[aid].is_visible
+        )
+
+    def public_actor_summaries(self) -> tuple[str, ...]:
+        """Return narration-safe summaries for actors visible in the current scene.
+
+        When encounter.npc_presences is empty (old encounters or bare test fixtures) all
+        encounter actors are included. When populated, only PCs and actively
+        present NPCs appear. MENTIONED and DEPARTED NPCs are excluded.
+        """
+        state = self.encounter  # type: ignore[assignment]
+        if not state.npc_presences:
+            return tuple(
+                self.actor_registry.actors[aid].narrative_summary()
+                for aid in state.actor_ids
+                if aid in self.actor_registry.actors
+            )
+        present_ids = {
+            p.actor_id for p in state.npc_presences if p.status in _ACTIVE_NPC_STATUSES
+        }
+        return tuple(
+            self.actor_registry.actors[aid].narrative_summary()
+            for aid in state.actor_ids
+            if aid in self.actor_registry.actors
+            and (
+                self.actor_registry.actors[aid].actor_type == ActorType.PC
+                or aid in present_ids
+            )
+        )
 
     def to_json(self) -> dict[str, object]:
         """Serialise to a JSON-compatible dict.

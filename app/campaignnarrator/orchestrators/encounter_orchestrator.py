@@ -27,7 +27,6 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
-    public_actor_summaries,
 )
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.game_state_repository import GameStateRepository
@@ -259,9 +258,7 @@ class EncounterOrchestrator:
             phase=game_state.encounter.phase,
             setting=game_state.encounter.setting,
             recent_events=game_state.encounter.public_events[-5:],
-            actor_summaries=public_actor_summaries(
-                game_state.encounter, game_state.actor_registry
-            ),
+            actor_summaries=game_state.public_actor_summaries(),
             npc_presences=game_state.encounter.npc_presences,
         )
         _log.debug(
@@ -674,11 +671,7 @@ def _status_frame(game_state: GameState) -> NarrationFrame:
     return _frame(
         game_state,
         "status_response",
-        resolved_outcomes=(
-            "; ".join(
-                public_actor_summaries(game_state.encounter, game_state.actor_registry)
-            ),
-        ),
+        resolved_outcomes=("; ".join(game_state.public_actor_summaries()),),
         allowed_disclosures=("player HP", "inventory", "visible actors"),
     )
 
@@ -715,9 +708,7 @@ def _frame(
         purpose=purpose,
         phase=game_state.encounter.phase,
         setting=game_state.encounter.current_location or game_state.encounter.setting,
-        public_actor_summaries=public_actor_summaries(
-            game_state.encounter, game_state.actor_registry
-        ),
+        public_actor_summaries=game_state.public_actor_summaries(),
         npc_presences=tuple(
             p
             for p in game_state.encounter.npc_presences

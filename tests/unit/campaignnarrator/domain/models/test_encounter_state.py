@@ -20,9 +20,6 @@ from campaignnarrator.domain.models import (
     ModuleState,
     NpcPresence,
     NpcPresenceStatus,
-    get_player,
-    public_actor_summaries,
-    visible_actor_names,
 )
 
 from tests.fixtures.fighter_talia import TALIA
@@ -126,7 +123,12 @@ def test_encounter_state_tracks_public_and_hidden_state() -> None:
     assert registry.actors["pc:talia"].name == "Talia"
     assert state.hidden_facts["alarm_level"] == "high"
     assert state.public_events == ("Talia approaches the camp.",)
-    assert visible_actor_names(state, registry) == ("Talia", "Goblin Scout")
+    assert GameState(
+        encounter=state, actor_registry=registry
+    ).visible_actor_names() == (
+        "Talia",
+        "Goblin Scout",
+    )
 
 
 def test_initiative_turn_holds_actor_id_and_roll() -> None:
@@ -267,7 +269,9 @@ def test_encounter_state_public_actor_summaries_no_presences_includes_all() -> N
         npc_presences=(),
     )
     registry = ActorRegistry(actors={"pc:talia": TALIA, "npc:goblin-scout": goblin})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert len(summaries) == _EXPECTED_PUBLIC_ACTOR_COUNT
 
 
@@ -290,7 +294,9 @@ def test_encounter_state_public_actor_summaries_excludes_departed() -> None:
         npc_presences=(departed,),
     )
     registry = ActorRegistry(actors={"pc:talia": TALIA, "npc:goblin-scout": goblin})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert any("Talia" in s for s in summaries)
     assert not any("Goblin" in s for s in summaries)
 
@@ -306,7 +312,9 @@ def test_encounter_state_public_actor_summaries_pc_always_included() -> None:
         npc_presences=(),
     )
     registry = ActorRegistry(actors={"pc:talia": TALIA})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert any("Talia" in s for s in summaries)
 
 
@@ -329,7 +337,9 @@ def test_encounter_state_public_actor_summaries_includes_concealed() -> None:
         npc_presences=(concealed,),
     )
     registry = ActorRegistry(actors={"pc:talia": TALIA, "npc:goblin-scout": goblin})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert any("Goblin" in s for s in summaries)
 
 
@@ -440,7 +450,9 @@ def test_public_actor_summaries_excludes_mentioned_npcs() -> None:
         ),
     )
     registry = ActorRegistry(actors={"pc:talia": TALIA, "npc:elder": elder})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert not any("Elder" in s for s in summaries)
     assert any("pc:talia" in s or "talia" in s.lower() for s in summaries)
 
@@ -535,20 +547,6 @@ def test_game_state_accepts_actor_registry() -> None:
     assert TALIA.actor_id in state.actor_registry.actors
 
 
-def test_get_player_returns_actor_from_registry() -> None:
-    """get_player looks up the player by actor_id from the registry."""
-    registry = ActorRegistry().with_actor(TALIA)
-    result = get_player(registry, TALIA.actor_id)
-    assert result is TALIA
-
-
-def test_get_player_raises_runtime_error_when_absent() -> None:
-    """get_player raises RuntimeError with a readable message when player not in registry."""
-    registry = ActorRegistry()
-    with pytest.raises(RuntimeError, match="pc:talia"):
-        get_player(registry, "pc:talia")
-
-
 def test_encounter_state_actor_ids_field() -> None:
     """actor_ids is a stored tuple, not derived from actors dict."""
     state = EncounterState(
@@ -603,7 +601,9 @@ def test_visible_actor_names_module_level_function() -> None:
         player_actor_id="pc:talia",
     )
     registry = ActorRegistry(actors={"pc:talia": talia})
-    assert visible_actor_names(state, registry) == ("Talia",)
+    assert GameState(
+        encounter=state, actor_registry=registry
+    ).visible_actor_names() == ("Talia",)
 
 
 def test_public_actor_summaries_module_level_function() -> None:
@@ -636,7 +636,9 @@ def test_public_actor_summaries_module_level_function() -> None:
         player_actor_id="pc:talia",
     )
     registry = ActorRegistry(actors={"pc:talia": talia})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert len(summaries) == 1
     assert "Talia" in summaries[0]
 
@@ -734,7 +736,9 @@ def test_public_actor_summaries_filters_by_npc_presences() -> None:
         }
     )
     _expected_present_count = 2  # Talia (PC) + Goblin (PRESENT)
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     ids_in_summaries = [s for s in summaries if "Departed" in s]
     assert len(ids_in_summaries) == 0
     assert len(summaries) == _expected_present_count

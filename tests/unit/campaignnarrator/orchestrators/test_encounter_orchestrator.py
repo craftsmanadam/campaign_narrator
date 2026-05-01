@@ -35,7 +35,6 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
-    public_actor_summaries,
 )
 from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
@@ -2190,7 +2189,9 @@ def test_public_actor_summaries_excludes_departed_npcs() -> None:
         npc_presences=(departed_presence,),
     )
     registry = ActorRegistry(actors={talia.actor_id: talia, "npc:goblin-scout": goblin})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     # Talia (PC) must appear; goblin (DEPARTED) must not
     assert any("Talia" in s for s in summaries)
     assert not any("Goblin" in s for s in summaries)
@@ -2216,7 +2217,9 @@ def test_public_actor_summaries_includes_concealed_npcs() -> None:
         npc_presences=(concealed_presence,),
     )
     registry = ActorRegistry(actors={talia.actor_id: talia, "npc:goblin-scout": goblin})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     # CONCEALED NPC must still appear — it is in the scene
     assert any("Goblin" in s for s in summaries)
 
@@ -2234,7 +2237,9 @@ def test_public_actor_summaries_includes_all_when_no_presences() -> None:
         npc_presences=(),
     )
     registry = ActorRegistry(actors={talia.actor_id: talia, "npc:goblin-scout": goblin})
-    summaries = public_actor_summaries(state, registry)
+    summaries = GameState(
+        encounter=state, actor_registry=registry
+    ).public_actor_summaries()
     assert len(summaries) == _EXPECTED_ALL_ACTOR_COUNT
 
 
