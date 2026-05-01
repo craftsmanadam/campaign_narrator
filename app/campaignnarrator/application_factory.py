@@ -39,8 +39,6 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
 )
 from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     EncounterPlannerOrchestrator,
-    EncounterPlannerOrchestratorAgents,
-    EncounterPlannerOrchestratorRepositories,
 )
 from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestrator,
@@ -227,14 +225,10 @@ class ApplicationFactory:
         )
 
         encounter_planner_orchestrator = EncounterPlannerOrchestrator(
-            repositories=EncounterPlannerOrchestratorRepositories(
-                narrative=repos.narrative,
-                compendium=repos.compendium,
-                game_state=repos.game_state,
-            ),
-            agents=EncounterPlannerOrchestratorAgents(
-                planner=EncounterPlannerAgent(adapter=agents.narrator.adapter),
-            ),
+            data_root=self._data_root,
+            narrative=repos.narrative,
+            game_state=repos.game_state,
+            planner=EncounterPlannerAgent(adapter=agents.narrator.adapter),
         )
 
         module_orchestrator = ModuleOrchestrator(

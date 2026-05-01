@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, replace
+from dataclasses import replace
+from pathlib import Path
 
 from campaignnarrator.agents.encounter_planner_agent import EncounterPlannerAgent
 from campaignnarrator.domain.models import (
@@ -44,22 +45,6 @@ class _OutOfBoundsTemplateError(ValueError):
 _MAX_PREPARE_ATTEMPTS = 3
 
 
-@dataclass(frozen=True)
-class EncounterPlannerOrchestratorRepositories:
-    """All repositories required by EncounterPlannerOrchestrator."""
-
-    narrative: NarrativeMemoryRepository
-    compendium: CompendiumRepository
-    game_state: GameStateRepository
-
-
-@dataclass(frozen=True)
-class EncounterPlannerOrchestratorAgents:
-    """All agents required by EncounterPlannerOrchestrator."""
-
-    planner: EncounterPlannerAgent
-
-
 class EncounterPlannerOrchestrator:
     """Produce a ready-to-run EncounterState before the narrator opens the scene.
 
@@ -70,12 +55,15 @@ class EncounterPlannerOrchestrator:
     def __init__(
         self,
         *,
-        repositories: EncounterPlannerOrchestratorRepositories,
-        agents: EncounterPlannerOrchestratorAgents,
+        data_root: Path,
+        narrative: NarrativeMemoryRepository,
+        game_state: GameStateRepository,
+        planner: EncounterPlannerAgent,
     ) -> None:
-        self._repos = repositories
-        self._agents = agents
-        self._game_state_repo = repositories.game_state
+        self._compendium = CompendiumRepository(data_root / "compendium")
+        self._narrative = narrative
+        self._game_state_repo = game_state
+        self._planner = planner
 
     def prepare(
         self,
@@ -140,7 +128,7 @@ class EncounterPlannerOrchestrator:
         narrative_context = self._narrative_context(
             module=module, campaign_id=campaign.campaign_id
         )
-        new_plans = self._agents.planner.plan_encounters(
+        new_plans = self._planner.plan_encounters(
             module=module,
             campaign=campaign,
             player=player,
@@ -174,7 +162,7 @@ class EncounterPlannerOrchestrator:
             template = module.planned_encounters[module.next_encounter_index]
 
         # Step 2: Divergence check
-        assessment = self._agents.planner.assess_divergence(
+        assessment = self._planner.assess_divergence(
             template=template,
             module=module,
             milestone=milestone,
@@ -233,7 +221,7 @@ class EncounterPlannerOrchestrator:
         current_index = module.next_encounter_index
         remaining = module.planned_encounters[current_index:]
 
-        recovery = self._agents.planner.recover_encounters(
+        recovery = self._planner.recover_encounters(
             divergence_reason=assessment.reason,
             recovery_type=recovery_type,
             current_index=current_index,
@@ -250,7 +238,7 @@ class EncounterPlannerOrchestrator:
                 " — escalating to full replan",
                 module.module_id,
             )
-            recovery = self._agents.planner.recover_encounters(
+            recovery = self._planner.recover_encounters(
                 divergence_reason=(
                     f"Previous recovery returned empty list. {assessment.reason}"
                 ),
@@ -290,7 +278,7 @@ class EncounterPlannerOrchestrator:
         new encounter. Traveling presences arrive with INTERACTED status so the
         narrator sees their history immediately.
         """
-        index_path = self._repos.compendium.monster_index_path()
+        index_path = self._compendium.monster_index_path()
 
         scaled_npcs = scale_encounter_npcs(template.npcs, player_level=player.level)
 
@@ -369,7 +357,7 @@ class EncounterPlannerOrchestrator:
 
     def _narrative_context(self, *, module: ModuleState, campaign_id: str) -> str:
         """Retrieve recent narrative memory relevant to this module."""
-        results = self._repos.narrative.retrieve_relevant(
+        results = self._narrative.retrieve_relevant(
             module.title, campaign_id=campaign_id, limit=5
         )
         return "\n---\n".join(results) if results else "No prior narrative context."
