@@ -2507,16 +2507,15 @@ def test_npc_dialogue_updates_npc_interaction_when_summary_and_target_present(
         narrator_agent=_FakeNarratorWithSummary(),
     )
     registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    updated_state, _registry, _narration = orchestrator._handle_non_combat_action(
-        state,
+    game_state = GameState(encounter=state, actor_registry=registry)
+    updated_gs, _narration = orchestrator._handle_non_combat_action(
+        game_state,
         PlayerInput("I ask Elder Rovan about the missing children."),
         PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"),
-        registry.actors["pc:talia"],
-        registry,
         campaign_id="test-campaign",
     )
     updated_presence = next(
-        p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
+        p for p in updated_gs.encounter.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.INTERACTED
     assert len(updated_presence.interaction_summaries) == 1
@@ -2551,16 +2550,15 @@ def test_npc_dialogue_skips_update_when_no_summary(make_state) -> None:
 
     orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorNoSummary())
     registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    updated_state, _registry, _narration = orchestrator._handle_non_combat_action(
-        state,
+    game_state = GameState(encounter=state, actor_registry=registry)
+    updated_gs, _narration = orchestrator._handle_non_combat_action(
+        game_state,
         PlayerInput("I greet the elder."),
         PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"),
-        registry.actors["pc:talia"],
-        registry,
         campaign_id="test-campaign",
     )
     updated_presence = next(
-        p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
+        p for p in updated_gs.encounter.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.AVAILABLE
 
@@ -2594,16 +2592,15 @@ def test_npc_dialogue_skips_update_when_no_target_npc_id(make_state) -> None:
 
     orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorWithSummaryNoTarget())
     registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    updated_state, _registry, _narration = orchestrator._handle_non_combat_action(
-        state,
+    game_state = GameState(encounter=state, actor_registry=registry)
+    updated_gs, _narration = orchestrator._handle_non_combat_action(
+        game_state,
         PlayerInput("I say hello."),
         PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id=None),
-        registry.actors["pc:talia"],
-        registry,
         campaign_id="test-campaign",
     )
     updated_presence = next(
-        p for p in updated_state.npc_presences if p.actor_id == "npc:elder"
+        p for p in updated_gs.encounter.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.AVAILABLE
 
