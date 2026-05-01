@@ -114,7 +114,7 @@ class EncounterOrchestrator:
 
         if state.phase is EncounterPhase.SCENE_OPENING:
             opening, game_state = self._narrate(
-                _frame(state, game_state.actor_registry, "scene_opening"),
+                _frame(game_state, "scene_opening"),
                 game_state,
             )
             updated = replace(
@@ -139,8 +139,7 @@ class EncounterOrchestrator:
             )
             resume_frame = replace(
                 _frame(
-                    state,
-                    game_state.actor_registry,
+                    game_state,
                     "session_resume",
                     resolved_outcomes=state.public_events,
                 ),
@@ -180,13 +179,11 @@ class EncounterOrchestrator:
     ) -> GameState:
         """Main interaction loop — runs until combat, quit, or encounter complete."""
         while True:
-            state = game_state.encounter
-
-            if state.phase is EncounterPhase.COMBAT:
+            if game_state.encounter.phase is EncounterPhase.COMBAT:
                 game_state = self._run_combat(game_state)
                 break
 
-            if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
+            if game_state.encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE:
                 break
 
             raw_input = self._io.prompt("> ")
@@ -194,20 +191,18 @@ class EncounterOrchestrator:
             if not player_input.normalized:
                 continue
 
-            intent = self._classify_intent(
-                state, game_state.actor_registry, player_input
-            )
+            intent = self._classify_intent(game_state, player_input)
 
             match intent.category:
                 case IntentCategory.SAVE_EXIT:
                     partial_summary = self._narrator_agent.summarize_encounter_partial(
-                        state
+                        game_state.encounter
                     )
                     self._memory_repository.stage_narration(
                         partial_summary,
                         {
                             "event_type": "encounter_partial_summary",
-                            "encounter_id": state.encounter_id,
+                            "encounter_id": game_state.encounter.encounter_id,
                             "campaign_id": game_state.campaign.campaign_id,
                             "module_id": "",
                         },
@@ -219,15 +214,15 @@ class EncounterOrchestrator:
                     self._append_event(
                         {
                             "type": "encounter_saved",
-                            "encounter_id": state.encounter_id,
-                            "phase": state.phase.value,
-                            "outcome": state.outcome,
+                            "encounter_id": game_state.encounter.encounter_id,
+                            "phase": game_state.encounter.phase.value,
+                            "outcome": game_state.encounter.outcome,
                         }
                     )
                     break
                 case IntentCategory.STATUS:
                     narration, game_state = self._narrate(
-                        _status_frame(state, game_state.actor_registry),
+                        _status_frame(game_state),
                         game_state,
                     )
                     self._io.display(narration.text)
@@ -235,7 +230,7 @@ class EncounterOrchestrator:
                     continue
                 case IntentCategory.RECAP:
                     narration, game_state = self._narrate(
-                        _recap_frame(state, game_state.actor_registry),
+                        _recap_frame(game_state),
                         game_state,
                     )
                     self._io.display(narration.text)
@@ -243,7 +238,7 @@ class EncounterOrchestrator:
                     continue
                 case IntentCategory.LOOK_AROUND:
                     narration, game_state = self._narrate(
-                        _look_frame(state, game_state.actor_registry),
+                        _look_frame(game_state),
                         game_state,
                     )
                     self._io.display(narration.text)
@@ -256,17 +251,18 @@ class EncounterOrchestrator:
 
     def _classify_intent(
         self,
-        state: EncounterState,
-        registry: ActorRegistry,
+        game_state: GameState,
         player_input: PlayerInput,
     ) -> PlayerIntent:
         result = self._player_intent_agent.classify(
             player_input.raw_text,
-            phase=state.phase,
-            setting=state.setting,
-            recent_events=state.public_events[-5:],
-            actor_summaries=public_actor_summaries(state, registry),
-            npc_presences=state.npc_presences,
+            phase=game_state.encounter.phase,
+            setting=game_state.encounter.setting,
+            recent_events=game_state.encounter.public_events[-5:],
+            actor_summaries=public_actor_summaries(
+                game_state.encounter, game_state.actor_registry
+            ),
+            npc_presences=game_state.encounter.npc_presences,
         )
         _log.debug(
             "Intent classified: category=%s check_hint=%r reason=%r input=%r",
@@ -376,8 +372,7 @@ class EncounterOrchestrator:
                 narration, game_state = self._narrate(
                     replace(
                         _frame(
-                            game_state.encounter,
-                            game_state.actor_registry,
+                            game_state,
                             "npc_dialogue",
                         ),
                         player_action=player_input.raw_text,
@@ -395,7 +390,7 @@ class EncounterOrchestrator:
             case IntentCategory.SCENE_OBSERVATION:
                 narration, game_state = self._narrate(
                     replace(
-                        _frame(state, registry, "scene_response"),
+                        _frame(game_state, "scene_response"),
                         player_action=player_input.raw_text,
                     ),
                     game_state,
@@ -407,7 +402,7 @@ class EncounterOrchestrator:
                 )
                 narration, game_state = self._narrate(
                     replace(
-                        _frame(state, registry, "scene_response"),
+                        _frame(game_state, "scene_response"),
                         player_action=player_input.raw_text,
                     ),
                     game_state,
@@ -460,8 +455,7 @@ class EncounterOrchestrator:
         narration, game_state = self._narrate(
             replace(
                 _frame(
-                    game_state.encounter,
-                    game_state.actor_registry,
+                    game_state,
                     "social_resolution",
                     resolved_outcomes=resolved_outcomes,
                     compendium_context=compendium_context,
@@ -518,8 +512,9 @@ class EncounterOrchestrator:
                 "outcome": "combat",
             }
         )
+        game_state = game_state.with_encounter(updated_state)
         narration, narrated_gs = self._narrate(
-            _frame(updated_state, registry, "combat_start", resolved_outcomes=(event,)),
+            _frame(game_state, "combat_start", resolved_outcomes=(event,)),
             game_state.with_encounter(updated_state),
         )
         return narrated_gs.encounter, narration
@@ -675,40 +670,41 @@ class EncounterOrchestrator:
         self._memory_repository.append_event(event)
 
 
-def _status_frame(state: EncounterState, registry: ActorRegistry) -> NarrationFrame:
+def _status_frame(game_state: GameState) -> NarrationFrame:
     return _frame(
-        state,
-        registry,
+        game_state,
         "status_response",
-        resolved_outcomes=("; ".join(public_actor_summaries(state, registry)),),
+        resolved_outcomes=(
+            "; ".join(
+                public_actor_summaries(game_state.encounter, game_state.actor_registry)
+            ),
+        ),
         allowed_disclosures=("player HP", "inventory", "visible actors"),
     )
 
 
-def _recap_frame(state: EncounterState, registry: ActorRegistry) -> NarrationFrame:
-    outcome = () if state.outcome is None else (f"Outcome: {state.outcome}",)
+def _recap_frame(game_state: GameState) -> NarrationFrame:
+    enc = game_state.encounter
+    outcome = () if enc.outcome is None else (f"Outcome: {enc.outcome}",)
     return _frame(
-        state,
-        registry,
+        game_state,
         "recap_response",
-        resolved_outcomes=(*state.public_events, *outcome),
+        resolved_outcomes=(*game_state.encounter.public_events, *outcome),
         allowed_disclosures=("public events", "encounter outcome"),
     )
 
 
-def _look_frame(state: EncounterState, registry: ActorRegistry) -> NarrationFrame:
+def _look_frame(game_state: GameState) -> NarrationFrame:
     return _frame(
-        state,
-        registry,
+        game_state,
         "status_response",
-        resolved_outcomes=(state.setting,),
+        resolved_outcomes=(game_state.encounter.setting,),
         allowed_disclosures=("setting", "visible actors"),
     )
 
 
 def _frame(
-    state: EncounterState,
-    registry: ActorRegistry,
+    game_state: GameState,
     purpose: str,
     *,
     resolved_outcomes: tuple[str, ...] = (),
@@ -717,17 +713,21 @@ def _frame(
 ) -> NarrationFrame:
     return NarrationFrame(
         purpose=purpose,
-        phase=state.phase,
-        setting=state.current_location or state.setting,
-        public_actor_summaries=public_actor_summaries(state, registry),
-        npc_presences=tuple(
-            p for p in state.npc_presences if p.status is not NpcPresenceStatus.DEPARTED
+        phase=game_state.encounter.phase,
+        setting=game_state.encounter.current_location or game_state.encounter.setting,
+        public_actor_summaries=public_actor_summaries(
+            game_state.encounter, game_state.actor_registry
         ),
-        recent_public_events=state.public_events[-5:],
+        npc_presences=tuple(
+            p
+            for p in game_state.encounter.npc_presences
+            if p.status is not NpcPresenceStatus.DEPARTED
+        ),
+        recent_public_events=game_state.encounter.public_events[-5:],
         resolved_outcomes=resolved_outcomes,
         allowed_disclosures=allowed_disclosures,
         compendium_context=compendium_context,
-        tone_guidance=state.scene_tone,
+        tone_guidance=game_state.encounter.scene_tone,
     )
 
 

@@ -29,7 +29,6 @@ from campaignnarrator.domain.models import (
     NarrationFrame,
     NpcPresence,
     NpcPresenceStatus,
-    PlayerInput,
     PlayerIntent,
     RollRequest,
     RollVisibility,
@@ -2382,12 +2381,12 @@ def _make_orchestrator(
 
 
 # ---------------------------------------------------------------------------
-# Task 1: _classify_intent passes npc_presences to the intent agent
+# npc_presences forwarded to intent agent — verified through run_encounter()
 # ---------------------------------------------------------------------------
 
 
-def test_classify_intent_passes_npc_presences_to_agent(make_state) -> None:
-    """_classify_intent must forward state.npc_presences to the intent agent."""
+def test_classify_intent_passes_npc_presences_to_agent() -> None:
+    """The intent agent must receive the encounter's npc_presences on every classification."""
     captured_presences: list = []
 
     class CapturingIntentAgent:
@@ -2402,7 +2401,7 @@ def test_classify_intent_passes_npc_presences_to_agent(make_state) -> None:
             npc_presences=(),
         ):
             captured_presences.extend(npc_presences)
-            return PlayerIntent(category=IntentCategory.SCENE_OBSERVATION)
+            return PlayerIntent(category=IntentCategory.SAVE_EXIT)
 
     presence = NpcPresence(
         actor_id="npc:elder",
@@ -2411,10 +2410,30 @@ def test_classify_intent_passes_npc_presences_to_agent(make_state) -> None:
         name_known=True,
         status=NpcPresenceStatus.AVAILABLE,
     )
-    state = make_state(npc_presences=(presence,))
-    orchestrator = _make_orchestrator(_player_intent_agent=CapturingIntentAgent())
-    registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    orchestrator._classify_intent(state, registry, PlayerInput("look around"))
+    encounter = EncounterState(
+        encounter_id="enc-npc-presences",
+        phase=EncounterPhase.SOCIAL,
+        setting="The village square.",
+        actor_ids=(TALIA.actor_id,),
+        player_actor_id=TALIA.actor_id,
+        npc_presences=(presence,),
+    )
+    fake_gsr = FakeGameStateRepository(
+        GameState(
+            campaign=_default_campaign(),
+            encounter=encounter,
+            actor_registry=ActorRegistry(actors={TALIA.actor_id: TALIA}),
+        )
+    )
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            memory=FakeMemoryRepository(), game_state=fake_gsr
+        ),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
+        io=ScriptedIO(["look around"]),
+        _player_intent_agent=CapturingIntentAgent(),
+    )
+    orch.run_encounter(encounter_id="enc-npc-presences", campaign_id="test-campaign")
     assert len(captured_presences) == 1
     assert captured_presences[0].actor_id == "npc:elder"
 
