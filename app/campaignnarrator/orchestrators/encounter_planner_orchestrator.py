@@ -30,9 +30,10 @@ from campaignnarrator.domain.models import (
     NpcPresenceStatus,
 )
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.encounter_repository import EncounterRepository
-from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 from campaignnarrator.tools.cr_scaling import scale_encounter_npcs
 from campaignnarrator.tools.monster_loader import load_by_name as _load_monster
 
@@ -104,10 +105,9 @@ def _build_npc_actor(
 class EncounterPlannerOrchestratorRepositories:
     """All repositories required by EncounterPlannerOrchestrator."""
 
-    module: ModuleRepository
-    encounter: EncounterRepository
-    memory: MemoryRepository
+    narrative: NarrativeMemoryRepository
     compendium: CompendiumRepository
+    game_state: GameStateRepository
 
 
 @dataclass(frozen=True)
@@ -132,6 +132,7 @@ class EncounterPlannerOrchestrator:
     ) -> None:
         self._repos = repositories
         self._agents = agents
+        self._game_state_repo = repositories.game_state
 
     def prepare(
         self,
@@ -193,7 +194,9 @@ class EncounterPlannerOrchestrator:
             "Module %s has no planned encounters — running planner",
             module.module_id,
         )
-        narrative_context = self._narrative_context(module=module)
+        narrative_context = self._narrative_context(
+            module=module, campaign_id=campaign.campaign_id
+        )
         new_plans = self._agents.planner.plan_encounters(
             module=module,
             campaign=campaign,
@@ -201,7 +204,8 @@ class EncounterPlannerOrchestrator:
             narrative_context=narrative_context,
         )
         module = replace(module, planned_encounters=new_plans, next_encounter_index=0)
-        self._repos.module.save(module)
+        gs = self._game_state_repo.load()
+        self._game_state_repo.persist(replace(gs, module=module))
         return module
 
     # ── Step 2 & 3: divergence check + instantiation (Plans 3b and 3c) ───────
@@ -215,7 +219,9 @@ class EncounterPlannerOrchestrator:
         transition: EncounterTransition | None = None,
     ) -> EncounterReady | MilestoneAchieved:
         """Steps 2-3: divergence check, optional recovery, then instantiation."""
-        narrative_context = self._narrative_context(module=module)
+        narrative_context = self._narrative_context(
+            module=module, campaign_id=campaign.campaign_id
+        )
         milestone = campaign.milestones[campaign.current_milestone_index]
 
         # Determine the next template (None if index is out of bounds)
@@ -317,7 +323,8 @@ class EncounterPlannerOrchestrator:
         completed = module.planned_encounters[:current_index]
         new_plans = tuple(completed) + tuple(recovery.updated_templates)
         module = replace(module, planned_encounters=new_plans)
-        self._repos.module.save(module)
+        gs = self._game_state_repo.load()
+        self._game_state_repo.persist(replace(gs, module=module))
         return module
 
     def _instantiate(
@@ -329,6 +336,12 @@ class EncounterPlannerOrchestrator:
         transition: EncounterTransition | None = None,
     ) -> EncounterReady:
         """Build ActorState + NpcPresence for each NPC, assemble EncounterState.
+
+        Stages the new encounter and updated actor registry into GameState cache.
+        Does NOT call persist() — the encounter orchestrator owns persistence once
+        run_encounter() begins. A crash before run_encounter() first persists is
+        safe: load() from a cold cache finds no encounter file and replans from
+        scratch.
 
         When transition is provided, merges traveling actors and presences into the
         new encounter. Traveling presences arrive with INTERACTED status so the
@@ -396,12 +409,10 @@ class EncounterPlannerOrchestrator:
             player_actor_id=player.actor_id,
             npc_presences=tuple(npc_presences),
         )
-        self._repos.encounter.save(encounter)
-
         # Seed all encounter actors into the registry and link the new encounter
         # in one write, so run_encounter() sees both when it loads game state.
-        gs = self._repos.memory.load_game_state()
-        self._repos.memory.update_game_state(
+        gs = self._game_state_repo.load()
+        self._game_state_repo.persist(
             replace(
                 gs,
                 actor_registry=gs.actor_registry.with_actors(registry_updates),
@@ -413,7 +424,9 @@ class EncounterPlannerOrchestrator:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _narrative_context(self, *, module: ModuleState) -> str:
+    def _narrative_context(self, *, module: ModuleState, campaign_id: str) -> str:
         """Retrieve recent narrative memory relevant to this module."""
-        results = self._repos.memory.retrieve_relevant(module.title, limit=5)
+        results = self._repos.narrative.retrieve_relevant(
+            module.title, campaign_id=campaign_id, limit=5
+        )
         return "\n---\n".join(results) if results else "No prior narrative context."

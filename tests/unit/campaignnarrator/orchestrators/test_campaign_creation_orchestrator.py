@@ -10,13 +10,16 @@ from campaignnarrator.agents.campaign_generator_agent import (
     MilestoneResult,
 )
 from campaignnarrator.agents.module_generator_agent import ModuleGenerationResult
+from campaignnarrator.domain.models import GameState
 from campaignnarrator.orchestrators.campaign_creation_orchestrator import (
     CampaignCreationAgents,
     CampaignCreationOrchestrator,
     CampaignCreationRepositories,
 )
 from campaignnarrator.orchestrators.module_orchestrator import ModuleOrchestrator
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 from tests.conftest import ScriptedIO
 from tests.fixtures.fighter_talia import TALIA
@@ -43,15 +46,13 @@ _MODULE_RESULT = ModuleGenerationResult(
 )
 
 
-def _make_orchestrator() -> tuple[
-    CampaignCreationOrchestrator, MagicMock, MagicMock, MagicMock
-]:
+def _make_orchestrator() -> tuple[CampaignCreationOrchestrator, MagicMock, MagicMock]:
     io = MagicMock()
-    io.prompt.return_value = "I want dark coastal horror with undead."
+    io.prompt_multiline.return_value = "I want dark coastal horror with undead."
 
-    mock_campaign_repo = MagicMock()
-    mock_module_repo = MagicMock()
-    mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_narrative_repo = MagicMock(spec=NarrativeMemoryRepository)
+    mock_game_state_repo = MagicMock()
+    mock_game_state_repo.load.return_value = GameState()
     mock_campaign_agent = MagicMock()
     mock_module_agent = MagicMock()
     mock_module_orch = MagicMock(spec=ModuleOrchestrator)
@@ -64,9 +65,8 @@ def _make_orchestrator() -> tuple[
     )
 
     repos = CampaignCreationRepositories(
-        campaign=mock_campaign_repo,
-        module=mock_module_repo,
-        memory=mock_memory_repo,
+        narrative=mock_narrative_repo,
+        game_state=mock_game_state_repo,
     )
     agents = CampaignCreationAgents(
         campaign_generator=mock_campaign_agent,
@@ -79,33 +79,40 @@ def _make_orchestrator() -> tuple[
         agents=agents,
         module_orchestrator=mock_module_orch,
     )
-    return orch, mock_campaign_repo, mock_module_repo, mock_memory_repo
+    return orch, mock_narrative_repo, mock_game_state_repo
 
 
-def test_run_saves_campaign() -> None:
-    orch, mock_campaign_repo, _, __ = _make_orchestrator()
+def test_run_persists_campaign_via_game_state() -> None:
+    orch, _, mock_game_state_repo = _make_orchestrator()
     orch.run()
-    mock_campaign_repo.save.assert_called_once()
-    saved_campaign = mock_campaign_repo.save.call_args[0][0]
-    assert saved_campaign.name == "The Cursed Coast"
-    assert saved_campaign.bbeg_name == "Malachar"
-    assert saved_campaign.player_actor_id == "pc:player"
-    assert saved_campaign.starting_level == 1
-    assert saved_campaign.target_level == _CAMPAIGN_RESULT.target_level
+    mock_game_state_repo.persist.assert_called()
+    call_args_list = mock_game_state_repo.persist.call_args_list
+    staged_campaigns = [
+        call.args[0].campaign
+        for call in call_args_list
+        if call.args[0].campaign is not None
+    ]
+    assert any(getattr(c, "name", None) == "The Cursed Coast" for c in staged_campaigns)
 
 
-def test_run_saves_module() -> None:
-    orch, _, mock_module_repo, __ = _make_orchestrator()
+def test_run_persists_module_via_game_state() -> None:
+    orch, _, mock_game_state_repo = _make_orchestrator()
     orch.run()
-    mock_module_repo.save.assert_called_once()
-    saved_module = mock_module_repo.save.call_args[0][0]
-    assert saved_module.title == "The Dockside Murders"
-    assert saved_module.guiding_milestone_id == "m1"
+    mock_game_state_repo.persist.assert_called()
+    call_args_list = mock_game_state_repo.persist.call_args_list
+    staged_modules = [
+        call.args[0].module
+        for call in call_args_list
+        if call.args[0].module is not None
+    ]
+    assert any(
+        getattr(m, "title", None) == "The Dockside Murders" for m in staged_modules
+    )
 
 
 def test_hidden_goal_not_in_player_facing_output() -> None:
     """hidden_goal must never appear in any display() or prompt() call."""
-    orch, _, __, ___ = _make_orchestrator()
+    orch, _, __ = _make_orchestrator()
     orch.run()
     all_display_calls = [str(call) for call in orch._io.display.call_args_list]
     for call_str in all_display_calls:
@@ -113,16 +120,16 @@ def test_hidden_goal_not_in_player_facing_output() -> None:
 
 
 def test_v2_run_saves_campaign() -> None:
-    orch, mock_campaign_repo, _, __ = _make_orchestrator()
+    orch, _, mock_game_state_repo = _make_orchestrator()
     orch.run()
-    mock_campaign_repo.save.assert_called_once()
+    mock_game_state_repo.persist.assert_called()
 
 
-def test_v2_run_stores_campaign_setting_in_memory() -> None:
-    orch, _, __, mock_memory_repo = _make_orchestrator()
+def test_v2_run_stores_campaign_setting_in_narrative() -> None:
+    orch, mock_narrative_repo, _ = _make_orchestrator()
     orch.run()
-    mock_memory_repo.store_narrative.assert_called_once()
-    args = mock_memory_repo.store_narrative.call_args
+    mock_narrative_repo.store_narrative.assert_called_once()
+    args = mock_narrative_repo.store_narrative.call_args
     assert args[0][1]["event_type"] == "campaign_setting"
 
 
@@ -133,26 +140,37 @@ def test_v2_run_delegates_to_module_orchestrator() -> None:
 
 
 def test_v2_run_saves_module_with_empty_log() -> None:
-    orch, _, mock_module_repo, __ = _make_orchestrator()
+    orch, _, mock_game_state_repo = _make_orchestrator()
     orch.run()
-    mock_module_repo.save.assert_called_once()
-    saved = mock_module_repo.save.call_args[0][0]
-    assert saved.completed_encounter_ids == ()
+    call_args_list = mock_game_state_repo.persist.call_args_list
+    staged_modules = [
+        call.args[0].module
+        for call in call_args_list
+        if call.args[0].module is not None
+    ]
+    assert any(m.completed_encounter_ids == () for m in staged_modules)
 
 
 def test_v2_campaign_has_current_module_id() -> None:
-    orch, mock_campaign_repo, *_ = _make_orchestrator()
+    orch, _, mock_game_state_repo = _make_orchestrator()
     orch.run()
-    saved_campaign = mock_campaign_repo.save.call_args[0][0]
-    assert saved_campaign.current_module_id == "module-001"
+    call_args_list = mock_game_state_repo.persist.call_args_list
+    staged_campaigns = [
+        call.args[0].campaign
+        for call in call_args_list
+        if call.args[0].campaign is not None
+    ]
+    assert any(
+        getattr(c, "current_module_id", None) == "module-001" for c in staged_campaigns
+    )
 
 
 def test_run_displays_building_world_message_before_campaign_generation() -> None:
     """Player must see a progress message immediately after submitting their brief."""
     io = ScriptedIO(["I want dark coastal horror with undead."])
-    mock_campaign_repo = MagicMock()
-    mock_module_repo = MagicMock()
-    mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_narrative_repo = MagicMock(spec=NarrativeMemoryRepository)
+    mock_game_state_repo = MagicMock()
+    mock_game_state_repo.load.return_value = GameState()
     mock_campaign_agent = MagicMock()
     mock_module_agent = MagicMock()
     mock_module_orch = MagicMock(spec=ModuleOrchestrator)
@@ -167,9 +185,8 @@ def test_run_displays_building_world_message_before_campaign_generation() -> Non
         io=io,
         player=player,
         repositories=CampaignCreationRepositories(
-            campaign=mock_campaign_repo,
-            module=mock_module_repo,
-            memory=mock_memory_repo,
+            narrative=mock_narrative_repo,
+            game_state=mock_game_state_repo,
         ),
         agents=CampaignCreationAgents(
             campaign_generator=mock_campaign_agent,

@@ -57,12 +57,10 @@ class RulesAgent:
         self,
         *,
         adapter: object,
-        rules_repository: object | None = None,
         compendium_repository: object | None = None,
         _agent: object | None = None,
     ) -> None:
-        _ = compendium_repository
-        self._rules_repository = rules_repository
+        self._compendium_repository = compendium_repository
         if _agent is not None:
             self._agent = _agent
         else:
@@ -115,7 +113,7 @@ class RulesAgent:
         check_hint: str | None = None,
         phase: EncounterPhase | None = None,
     ) -> tuple[str, ...]:
-        if self._rules_repository is None:
+        if self._compendium_repository is None:
             return ()
 
         hint_lower = (check_hint or "").lower()
@@ -133,7 +131,9 @@ class RulesAgent:
                     if topic not in base_topics:
                         base_topics.append(topic)
 
-        return self._rules_repository.load_context_for_topics(tuple(base_topics))
+        return self._compendium_repository.load_rules_context_for_topics(
+            tuple(base_topics)
+        )
 
     def _build_input(
         self,

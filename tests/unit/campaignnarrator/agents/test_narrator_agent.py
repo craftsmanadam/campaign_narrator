@@ -26,7 +26,9 @@ from campaignnarrator.domain.models import (
     NpcPresenceStatus,
     SceneOpeningResponse,
 )
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -305,7 +307,7 @@ def _make_narrator_with_memory(
 ) -> tuple[NarratorAgent, MagicMock]:
     mock_adapter = MagicMock()
     mock_adapter.generate_text.return_value = "Some narration."
-    mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_memory_repo = MagicMock(spec=NarrativeMemoryRepository)
     mock_memory_repo.retrieve_relevant.return_value = memory_returns or []
     mock_memory_repo.get_exchange_buffer.return_value = exchange_buffer
     narrator = NarratorAgent(
@@ -369,7 +371,9 @@ def test_retrieve_memory_returns_joined_results() -> None:
         memory_returns=["Entry one.", "Entry two."]
     )
     result = narrator.retrieve_memory("docks")
-    mock_repo.retrieve_relevant.assert_called_once_with("docks", limit=5)
+    mock_repo.retrieve_relevant.assert_called_once_with(
+        "docks", campaign_id="", limit=5
+    )
     assert "Entry one." in result
     assert "Entry two." in result
 
@@ -523,7 +527,7 @@ def _make_scene_narrator(
     mock_scene_agent.run_sync.return_value.output = scene_response
 
     if mock_repo is None:
-        mock_repo = MagicMock(spec=MemoryRepository)
+        mock_repo = MagicMock(spec=NarrativeMemoryRepository)
         mock_repo.retrieve_relevant.return_value = memory_returns or []
         mock_repo.get_exchange_buffer.return_value = exchange_buffer
 
@@ -545,7 +549,7 @@ def test_scene_opening_retrieves_memory_with_setting_as_query() -> None:
     narrator.narrate(_make_scene_frame("The docks at midnight."))
 
     mock_repo.retrieve_relevant.assert_called_once_with(
-        "The docks at midnight.", limit=5
+        "The docks at midnight.", campaign_id="", limit=5
     )
     call_args = mock_scene_agent.run_sync.call_args[0][0]
     assert "Malachar had pale hollow eyes." in call_args
@@ -734,7 +738,7 @@ def test_open_scene_retrieves_memory_and_injects_it() -> None:
     narrator.open_scene(_make_scene_frame("The docks at midnight."))
 
     mock_repo.retrieve_relevant.assert_called_once_with(
-        "The docks at midnight.", limit=5
+        "The docks at midnight.", campaign_id="", limit=5
     )
     call_args = mock_scene_agent.run_sync.call_args[0][0]
     assert "Malachar had pale hollow eyes." in call_args
@@ -993,3 +997,27 @@ def test_base_narrate_instructions_rule_16_includes_travel_commitment_sentence()
     """Rule 16 explains that traveling_actor_ids causes NPC injection in the next scene."""
     assert "traveling_actor_ids" in BASE_NARRATE_INSTRUCTIONS
     assert "system injects" in BASE_NARRATE_INSTRUCTIONS
+
+
+# ---------------------------------------------------------------------------
+# campaign context
+# ---------------------------------------------------------------------------
+
+
+def test_retrieve_memory_uses_campaign_id_for_retrieval() -> None:
+    """retrieve_memory passes campaign_id to retrieve_relevant."""
+    mock_memory_repo = MagicMock()
+    mock_memory_repo.retrieve_relevant.return_value = []
+    mock_memory_repo.get_exchange_buffer.return_value = ()
+    agent = NarratorAgent(
+        adapter=MagicMock(),
+        memory_repository=mock_memory_repo,
+        _scene_agent=MagicMock(),
+        _assess_agent=MagicMock(),
+        _narrate_agent=MagicMock(),
+    )
+    agent.set_campaign_context("camp-xyz")
+    agent.retrieve_memory("some query")
+    mock_memory_repo.retrieve_relevant.assert_called_once_with(
+        "some query", campaign_id="camp-xyz", limit=5
+    )

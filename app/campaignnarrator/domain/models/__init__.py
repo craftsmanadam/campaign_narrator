@@ -15,7 +15,9 @@ from .actor_components import (
 )
 from .actor_registry import ActorRegistry, EncounterTransition
 from .actor_state import ActorState, ActorType, TurnResources
+from .background_entry import BackgroundEntry
 from .campaign_state import CampaignEvent, CampaignState, Milestone, ModuleState
+from .class_entry import ClassEntry
 from .combat import (
     CombatAssessment,
     CombatIntent,
@@ -25,16 +27,15 @@ from .combat import (
 )
 from .encounter_state import (
     EncounterPhase,
-    EncounterReady,
     EncounterState,
-    GameState,
     InitiativeTurn,
-    MilestoneAchieved,
     get_player,
     public_actor_summaries,
     visible_actor_names,
 )
 from .encounter_template import EncounterNpc, EncounterTemplate
+from .feat_entry import FeatEntry
+from .game_state import EncounterReady, GameState, MilestoneAchieved
 from .intent import IntentCategory, PlayerInput, PlayerIntent, PlayerIO
 from .narration import (
     Narration,
@@ -60,8 +61,10 @@ __all__ = [
     "ActorState",
     "ActorType",
     "Adjudication",
+    "BackgroundEntry",
     "CampaignEvent",
     "CampaignState",
+    "ClassEntry",
     "CombatAssessment",
     "CombatIntent",
     "CombatOutcome",
@@ -76,6 +79,7 @@ __all__ = [
     "EncounterState",
     "EncounterTemplate",
     "EncounterTransition",
+    "FeatEntry",
     "FeatState",
     "GameState",
     "InitiativeTurn",

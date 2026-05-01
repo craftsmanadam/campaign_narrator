@@ -4,39 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
+from campaignnarrator.domain.models.background_entry import BackgroundEntry
+from campaignnarrator.domain.models.class_entry import ClassEntry
+from campaignnarrator.domain.models.feat_entry import FeatEntry
+
 _logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class ClassEntry:
-    """Minimal class entry loaded from the compendium."""
-
-    class_id: str
-    name: str
-    reference: str | None
-
-
-@dataclass(frozen=True, slots=True)
-class BackgroundEntry:
-    """Minimal background entry loaded from the compendium."""
-
-    background_id: str
-    name: str
-    reference: str | None
-
-
-@dataclass(frozen=True, slots=True)
-class FeatEntry:
-    """Minimal feat entry loaded from the compendium."""
-
-    feat_id: str
-    name: str
-    summary: str
-    reference: str | None
 
 
 class CompendiumRepository:
@@ -46,9 +21,11 @@ class CompendiumRepository:
         {"common", "uncommon", "rare"}
     )
     _MISSING_CONTEXT_MARKER: ClassVar[str] = "Missing compendium context:"
+    _MISSING_RULES_CONTEXT_MARKER: ClassVar[str] = "Missing rules context:"
 
     def __init__(self, root: Path | str) -> None:
         self._root = Path(root)
+        self._resolved_rules_root = (self._root / "rules").resolve()
 
     def monster_index_path(self) -> Path:
         """Return the absolute path to the monster compendium index."""
@@ -194,6 +171,61 @@ class CompendiumRepository:
             "anchor '%s' not found in '%s'; returning full file", anchor, path_part
         )
         return text
+
+    def load_rule_index(self) -> dict[str, list[str]]:
+        """Return the generated rule index."""
+
+        path = self._root / "rules" / "generated" / "rule_index.json"
+        return json.loads(path.read_text())
+
+    def load_rules_topic_markdown(self, relative_path: str | Path) -> str:
+        """Return the raw markdown for a rule topic."""
+
+        rules_root = self._root / "rules"
+        candidate = (rules_root / Path(relative_path)).resolve()
+        if self._resolved_rules_root not in candidate.parents and (
+            candidate != self._resolved_rules_root
+        ):
+            raise ValueError
+        return candidate.read_text()
+
+    def load_rules_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        """Return loaded markdown context for the requested rule topics."""
+
+        rule_index = self._load_rule_index_or_empty()
+        contexts: list[str] = []
+        for topic in topics:
+            contexts.append(self._load_rules_topic_context(topic, rule_index))
+        return tuple(contexts)
+
+    def _load_rule_index_or_empty(self) -> dict[str, list[str]]:
+        try:
+            return self.load_rule_index()
+        except FileNotFoundError:
+            return {}
+
+    def _load_rules_topic_context(
+        self,
+        topic: str,
+        rule_index: dict[str, list[str]],
+    ) -> str:
+        relative_paths = rule_index.get(topic)
+        if not relative_paths:
+            return f"{self._MISSING_RULES_CONTEXT_MARKER} {topic}"
+
+        topic_markdown: list[str] = []
+        for relative_path in relative_paths:
+            try:
+                topic_markdown.append(self.load_rules_topic_markdown(relative_path))
+            except (FileNotFoundError, ValueError) as exc:
+                _logger.warning(
+                    "Could not load rule topic %r (%r): %s",
+                    topic,
+                    relative_path,
+                    exc,
+                )
+                return f"{self._MISSING_RULES_CONTEXT_MARKER} {topic}"
+        return "\n\n".join(topic_markdown)
 
     def _extract_section(self, text: str, anchor: str) -> str | None:
         """Return the section under the first heading that matches anchor.

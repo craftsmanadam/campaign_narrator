@@ -1,0 +1,73 @@
+{
+  "actor_registry": {
+    "actors": {}
+  },
+  "campaign": {
+    "bbeg_actor_id": null,
+    "bbeg_description": "A lich bound to the tides.",
+    "bbeg_name": "Malachar",
+    "campaign_id": "c-startup-s2",
+    "current_milestone_index": 0,
+    "current_module_id": "module-001",
+    "hidden_goal": "Awaken the drowned god Malachar.",
+    "milestones": [
+      {
+        "completed": false,
+        "description": "Survive the docks.",
+        "milestone_id": "m1",
+        "title": "First Blood"
+      },
+      {
+        "completed": false,
+        "description": "Unmask the sea cult.",
+        "milestone_id": "m2",
+        "title": "The Cult"
+      },
+      {
+        "completed": false,
+        "description": "Face Malachar.",
+        "milestone_id": "m3",
+        "title": "Reckoning"
+      }
+    ],
+    "name": "The Cursed Coast",
+    "narrator_personality": "Grim and theatrical, with a taste for irony.",
+    "player_actor_id": "pc:player",
+    "player_brief": "Dark coastal horror with undead.",
+    "setting": "A fog-draped coastal city where the dead walk at low tide.",
+    "starting_level": 1,
+    "target_level": 5
+  },
+  "encounter": {
+    "actor_ids": [
+      "pc:player"
+    ],
+    "combat_turns": [],
+    "current_location": "You arrive at the fog-shrouded docks of Darkholm at dusk. A sailor's corpse bobs in the black water.",
+    "encounter_id": "module-001-enc-001",
+    "hidden_facts": {},
+    "next_location_hint": null,
+    "npc_presences": [],
+    "outcome": "The player confronted a cultist and learned of the Drowned Lady.",
+    "phase": "encounter_complete",
+    "player_actor_id": "pc:player",
+    "public_events": [
+      "Aldric confronted a robed cultist near the dockside warehouse."
+    ],
+    "scene_tone": "dark and foreboding",
+    "setting": "You arrive at the fog-shrouded docks of Darkholm at dusk. A sailor's corpse bobs in the black water.",
+    "traveling_actor_ids": []
+  },
+  "module": {
+    "campaign_id": "c-startup-s2",
+    "completed": false,
+    "completed_encounter_ids": [],
+    "completed_encounter_summaries": [],
+    "guiding_milestone_id": "m1",
+    "module_id": "module-001",
+    "next_encounter_index": 0,
+    "planned_encounters": [],
+    "summary": "Bodies wash ashore nightly along the Darkholm waterfront.",
+    "title": "The Dockside Murders"
+  }
+}

@@ -22,12 +22,11 @@ from campaignnarrator.orchestrators.encounter_orchestrator import EncounterOrche
 from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     EncounterPlannerOrchestrator,
 )
-from campaignnarrator.repositories.campaign_repository import CampaignRepository
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.encounter_repository import EncounterRepository
-from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
-from campaignnarrator.repositories.player_repository import PlayerRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -36,12 +35,9 @@ _log = logging.getLogger(__name__)
 class ModuleOrchestratorRepositories:
     """All repositories required by ModuleOrchestrator."""
 
-    campaign: CampaignRepository
-    module: ModuleRepository
-    encounter: EncounterRepository
-    actor: PlayerRepository
-    memory: MemoryRepository
+    narrative: NarrativeMemoryRepository
     compendium: CompendiumRepository
+    game_state: GameStateRepository
 
 
 @dataclass(frozen=True)
@@ -57,7 +53,7 @@ class ModuleOrchestrator:
     """Own the encounter loop within a module.
 
     Single caller of EncounterOrchestrator.run_encounter() and single writer
-    of encounter summaries to MemoryRepository. Callers pass campaign at run()
+    of encounter summaries to NarrativeMemoryRepository. Callers pass campaign at run()
     time — not at construction — so this can be built eagerly by
     ApplicationFactory. The player is read from ActorRegistry each iteration.
     """
@@ -76,10 +72,11 @@ class ModuleOrchestrator:
         self._repos = repositories
         self._agents = agents
         self._encounter_orchestrator = encounter_orchestrator
+        self._game_state_repo = repositories.game_state
 
     def run(self, *, campaign: CampaignState) -> None:
         """Detect module state and run the encounter loop."""
-        module = self._repos.module.load(campaign.current_module_id)
+        module = self._game_state_repo.load().module
         if module is None:
             return
 
@@ -94,10 +91,10 @@ class ModuleOrchestrator:
     ) -> None:
         """Inner loop: check encounter → archive if complete → prepare → run."""
         # Read player from registry each iteration so level-ups are reflected.
-        gs = self._repos.memory.load_game_state()
+        gs = self._game_state_repo.load()
         player = get_player(gs.actor_registry, campaign.player_actor_id)
 
-        active = self._repos.encounter.load_active()
+        active = gs.encounter
 
         # No active encounter — proceed to planning
         if active is None:
@@ -116,7 +113,7 @@ class ModuleOrchestrator:
             )
             # Re-read player after archiving: encounter may have changed HP/conditions.
             player = get_player(
-                self._repos.memory.load_game_state().actor_registry,
+                self._game_state_repo.load().actor_registry,
                 campaign.player_actor_id,
             )
             self._prepare_and_run(
@@ -129,17 +126,19 @@ class ModuleOrchestrator:
             return
 
         # Encounter in progress — resume it; output is displayed live during the loop
-        self._encounter_orchestrator.run_encounter(encounter_id=active.encounter_id)
+        self._encounter_orchestrator.run_encounter(
+            encounter_id=active.encounter_id, campaign_id=campaign.campaign_id
+        )
 
         # Reload from cache (not disk) to detect completion vs player quit
-        reloaded = self._repos.memory.load_game_state().encounter
+        reloaded = self._game_state_repo.load().encounter
         if reloaded is not None and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE:
             module, transition = self._archive_encounter(
                 encounter=reloaded, module=module, campaign=campaign
             )
             # Re-read player after archiving: encounter may have changed HP/conditions.
             player = get_player(
-                self._repos.memory.load_game_state().actor_registry,
+                self._game_state_repo.load().actor_registry,
                 campaign.player_actor_id,
             )
             self._prepare_and_run(
@@ -160,7 +159,7 @@ class ModuleOrchestrator:
     ) -> tuple[ModuleState, EncounterTransition]:
         """Summarize, store narrative, update module log, persist, clear."""
         summary = self._agents.narrator.summarize_encounter(encounter, module, campaign)
-        self._repos.memory.store_narrative(
+        self._repos.narrative.store_narrative(
             summary,
             {
                 "event_type": "encounter_summary",
@@ -170,12 +169,22 @@ class ModuleOrchestrator:
             },
         )
 
-        # persist() flushes the registry to disk and resets the in-memory cache.
-        # The registry is already current — apply_state_effects updated it throughout.
-        self._repos.memory.persist()
+        new_ids = (*module.completed_encounter_ids, encounter.encounter_id)
+        new_summaries = (*module.completed_encounter_summaries, summary)
+        updated_module = replace(
+            module,
+            completed_encounter_ids=new_ids,
+            completed_encounter_summaries=new_summaries,
+            next_encounter_index=module.next_encounter_index + 1,
+        )
 
-        # Build transition payload: read traveling actors from registry.
-        gs = self._repos.memory.load_game_state()
+        gs = self._game_state_repo.load()
+        self._game_state_repo.persist(
+            replace(gs, module=updated_module, encounter=None)
+        )
+
+        # Build transition payload: read traveling actors from (post-persist) registry.
+        gs = self._game_state_repo.load()
         registry = gs.actor_registry
         traveling_actors = {
             aid: registry.actors[aid]
@@ -195,16 +204,6 @@ class ModuleOrchestrator:
             traveling_presences=traveling_presences,
         )
 
-        new_ids = (*module.completed_encounter_ids, encounter.encounter_id)
-        new_summaries = (*module.completed_encounter_summaries, summary)
-        updated_module = replace(
-            module,
-            completed_encounter_ids=new_ids,
-            completed_encounter_summaries=new_summaries,
-            next_encounter_index=module.next_encounter_index + 1,
-        )
-        self._repos.module.save(updated_module)
-        self._repos.encounter.clear()
         return updated_module, transition
 
     def _prepare_and_run(
@@ -232,10 +231,12 @@ class ModuleOrchestrator:
         # EncounterReady: the planner has created and saved the encounter.
         module = result.module
         encounter_id = result.encounter_state.encounter_id
-        self._encounter_orchestrator.run_encounter(encounter_id=encounter_id)
+        self._encounter_orchestrator.run_encounter(
+            encounter_id=encounter_id, campaign_id=campaign.campaign_id
+        )
 
         # Reload from cache (not disk) to detect completion vs player quit
-        reloaded = self._repos.memory.load_game_state().encounter
+        reloaded = self._game_state_repo.load().encounter
         if (
             reloaded is not None
             and reloaded.encounter_id == encounter_id
@@ -294,14 +295,17 @@ class ModuleOrchestrator:
             summary=module_result.summary,
             guiding_milestone_id=module_result.guiding_milestone_id,
         )
-        self._repos.module.save(new_module)
 
         updated_campaign = replace(
             campaign,
             current_milestone_index=new_index,
             current_module_id=new_module_id,
         )
-        self._repos.campaign.save(updated_campaign)
+
+        gs = self._game_state_repo.load()
+        self._game_state_repo.persist(
+            replace(gs, campaign=updated_campaign, module=new_module)
+        )
 
         # Recurse into new module
         self._run_loop(

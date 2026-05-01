@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -50,27 +51,57 @@ def _get_free_port() -> int:
         return int(candidate.getsockname()[1])
 
 
-def _seed_actor_registry_from_encounter(
+def _seed_game_state_from_encounter(
     encounter_file: Path,
     runtime_data_root: Path,
 ) -> None:
-    """Populate actor_registry.json from the encounter fixture's old-format actors dict.
+    """Patch state/game_state.json to include the encounter and its NPC actors.
 
-    Encounter fixtures pre-dating the registry migration store actor state
-    inside an 'actors' dict. After migration, actors live in ActorRegistry.
-    This helper seeds the registry so the app can find all actors on load.
+    Encounter fixture files use the old format with a top-level 'actors' dict.
+    This helper converts that to the new blob format: encounter gets actor_ids
+    and player_actor_id; NPC actors go into actor_registry.actors in the blob.
     """
     try:
         encounter_data = json.loads(encounter_file.read_text(encoding="utf-8"))
     except OSError, json.JSONDecodeError:
         return
-    actors = encounter_data.get("actors", {})
-    if not actors:
-        return
-    registry_path = runtime_data_root / "memory" / "actor_registry.json"
-    registry_path.parent.mkdir(parents=True, exist_ok=True)
-    registry_path.write_text(
-        json.dumps({"actors": actors}, indent=2, sort_keys=True),
+
+    blob_path = runtime_data_root / "state" / "game_state.json"
+    blob: dict = {}
+    if blob_path.exists():
+        with contextlib.suppress(OSError, json.JSONDecodeError):
+            blob = json.loads(blob_path.read_text(encoding="utf-8"))
+
+    actors_raw: dict = encounter_data.pop("actors", {})
+    if actors_raw:
+        actor_ids = list(actors_raw.keys())
+        player_actor_id = next(
+            (k for k, v in actors_raw.items() if v.get("actor_type") == "pc"),
+            "",
+        )
+        npc_actors = {
+            k: v for k, v in actors_raw.items() if v.get("actor_type") != "pc"
+        }
+        encounter_data["actor_ids"] = actor_ids
+        encounter_data["player_actor_id"] = player_actor_id
+        if player_actor_id:
+            player_path = runtime_data_root / "state" / "actors" / "player.json"
+            player_path.parent.mkdir(parents=True, exist_ok=True)
+            player_path.write_text(
+                json.dumps(actors_raw[player_actor_id], indent=2, sort_keys=True)
+                + "\n",
+                encoding="utf-8",
+            )
+    else:
+        npc_actors = {}
+
+    blob["encounter"] = encounter_data
+    existing_actors: dict = (blob.get("actor_registry") or {}).get("actors", {})
+    blob["actor_registry"] = {"actors": {**existing_actors, **npc_actors}}
+
+    blob_path.parent.mkdir(parents=True, exist_ok=True)
+    blob_path.write_text(
+        json.dumps(blob, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -245,12 +276,7 @@ def configure_openai_api_for_scenario_with_encounter(
     _copy_fixture_tree(ENCOUNTER_FIXTURE_ROOT, runtime_data_root)
     named_encounter = EXAMPLES_ROOT / "state" / "encounters" / f"{encounter_id}.json"
     if named_encounter.exists():
-        active_path = runtime_data_root / "state" / "encounters" / "active.json"
-        active_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(named_encounter, active_path)
-        # Populate actor_registry.json from the encounter's actor data so the
-        # registry is consistent with the encounter fixture on first load.
-        _seed_actor_registry_from_encounter(named_encounter, runtime_data_root)
+        _seed_game_state_from_encounter(named_encounter, runtime_data_root)
     active_wiremock_scenario = _ENCOUNTER_TO_WIREMOCK_SCENARIO.get(scenario_name, "")
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(
@@ -286,6 +312,9 @@ def configure_openai_api_for_scenario(
     """
     request.node._encounter_scenario_name = scenario_name
     _copy_fixture_tree(ENCOUNTER_FIXTURE_ROOT, runtime_data_root)
+    default_encounter = EXAMPLES_ROOT / "state" / "encounters" / "active.json"
+    if default_encounter.exists():
+        _seed_game_state_from_encounter(default_encounter, runtime_data_root)
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), "")
     return {"scenario_name": scenario_name, "encounter_id": "goblin-camp"}
@@ -351,9 +380,9 @@ def encounter_actor_is_defeated(
 ) -> None:
     """Assert that the named actor has hp_current==0 and 'dead' in conditions."""
 
-    state_path = runtime_data_root / "state" / "encounters" / "active.json"
-    state_data = json.loads(state_path.read_text())
-    actor_data = state_data["actors"][actor_id]
+    blob_path = runtime_data_root / "state" / "game_state.json"
+    blob = json.loads(blob_path.read_text())
+    actor_data = blob["actor_registry"]["actors"][actor_id]
     assert actor_data["hp_current"] == 0, (
         f"{actor_id} hp_current={actor_data['hp_current']}, expected 0"
     )
@@ -456,12 +485,6 @@ def game_state_player_no_campaign(
     """Set up player-only state (no campaign) for returning-without-campaign."""
     fixture_dir = STARTUP_FIXTURE_ROOT / _STARTUP_FIXTURE_DIR[scenario_name]
     _copy_fixture_tree(fixture_dir, runtime_data_root)
-    # Clear any active encounter inherited from EXAMPLES_ROOT. A player-only
-    # scenario must start with no in-progress encounter so the planner creates
-    # a fresh one keyed to the correct player actor_id.
-    active_encounter = runtime_data_root / "state" / "encounters" / "active.json"
-    if active_encounter.exists():
-        active_encounter.unlink()
     wiremock_scenario = _STARTUP_SCENARIO_TO_WIREMOCK[scenario_name]
     env: dict[str, str] = request.getfixturevalue("compose_environment")
     _deactivate_wiremock_scenarios(int(env["WIREMOCK_PORT"]), wiremock_scenario)

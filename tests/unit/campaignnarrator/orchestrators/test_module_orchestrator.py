@@ -33,12 +33,11 @@ from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestratorAgents,
     ModuleOrchestratorRepositories,
 )
-from campaignnarrator.repositories.campaign_repository import CampaignRepository
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.encounter_repository import EncounterRepository
-from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
-from campaignnarrator.repositories.player_repository import PlayerRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 from tests.conftest import ScriptedIO
 from tests.fixtures.fighter_talia import TALIA
@@ -121,24 +120,18 @@ def _make_orchestrator(
     summarize_returns: str = "Rich encounter summary.",
 ) -> tuple[
     ModuleOrchestrator,
-    MagicMock,
-    MagicMock,
-    MagicMock,
-    MagicMock,
-    MagicMock,
+    MagicMock,  # mock_narrator
+    MagicMock,  # mock_encounter_orch
+    MagicMock,  # mock_narrative_repo
+    MagicMock,  # mock_game_state_repo
 ]:
     io = MagicMock()
 
-    mock_campaign_repo = MagicMock(spec=CampaignRepository)
-    mock_module_repo = MagicMock(spec=ModuleRepository)
-    mock_encounter_repo = MagicMock(spec=EncounterRepository)
-    mock_actor_repo = MagicMock(spec=PlayerRepository)
-    mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_narrative_repo = MagicMock(spec=NarrativeMemoryRepository)
     mock_compendium_repo = MagicMock(spec=CompendiumRepository)
+    mock_game_state_repo = MagicMock(spec=GameStateRepository)
 
     resolved_module = module or _make_module()
-    mock_module_repo.load.return_value = resolved_module
-    mock_encounter_repo.load_active.return_value = active_encounter
 
     mock_narrator = MagicMock(spec=NarratorAgent)
     mock_narrator.summarize_encounter.return_value = summarize_returns
@@ -153,21 +146,20 @@ def _make_orchestrator(
     mock_module_gen = MagicMock(spec=ModuleGeneratorAgent)
     mock_encounter_orch = MagicMock()
     mock_encounter_orch.run_encounter.return_value = None
-    mock_actor_repo.load.return_value = _make_player()
-    # Default: post-run memory read returns no active encounter with player in registry.
+
+    # Default game state: module loaded, no active encounter, player in registry.
     player_registry = ActorRegistry(actors={"pc:player": _make_player()})
-    mock_memory_repo.load_game_state.return_value = GameState(
-        encounter=None,
+    mock_game_state_repo.load.return_value = GameState(
+        campaign=_make_campaign(),
+        module=resolved_module,
+        encounter=active_encounter,
         actor_registry=player_registry,
     )
 
     repos = ModuleOrchestratorRepositories(
-        campaign=mock_campaign_repo,
-        module=mock_module_repo,
-        encounter=mock_encounter_repo,
-        actor=mock_actor_repo,
-        memory=mock_memory_repo,
+        narrative=mock_narrative_repo,
         compendium=mock_compendium_repo,
+        game_state=mock_game_state_repo,
     )
     agents = ModuleOrchestratorAgents(
         narrator=mock_narrator,
@@ -182,49 +174,48 @@ def _make_orchestrator(
     )
     return (
         orch,
-        mock_module_repo,
-        mock_encounter_repo,
         mock_narrator,
         mock_encounter_orch,
-        mock_memory_repo,
+        mock_narrative_repo,
+        mock_game_state_repo,
     )
 
 
 def test_module_orchestrator_instantiates() -> None:
-    orch, mock_module_repo, _, _, _, _ = _make_orchestrator()
-    assert orch._repos.module is mock_module_repo
+    orch, _, _, mock_narrative_repo, _ = _make_orchestrator()
+    assert orch._repos.narrative is mock_narrative_repo
 
 
 def test_run_with_in_progress_encounter_calls_run_encounter() -> None:
     """Step 2c: active encounter not complete → resume it."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
-    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(active_encounter=active)
+    orch, _, mock_enc_orch, _, _ = _make_orchestrator(active_encounter=active)
     orch.run(campaign=_make_campaign())
     mock_enc_orch.run_encounter.assert_called_once_with(
-        encounter_id="module-001-enc-001"
+        encounter_id="module-001-enc-001", campaign_id="c-1"
     )
 
 
 def test_run_with_no_active_encounter_calls_encounter_planner() -> None:
     """No active encounter → encounter_planner.prepare() is called."""
-    orch, _, _, _, _, _ = _make_orchestrator(active_encounter=None)
+    orch, _, _, _, _ = _make_orchestrator(active_encounter=None)
     orch.run(campaign=_make_campaign())
     orch._agents.encounter_planner.prepare.assert_called_once()
 
 
 def test_run_with_no_active_encounter_calls_run_encounter() -> None:
     """No active encounter → run_encounter is called with planner's encounter_id."""
-    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(active_encounter=None)
+    orch, _, mock_enc_orch, _, _ = _make_orchestrator(active_encounter=None)
     orch.run(campaign=_make_campaign())
     mock_enc_orch.run_encounter.assert_called_once_with(
-        encounter_id="module-001-enc-new"
+        encounter_id="module-001-enc-new", campaign_id="c-1"
     )
 
 
 def test_run_does_not_forward_encounter_output_to_io() -> None:
     """Encounter output is displayed live in EncounterOrchestrator; not forwarded."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
-    orch, _, _, _, mock_enc_orch, _ = _make_orchestrator(active_encounter=active)
+    orch, _, mock_enc_orch, _, _ = _make_orchestrator(active_encounter=active)
     mock_enc_orch.run_encounter.return_value = MagicMock(output_text="Docks at dusk.")
     orch.run(campaign=_make_campaign())
     # Output display is the encounter orchestrator's responsibility; module orchestrator
@@ -239,11 +230,10 @@ def test_run_with_completed_encounter_calls_summarize() -> None:
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Cultist subdued.",
     )
-    orch, _, mock_enc_repo, mock_narrator, _, _ = _make_orchestrator(
+    orch, mock_narrator, _, _, _ = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign())
     mock_narrator.summarize_encounter.assert_called_once()
 
@@ -253,31 +243,30 @@ def test_run_with_completed_encounter_stores_narrative() -> None:
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Cultist subdued.",
     )
-    orch, _, mock_enc_repo, _, _, mock_memory_repo = _make_orchestrator(
+    orch, _, _, mock_narrative_repo, _ = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
         summarize_returns="Rich summary text.",
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign())
-    mock_memory_repo.store_narrative.assert_called_once()
-    args = mock_memory_repo.store_narrative.call_args
+    mock_narrative_repo.store_narrative.assert_called_once()
+    args = mock_narrative_repo.store_narrative.call_args
     assert args[0][0] == "Rich summary text."
     assert args[0][1]["event_type"] == "encounter_summary"
 
 
 def test_run_with_completed_encounter_clears_encounter() -> None:
+    """Archiving a completed encounter stages encounter=None and calls persist."""
     active = _make_active_encounter(
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Cultist subdued.",
     )
-    orch, _, mock_enc_repo, _, _, _ = _make_orchestrator(
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign())
-    mock_enc_repo.clear.assert_called_once()
+    mock_game_state_repo.persist.assert_called()
 
 
 def test_run_with_completed_encounter_saves_updated_module() -> None:
@@ -285,19 +274,21 @@ def test_run_with_completed_encounter_saves_updated_module() -> None:
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Cultist subdued.",
     )
-    orch, mock_module_repo, mock_enc_repo, _, _, _ = _make_orchestrator(
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
         summarize_returns="Session notes.",
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign())
-    # Module save called at least once (archive)
-    assert mock_module_repo.save.call_count >= 1
-    # The archived module carries the completed encounter id
-    all_saved = [call[0][0] for call in mock_module_repo.save.call_args_list]
+    # persist() called at least once (archive)
+    assert mock_game_state_repo.persist.call_count >= 1
+    # The persisted game state carries the updated module with the completed encounter id
+    all_staged = [call[0][0] for call in mock_game_state_repo.persist.call_args_list]
     archived = next(
-        m for m in all_saved if "module-001-enc-001" in m.completed_encounter_ids
+        gs
+        for gs in all_staged
+        if gs.module is not None
+        and "module-001-enc-001" in gs.module.completed_encounter_ids
     )
     assert archived is not None
 
@@ -309,31 +300,32 @@ def test_run_archive_increments_next_encounter_index() -> None:
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Done.",
     )
-    orch, mock_module_repo, mock_enc_repo, _, _, _ = _make_orchestrator(
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(
         active_encounter=active,
         module=_make_module(next_encounter_index=_initial_index),
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign())
-    all_saved = [call[0][0] for call in mock_module_repo.save.call_args_list]
+    all_staged = [call[0][0] for call in mock_game_state_repo.persist.call_args_list]
     archived = next(
-        m for m in all_saved if "module-001-enc-001" in m.completed_encounter_ids
+        gs
+        for gs in all_staged
+        if gs.module is not None
+        and "module-001-enc-001" in gs.module.completed_encounter_ids
     )
-    assert archived.next_encounter_index == _initial_index + 1
+    assert archived.module.next_encounter_index == _initial_index + 1
 
 
 def test_run_milestone_achieved_saves_new_module() -> None:
-    """MilestoneAchieved from planner → new module is generated and saved."""
+    """MilestoneAchieved from planner → new module is generated and persisted."""
     active = _make_active_encounter(
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="Malachar defeated.",
     )
-    orch, mock_module_repo, mock_enc_repo, _, _, _ = _make_orchestrator(
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
         encounter_ready=MilestoneAchieved(),
     )
-    mock_enc_repo.load_active.return_value = active
 
     module_result = ModuleGenerationResult(
         title="The Cult Revealed",
@@ -344,15 +336,26 @@ def test_run_milestone_achieved_saves_new_module() -> None:
 
     orch.run(campaign=_make_campaign())
 
-    saved_modules = [call[0][0] for call in mock_module_repo.save.call_args_list]
-    new_module = next((m for m in saved_modules if m.module_id == "module-002"), None)
+    all_staged = [call[0][0] for call in mock_game_state_repo.persist.call_args_list]
+    new_module = next(
+        (
+            gs.module
+            for gs in all_staged
+            if gs.module and gs.module.module_id == "module-002"
+        ),
+        None,
+    )
     assert new_module is not None
     assert new_module.title == "The Cult Revealed"
 
 
 def test_run_returns_early_when_module_not_found() -> None:
-    orch, mock_module_repo, _, _, mock_enc_orch, _ = _make_orchestrator()
-    mock_module_repo.load.return_value = None
+    orch, _, mock_enc_orch, _, mock_game_state_repo = _make_orchestrator()
+    # Override default game state: module is absent
+    mock_game_state_repo.load.return_value = GameState(
+        module=None,
+        actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
+    )
     orch.run(campaign=_make_campaign())
     mock_enc_orch.run_encounter.assert_not_called()
 
@@ -382,12 +385,11 @@ def test_run_displays_end_of_campaign_when_milestones_exhausted() -> None:
         player_actor_id="pc:player",
         current_module_id="module-001",
     )
-    orch, _, mock_enc_repo, _, _, _ = _make_orchestrator(
+    orch, _, _, _, _ = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
         encounter_ready=MilestoneAchieved(),
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=campaign)
     orch._io.display.assert_any_call(
         "\nThe campaign is complete. Your legend will be remembered.\n"
@@ -401,11 +403,10 @@ def test_run_with_completed_encounter_passes_updated_module_to_planner() -> None
         outcome="Cultist subdued.",
     )
     _initial_index = 1
-    orch, _, mock_enc_repo, _, _, _ = _make_orchestrator(
+    orch, _, _, _, _ = _make_orchestrator(
         active_encounter=active,
         module=_make_module(next_encounter_index=_initial_index),
     )
-    mock_enc_repo.load_active.return_value = active
     orch.run(campaign=_make_campaign())
     prepare_call = orch._agents.encounter_planner.prepare.call_args
     passed_module = prepare_call[1]["module"]
@@ -414,10 +415,11 @@ def test_run_with_completed_encounter_passes_updated_module_to_planner() -> None
 
 def test_run_planner_receive_correct_campaign_and_player() -> None:
     """prepare() must be called with the correct campaign and player."""
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=None)
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=None)
     campaign = _make_campaign()
     expected_player = _make_player()
-    mock_memory_repo.load_game_state.return_value = GameState(
+    mock_game_state_repo.load.return_value = GameState(
+        module=_make_module(),
         encounter=None,
         actor_registry=ActorRegistry(actors={"pc:player": expected_player}),
     )
@@ -429,7 +431,7 @@ def test_run_planner_receive_correct_campaign_and_player() -> None:
 
 def test_run_reads_player_from_registry() -> None:
     """ModuleOrchestrator.run() no longer accepts player param; reads from registry."""
-    orch, _, _, _, _, _ = _make_orchestrator(active_encounter=None)
+    orch, _, _, _, _ = _make_orchestrator(active_encounter=None)
     # Should not raise — player is in registry (seeded by _make_orchestrator)
     orch.run(campaign=_make_campaign())
 
@@ -437,16 +439,16 @@ def test_run_reads_player_from_registry() -> None:
 def test_run_with_scripted_io_module_not_found_no_crash() -> None:
     """ModuleOrchestrator must not crash when module is absent."""
     io = ScriptedIO([])
-    mock_module_repo = MagicMock(spec=ModuleRepository)
-    mock_module_repo.load.return_value = None
+    mock_game_state_repo = MagicMock(spec=GameStateRepository)
+    mock_game_state_repo.load.return_value = GameState(
+        module=None,
+        actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
+    )
     mock_encounter_planner = MagicMock(spec=EncounterPlannerOrchestrator)
     repos = ModuleOrchestratorRepositories(
-        campaign=MagicMock(spec=CampaignRepository),
-        module=mock_module_repo,
-        encounter=MagicMock(spec=EncounterRepository),
-        actor=MagicMock(spec=PlayerRepository),
-        memory=MagicMock(spec=MemoryRepository),
+        narrative=MagicMock(spec=NarrativeMemoryRepository),
         compendium=MagicMock(spec=CompendiumRepository),
+        game_state=mock_game_state_repo,
     )
     agents = ModuleOrchestratorAgents(
         narrator=MagicMock(spec=NarratorAgent),
@@ -469,25 +471,26 @@ def test_archive_encounter_calls_persist() -> None:
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
         outcome="victory",
     )
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
     orch.run(campaign=_make_campaign())
-    mock_memory_repo.persist.assert_called_once()
+    mock_game_state_repo.persist.assert_called_once()
 
 
 def test_run_player_quits_mid_encounter_does_not_archive() -> None:
     """If player quits (encounter not complete after run), no archiving occurs."""
     active = _make_active_encounter(phase=EncounterPhase.COMBAT)
-    orch, _, mock_enc_repo, mock_narrator, _mock_enc_orch, mock_memory_repo = (
-        _make_orchestrator(active_encounter=active)
+    orch, mock_narrator, _, _, mock_game_state_repo = _make_orchestrator(
+        active_encounter=active
     )
-    # After run_encounter, memory returns COMBAT phase (player quit, not complete)
-    mock_memory_repo.load_game_state.return_value = GameState(
+    # After run_encounter, game state returns COMBAT phase (player quit, not complete)
+    mock_game_state_repo.load.return_value = GameState(
+        module=_make_module(),
         encounter=active,
         actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
     )
     orch.run(campaign=_make_campaign())
     mock_narrator.summarize_encounter.assert_not_called()
-    mock_enc_repo.clear.assert_not_called()
+    mock_game_state_repo.persist.assert_not_called()
 
 
 def test_run_encounter_completes_during_run_triggers_archive() -> None:
@@ -496,17 +499,18 @@ def test_run_encounter_completes_during_run_triggers_archive() -> None:
     completed = _make_active_encounter(
         phase=EncounterPhase.ENCOUNTER_COMPLETE, outcome="victory"
     )
-    orch, _, mock_enc_repo, mock_narrator, _, mock_memory_repo = _make_orchestrator(
+    orch, mock_narrator, _, _, mock_game_state_repo = _make_orchestrator(
         active_encounter=active
     )
-    # After run_encounter, memory cache holds the completed encounter
-    mock_memory_repo.load_game_state.return_value = GameState(
+    # After run_encounter, game state cache holds the completed encounter
+    mock_game_state_repo.load.return_value = GameState(
+        module=_make_module(),
         encounter=completed,
         actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
     )
     orch.run(campaign=_make_campaign())
     mock_narrator.summarize_encounter.assert_called_once()
-    mock_enc_repo.clear.assert_called_once()
+    mock_game_state_repo.persist.assert_called()
 
 
 # ─── _archive_encounter registry sync and transition ─────────────────────────
@@ -547,19 +551,23 @@ def test_prepare_receives_post_encounter_player_not_pre_encounter_snapshot() -> 
     )
 
     active = _make_completed_encounter()
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
 
     post_state = GameState(
-        actor_registry=ActorRegistry(actors={"pc:player": post_encounter_player})
+        module=_make_module(),
+        actor_registry=ActorRegistry(actors={"pc:player": post_encounter_player}),
     )
-    # Call 1: top-of-loop read (pre-encounter state)
-    # Call 2: _archive_encounter() traveling-actor read
-    # Call 3: our fix — re-read player after archive (post-encounter state)
-    # Call 4: _prepare_and_run() checks if newly-run encounter completed
-    mock_memory_repo.load_game_state.side_effect = [
+    # Call 1: top-of-loop read (pre-encounter state) — includes module for run()
+    # Call 2: _archive_encounter() gs read for stage
+    # Call 3: _archive_encounter() traveling-actor read (post-persist)
+    # Call 4: our fix — re-read player after archive (post-encounter state)
+    # Call 5: _prepare_and_run() checks if newly-run encounter completed
+    mock_game_state_repo.load.side_effect = [
         GameState(
-            actor_registry=ActorRegistry(actors={"pc:player": pre_encounter_player})
+            module=_make_module(),
+            actor_registry=ActorRegistry(actors={"pc:player": pre_encounter_player}),
         ),
+        post_state,
         post_state,
         post_state,
         post_state,
@@ -574,15 +582,27 @@ def test_prepare_receives_post_encounter_player_not_pre_encounter_snapshot() -> 
 def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
     """_archive_encounter calls persist() to flush the already-updated registry."""
     active = _make_completed_encounter()
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        encounter=None,
-        actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
+    player_registry = ActorRegistry(actors={"pc:player": _make_player()})
+    active_gs = GameState(
+        module=_make_module(), encounter=active, actor_registry=player_registry
     )
+    # First loads see the active encounter; post-persist loads see encounter cleared.
+    post_persist_gs = GameState(
+        module=_make_module(), encounter=None, actor_registry=player_registry
+    )
+    mock_game_state_repo.load.side_effect = [
+        active_gs,  # run() → load module
+        active_gs,  # _run_loop() → load gs (active = gs.encounter)
+        active_gs,  # _archive_encounter() → load gs for stage
+        post_persist_gs,  # _archive_encounter() → post-persist registry read
+        post_persist_gs,  # _run_loop() → re-read player after archive
+        post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
+    ]
 
     orch.run(campaign=_make_campaign())
 
-    mock_memory_repo.persist.assert_called_once()
+    mock_game_state_repo.persist.assert_called_once()
 
 
 def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
@@ -603,12 +623,23 @@ def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
         traveling_actor_ids=("npc:elara",),
         next_location_hint="Cave of Whispers",
     )
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
     # Seed registry with both actors so _archive_encounter can read them.
-    mock_memory_repo.load_game_state.return_value = GameState(
-        encounter=None,
-        actor_registry=ActorRegistry(actors={"pc:player": player, "npc:elara": elara}),
+    full_registry = ActorRegistry(actors={"pc:player": player, "npc:elara": elara})
+    active_gs = GameState(
+        module=_make_module(), encounter=active, actor_registry=full_registry
     )
+    post_persist_gs = GameState(
+        module=_make_module(), encounter=None, actor_registry=full_registry
+    )
+    mock_game_state_repo.load.side_effect = [
+        active_gs,  # run() → load module
+        active_gs,  # _run_loop() → load gs (active = gs.encounter)
+        active_gs,  # _archive_encounter() → load gs for stage
+        post_persist_gs,  # _archive_encounter() → post-persist registry read
+        post_persist_gs,  # _run_loop() → re-read player after archive
+        post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
+    ]
 
     orch.run(campaign=_make_campaign())
 
@@ -638,11 +669,22 @@ def test_run_loop_call_site_1_threads_transition_to_prepare() -> None:
         traveling_actor_ids=("npc:elara",),
         next_location_hint="The cave",
     )
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        encounter=None,
-        actor_registry=ActorRegistry(actors={"pc:player": player, "npc:elara": elara}),
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
+    full_registry = ActorRegistry(actors={"pc:player": player, "npc:elara": elara})
+    active_gs = GameState(
+        module=_make_module(), encounter=active, actor_registry=full_registry
     )
+    post_persist_gs = GameState(
+        module=_make_module(), encounter=None, actor_registry=full_registry
+    )
+    mock_game_state_repo.load.side_effect = [
+        active_gs,  # run() → load module
+        active_gs,  # _run_loop() → load gs (active = gs.encounter)
+        active_gs,  # _archive_encounter() → load gs for stage
+        post_persist_gs,  # _archive_encounter() → post-persist registry read
+        post_persist_gs,  # _run_loop() → re-read player after archive
+        post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
+    ]
 
     orch.run(campaign=_make_campaign())
 
@@ -675,8 +717,9 @@ def test_run_loop_call_site_2_threads_transition_to_prepare() -> None:
         traveling_actor_ids=("npc:elara",),
         next_location_hint="The harbor",
     )
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
+    mock_game_state_repo.load.return_value = GameState(
+        module=_make_module(),
         encounter=completed,
         actor_registry=ActorRegistry(actors={"pc:player": player, "npc:elara": elara}),
     )
@@ -692,11 +735,22 @@ def test_run_loop_call_site_2_threads_transition_to_prepare() -> None:
 def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
     """When traveling_actor_ids is empty, transition is passed but has no traveling actors."""
     active = _make_completed_encounter(traveling_actor_ids=())
-    orch, _, _, _, _, mock_memory_repo = _make_orchestrator(active_encounter=active)
-    mock_memory_repo.load_game_state.return_value = GameState(
-        encounter=None,
-        actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
+    player_registry = ActorRegistry(actors={"pc:player": _make_player()})
+    active_gs = GameState(
+        module=_make_module(), encounter=active, actor_registry=player_registry
     )
+    post_persist_gs = GameState(
+        module=_make_module(), encounter=None, actor_registry=player_registry
+    )
+    mock_game_state_repo.load.side_effect = [
+        active_gs,  # run() → load module
+        active_gs,  # _run_loop() → load gs (active = gs.encounter)
+        active_gs,  # _archive_encounter() → load gs for stage
+        post_persist_gs,  # _archive_encounter() → post-persist registry read
+        post_persist_gs,  # _run_loop() → re-read player after archive
+        post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
+    ]
 
     orch.run(campaign=_make_campaign())
 
@@ -705,3 +759,80 @@ def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
     assert transition is not None
     assert len(transition.traveling_actors) == 0
     assert transition.traveling_actor_ids == ()
+
+
+# ---------------------------------------------------------------------------
+# GameStateRepository path
+# ---------------------------------------------------------------------------
+
+
+def _make_orchestrator_with_gs_repo(
+    *,
+    active_encounter: EncounterState | None = None,
+    gs_after_run: GameState | None = None,
+) -> tuple[ModuleOrchestrator, MagicMock, MagicMock]:
+    """Build a ModuleOrchestrator wired with a GameStateRepository mock."""
+    player_registry = ActorRegistry(actors={"pc:player": _make_player()})
+    default_gs = GameState(
+        module=_make_module(),
+        encounter=active_encounter,
+        actor_registry=player_registry,
+    )
+    gs_cache: list[GameState] = [default_gs]
+
+    gs_repo = MagicMock(spec=GameStateRepository)
+    gs_repo.load.side_effect = lambda: gs_cache[-1]
+    gs_repo.persist.side_effect = gs_cache.append
+
+    if gs_after_run is not None:
+        gs_cache.append(gs_after_run)
+
+    mock_enc_orch = MagicMock()
+    mock_enc_orch.run_encounter.return_value = None
+
+    mock_narrative_repo = MagicMock(spec=NarrativeMemoryRepository)
+
+    mock_narrator = MagicMock(spec=NarratorAgent)
+    mock_narrator.summarize_encounter.return_value = "Summary."
+
+    mock_planner = MagicMock(spec=EncounterPlannerOrchestrator)
+    mock_planner.prepare.return_value = EncounterReady(
+        encounter_state=_make_planner_encounter(),
+        module=_make_module(),
+    )
+
+    repos = ModuleOrchestratorRepositories(
+        narrative=mock_narrative_repo,
+        compendium=MagicMock(spec=CompendiumRepository),
+        game_state=gs_repo,
+    )
+    agents = ModuleOrchestratorAgents(
+        narrator=mock_narrator,
+        module_generator=MagicMock(),
+        encounter_planner=mock_planner,
+    )
+    orch = ModuleOrchestrator(
+        io=MagicMock(),
+        repositories=repos,
+        agents=agents,
+        encounter_orchestrator=mock_enc_orch,
+    )
+    return orch, gs_repo, mock_narrative_repo
+
+
+def test_run_loop_uses_game_state_repo_when_set() -> None:
+    """_run_loop must call game_state_repo.load()."""
+    orch, gs_repo, _ = _make_orchestrator_with_gs_repo()
+    orch.run(campaign=_make_campaign())
+    gs_repo.load.assert_called()
+
+
+def test_archive_encounter_persists_via_game_state_repo_when_set() -> None:
+    """_archive_encounter must call game_state_repo.persist(), not narrative.persist()."""
+    completed = _make_active_encounter(phase=EncounterPhase.ENCOUNTER_COMPLETE)
+    orch, gs_repo, mock_narrative_repo = _make_orchestrator_with_gs_repo(
+        active_encounter=completed,
+    )
+    orch.run(campaign=_make_campaign())
+    gs_repo.persist.assert_called()
+    mock_narrative_repo.persist.assert_not_called()

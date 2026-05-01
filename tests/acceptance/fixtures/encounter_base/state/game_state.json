@@ -1,0 +1,48 @@
+{
+  "actor_registry": {
+    "actors": {}
+  },
+  "campaign": {
+    "bbeg_actor_id": null,
+    "bbeg_description": "A cunning goblin warchief.",
+    "bbeg_name": "Grizznak",
+    "campaign_id": "c-encounter-base",
+    "current_milestone_index": 0,
+    "current_module_id": "module-001",
+    "hidden_goal": "Drive back the goblin warband.",
+    "milestones": [
+      {
+        "completed": false,
+        "description": "Engage the goblin scouts.",
+        "milestone_id": "m1",
+        "title": "First Contact"
+      },
+      {
+        "completed": false,
+        "description": "Defeat the main force.",
+        "milestone_id": "m2",
+        "title": "The Warband"
+      }
+    ],
+    "name": "The Goblin Threat",
+    "narrator_personality": "Vivid and action-focused.",
+    "player_actor_id": "pc:talia",
+    "player_brief": "Frontier adventure against goblins.",
+    "setting": "A frontier village threatened by roving goblin bands.",
+    "starting_level": 1,
+    "target_level": 3
+  },
+  "encounter": null,
+  "module": {
+    "campaign_id": "c-encounter-base",
+    "completed": false,
+    "completed_encounter_ids": [],
+    "completed_encounter_summaries": [],
+    "guiding_milestone_id": "m1",
+    "module_id": "module-001",
+    "next_encounter_index": 0,
+    "planned_encounters": [],
+    "summary": "Goblin scouts have been spotted near the village. Drive them off.",
+    "title": "Goblin Scout Patrol"
+  }
+}

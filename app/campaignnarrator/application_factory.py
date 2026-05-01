@@ -48,17 +48,15 @@ from campaignnarrator.orchestrators.module_orchestrator import (
     ModuleOrchestratorRepositories,
 )
 from campaignnarrator.orchestrators.startup_orchestrator import StartupOrchestrator
-from campaignnarrator.repositories.campaign_repository import CampaignRepository
 from campaignnarrator.repositories.character_template_repository import (
     CharacterTemplateRepository,
 )
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.encounter_repository import EncounterRepository
-from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 from campaignnarrator.repositories.player_repository import PlayerRepository
-from campaignnarrator.repositories.rules_repository import RulesRepository
-from campaignnarrator.repositories.state_repository import StateRepository
 from campaignnarrator.settings import Settings
 from campaignnarrator.terminal_io import TerminalIO
 
@@ -75,13 +73,10 @@ class _Repositories:
     """All repositories, built in one place."""
 
     actor: PlayerRepository
-    encounter: EncounterRepository
-    campaign: CampaignRepository
-    module: ModuleRepository
-    rules: RulesRepository
     compendium: CompendiumRepository
-    memory: MemoryRepository
+    narrative: NarrativeMemoryRepository
     template: CharacterTemplateRepository
+    game_state: GameStateRepository
 
 
 @dataclass(frozen=True)
@@ -103,22 +98,22 @@ class _LazyGameOrchestrator:
         self,
         *,
         actor_repository: PlayerRepository,
-        campaign_repository: CampaignRepository,
-        memory_repository: MemoryRepository,
+        game_state_repository: GameStateRepository,
+        narrative_repository: NarrativeMemoryRepository,
         character_creation_orchestrator: CharacterCreationOrchestrator,
         make_campaign_creation: Callable[[ActorState], CampaignCreationOrchestrator],
         make_startup: Callable[[ActorState], StartupOrchestrator],
     ) -> None:
         self._actor_repo = actor_repository
-        self._campaign_repo = campaign_repository
-        self._memory_repo = memory_repository
+        self._game_state_repo = game_state_repository
+        self._narrative_repo = narrative_repository
         self._character_creation_orchestrator = character_creation_orchestrator
         self._make_campaign_creation = make_campaign_creation
         self._make_startup = make_startup
 
     def save_state(self) -> None:
         """Flush in-memory session state to disk."""
-        self._memory_repo.persist()
+        self._narrative_repo.persist()
 
     def run(self) -> None:
         """Detect game state and route to the appropriate sub-orchestrator."""
@@ -134,7 +129,7 @@ class _LazyGameOrchestrator:
             self._make_campaign_creation(player).run()
             return
 
-        if self._campaign_repo.exists():
+        if self._game_state_repo.load().campaign is not None:
             self._make_startup(player).handle_returning_with_campaign()
         else:
             self._make_startup(player).handle_returning_without_campaign()
@@ -177,33 +172,24 @@ class ApplicationFactory:
             else self._data_root / "memory" / "lancedb"
         )
 
-        actor = PlayerRepository(self._data_root / "state")
-        encounter = EncounterRepository(self._data_root / "state")
-        campaign = CampaignRepository(self._data_root)
-        module = ModuleRepository(self._data_root)
-        rules = RulesRepository(self._data_root / "rules")
+        actor = PlayerRepository(self._data_root)
         compendium = CompendiumRepository(self._data_root / "compendium")
-        state = StateRepository(
+        game_state = GameStateRepository(
+            state_path=self._data_root / "state" / "game_state.json",
             player_repo=actor,
-            encounter_repo=encounter,
-            compendium=compendium,
         )
-        memory = MemoryRepository(
+        memory = NarrativeMemoryRepository(
             self._data_root / "memory",
-            state_repo=state,
             embedding_adapter=embedding_adapter,
             lancedb_path=lancedb_path,
         )
         template = CharacterTemplateRepository(self._data_root / "character_templates")
         return _Repositories(
             actor=actor,
-            encounter=encounter,
-            campaign=campaign,
-            module=module,
-            rules=rules,
             compendium=compendium,
-            memory=memory,
+            narrative=memory,
             template=template,
+            game_state=game_state,
         )
 
     def _build_agents(self, repos: _Repositories) -> _Agents:
@@ -211,13 +197,12 @@ class ApplicationFactory:
         return _Agents(
             rules=RulesAgent(
                 adapter=adapter,
-                rules_repository=repos.rules,
                 compendium_repository=repos.compendium,
             ),
             narrator=NarratorAgent(
                 adapter=adapter,
                 personality=NARRATOR_PERSONALITY,
-                memory_repository=repos.memory,
+                memory_repository=repos.narrative,
             ),
             startup_interpreter=StartupInterpreterAgent(adapter=adapter),
             backstory=BackstoryAgent(adapter=adapter),
@@ -230,7 +215,8 @@ class ApplicationFactory:
 
         encounter_orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(
-                memory=repos.memory,
+                memory=repos.narrative,
+                game_state=repos.game_state,
             ),
             agents=OrchestratorAgents(
                 rules=agents.rules,
@@ -242,10 +228,9 @@ class ApplicationFactory:
 
         encounter_planner_orchestrator = EncounterPlannerOrchestrator(
             repositories=EncounterPlannerOrchestratorRepositories(
-                module=repos.module,
-                encounter=repos.encounter,
-                memory=repos.memory,
+                narrative=repos.narrative,
                 compendium=repos.compendium,
+                game_state=repos.game_state,
             ),
             agents=EncounterPlannerOrchestratorAgents(
                 planner=EncounterPlannerAgent(adapter=agents.narrator.adapter),
@@ -255,12 +240,9 @@ class ApplicationFactory:
         module_orchestrator = ModuleOrchestrator(
             io=io,
             repositories=ModuleOrchestratorRepositories(
-                campaign=repos.campaign,
-                module=repos.module,
-                encounter=repos.encounter,
-                actor=repos.actor,
-                memory=repos.memory,
+                narrative=repos.narrative,
                 compendium=repos.compendium,
+                game_state=repos.game_state,
             ),
             agents=ModuleOrchestratorAgents(
                 narrator=agents.narrator,
@@ -275,9 +257,8 @@ class ApplicationFactory:
                 io=io,
                 player=player,
                 repositories=CampaignCreationRepositories(
-                    campaign=repos.campaign,
-                    module=repos.module,
-                    memory=repos.memory,
+                    narrative=repos.narrative,
+                    game_state=repos.game_state,
                 ),
                 agents=CampaignCreationAgents(
                     campaign_generator=agents.campaign_generator,
@@ -290,7 +271,8 @@ class ApplicationFactory:
             return StartupOrchestrator(
                 io=io,
                 player=player,
-                campaign_repository=repos.campaign,
+                narrative_repository=repos.narrative,
+                game_state_repository=repos.game_state,
                 interpreter=agents.startup_interpreter,
                 campaign_creation_orchestrator=_make_campaign_creation(player),
                 module_orchestrator=module_orchestrator,
@@ -301,7 +283,7 @@ class ApplicationFactory:
             repositories=CharacterCreationRepositories(
                 actor=repos.actor,
                 template=repos.template,
-                memory=repos.memory,
+                memory=repos.narrative,
             ),
             agents=CharacterCreationAgents(
                 backstory=agents.backstory,
@@ -310,8 +292,8 @@ class ApplicationFactory:
 
         game_orchestrator = _LazyGameOrchestrator(
             actor_repository=repos.actor,
-            campaign_repository=repos.campaign,
-            memory_repository=repos.memory,
+            game_state_repository=repos.game_state,
+            narrative_repository=repos.narrative,
             character_creation_orchestrator=char_creation,
             make_campaign_creation=_make_campaign_creation,
             make_startup=_make_startup,

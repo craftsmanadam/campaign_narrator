@@ -34,9 +34,10 @@ from campaignnarrator.orchestrators.encounter_planner_orchestrator import (
     _OutOfBoundsTemplateError,
 )
 from campaignnarrator.repositories.compendium_repository import CompendiumRepository
-from campaignnarrator.repositories.encounter_repository import EncounterRepository
-from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 from tests.fixtures.goblin_scout import make_goblin_scout
 
@@ -182,10 +183,9 @@ def _make_transition(
 
 def _make_repos() -> EncounterPlannerOrchestratorRepositories:
     return EncounterPlannerOrchestratorRepositories(
-        module=MagicMock(spec=ModuleRepository),
-        encounter=MagicMock(spec=EncounterRepository),
-        memory=MagicMock(spec=MemoryRepository),
+        narrative=MagicMock(spec=NarrativeMemoryRepository),
         compendium=MagicMock(spec=CompendiumRepository),
+        game_state=MagicMock(spec=GameStateRepository),
     )
 
 
@@ -228,8 +228,8 @@ class TestEmptyPlanDetection:
             status="viable",
             milestone_achieved=False,
         )
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -254,8 +254,8 @@ class TestEmptyPlanDetection:
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
         )
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -266,11 +266,12 @@ class TestEmptyPlanDetection:
             player=_make_player(),
         )
 
-        # First save is from _ensure_planned; _recover_if_needed skips (viable)
-        repos.module.save.assert_called_once()
-        saved_module = repos.module.save.call_args[0][0]
-        assert len(saved_module.planned_encounters) == 1
-        assert saved_module.next_encounter_index == 0
+        # First persist is from _ensure_planned; _recover_if_needed skips (viable)
+        # The second persist is from _instantiate (encounter + actors).
+        # We check the first persist call contains the planned module.
+        first_stage_call = repos.game_state.persist.call_args_list[0][0][0]
+        assert len(first_stage_call.module.planned_encounters) == 1
+        assert first_stage_call.module.next_encounter_index == 0
 
     def test_plan_encounters_receives_narrative_context_from_memory(self) -> None:
         """plan_encounters() receives narrative context from MemoryRepository."""
@@ -281,8 +282,8 @@ class TestEmptyPlanDetection:
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
         )
-        repos.memory.retrieve_relevant.return_value = ["A prior narrative entry."]
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = ["A prior narrative entry."]
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -303,8 +304,8 @@ class TestEmptyPlanDetection:
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
         )
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         orchestrator = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
@@ -331,7 +332,7 @@ class TestOutOfBoundsIndex:
         """When next_encounter_index >= len(planned_encounters), run milestone check."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
+        repos.narrative.retrieve_relevant.return_value = []
         repos.compendium.monster_index_path.return_value = None
 
         milestone_assessment = DivergenceAssessment(
@@ -364,7 +365,7 @@ class TestOutOfBoundsIndex:
         """Out-of-bounds index + viable status → ValueError (no template at that index)."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
+        repos.narrative.retrieve_relevant.return_value = []
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -395,8 +396,8 @@ class TestViablePath:
         """Viable assessment → proceed directly to instantiation, returns EncounterReady."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -423,7 +424,7 @@ class TestViablePath:
     def test_milestone_achieved_returns_milestone_achieved_object(self) -> None:
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
+        repos.narrative.retrieve_relevant.return_value = []
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="milestone_achieved",
@@ -459,8 +460,8 @@ class TestRecovery:
     ]:
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -497,7 +498,7 @@ class TestRecovery:
         agents.planner.recover_encounters.assert_called_once()
         call_kwargs = agents.planner.recover_encounters.call_args[1]
         assert call_kwargs["recovery_type"] == "bridge_inserted"
-        repos.module.save.assert_called()
+        repos.game_state.persist.assert_called()
 
     def test_needs_bridge_updated_module_has_new_templates(self) -> None:
         bridge = _make_template("enc-bridge")
@@ -519,10 +520,11 @@ class TestRecovery:
             player=_make_player(),
         )
 
-        last_save = repos.module.save.call_args[0][0]
+        # First persist call is from _recover_if_needed; inspect its .module field
+        first_staged = repos.game_state.persist.call_args_list[0][0][0]
         expected_count = 2
-        assert len(last_save.planned_encounters) == expected_count
-        assert last_save.planned_encounters[0].template_id == "enc-bridge"
+        assert len(first_staged.module.planned_encounters) == expected_count
+        assert first_staged.module.planned_encounters[0].template_id == "enc-bridge"
 
     def test_needs_rebuild_replaces_current_template(self) -> None:
         replacement = _make_template("enc-001-rebuilt")
@@ -544,8 +546,11 @@ class TestRecovery:
             player=_make_player(),
         )
 
-        last_save = repos.module.save.call_args[0][0]
-        assert last_save.planned_encounters[0].template_id == "enc-001-rebuilt"
+        # First persist call is from _recover_if_needed; inspect its .module field
+        first_staged = repos.game_state.persist.call_args_list[0][0][0]
+        assert (
+            first_staged.module.planned_encounters[0].template_id == "enc-001-rebuilt"
+        )
 
     def test_needs_full_replan_replaces_all_remaining_templates(self) -> None:
         new1 = _make_template("enc-new-001")
@@ -569,17 +574,18 @@ class TestRecovery:
             player=_make_player(),
         )
 
-        last_save = repos.module.save.call_args[0][0]
-        assert existing_done in last_save.planned_encounters
-        assert new1 in last_save.planned_encounters
-        assert new2 in last_save.planned_encounters
+        # First persist call is from _recover_if_needed; inspect its .module field
+        first_staged = repos.game_state.persist.call_args_list[0][0][0]
+        assert existing_done in first_staged.module.planned_encounters
+        assert new1 in first_staged.module.planned_encounters
+        assert new2 in first_staged.module.planned_encounters
 
     def test_recovery_empty_result_escalates_to_full_replan(self) -> None:
         """Empty updated_templates triggers fallback to full module replan."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -694,8 +700,8 @@ class TestInstantiation:
         """Returns (orchestrator, repos, agents, module) ready for full prepare() call."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -753,12 +759,13 @@ class TestInstantiation:
         assert isinstance(result, EncounterReady)
         assert "npc:module-001-enc-001:goblin-a" in result.encounter_state.actor_ids
 
-    def test_encounter_state_saved_to_repository(self) -> None:
+    def test_encounter_state_staged_to_game_state_repository(self) -> None:
         orchestrator, repos, _agents, module = self._make_viable_orchestrator()
         orchestrator.prepare(
             module=module, campaign=_make_campaign(), player=_make_player()
         )
-        repos.encounter.save.assert_called_once()
+        # Encounter is now persisted via game_state_repo.persist(), not encounter.save()
+        repos.game_state.persist.assert_called_once()
 
     def test_encounter_ready_module_is_updated_module(self) -> None:
         """EncounterReady.module reflects any recovery updates."""
@@ -781,8 +788,8 @@ class TestInstantiation:
         """EncounterState.scene_tone is set from template.scene_tone at instantiation."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
@@ -892,8 +899,8 @@ class TestInstantiation:
         )
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
@@ -946,8 +953,8 @@ class TestInstantiation:
         )
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
@@ -979,8 +986,8 @@ class TestInstantiation:
         """Over-budget NPCs are trimmed by scale_encounter_npcs before actor creation."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
             status="viable", reason="ok", milestone_achieved=False
@@ -1094,25 +1101,25 @@ class TestInstantiation:
         assert "npc:elara" in result.encounter_state.actor_ids
 
     def test_instantiate_writes_actors_to_registry(self) -> None:
-        """_instantiate() calls update_game_state with a registry containing the new NPC."""
+        """_instantiate() stages a game state with a registry containing the new NPC."""
         orchestrator, repos, _agents, module = self._make_viable_orchestrator()
         orchestrator.prepare(
             module=module, campaign=_make_campaign(), player=_make_player()
         )
-        assert repos.memory.update_game_state.called
-        updated_state = repos.memory.update_game_state.call_args[0][0]
+        assert repos.game_state.persist.called
+        updated_state = repos.game_state.persist.call_args[0][0]
         assert "npc:module-001-enc-001:goblin-a" in updated_state.actor_registry.actors
 
     def test_instantiate_writes_player_to_registry(self) -> None:
-        """_instantiate() includes the player actor in the registry update."""
+        """_instantiate() includes the player actor in the staged registry."""
         player = _make_player()
         orchestrator, repos, _agents, module = self._make_viable_orchestrator()
         orchestrator.prepare(module=module, campaign=_make_campaign(), player=player)
-        updated_state = repos.memory.update_game_state.call_args[0][0]
+        updated_state = repos.game_state.persist.call_args[0][0]
         assert player.actor_id in updated_state.actor_registry.actors
 
     def test_instantiate_writes_traveling_actor_to_registry(self) -> None:
-        """Traveling actors are included in the registry write."""
+        """Traveling actors are included in the staged registry."""
         orchestrator, repos, _, _ = self._make_viable_orchestrator(
             _make_simple_npc_template()
         )
@@ -1126,17 +1133,17 @@ class TestInstantiation:
             player=_make_player(),
             transition=transition,
         )
-        updated_state = repos.memory.update_game_state.call_args[0][0]
+        updated_state = repos.game_state.persist.call_args[0][0]
         assert "npc:elara" in updated_state.actor_registry.actors
 
-    def test_instantiate_update_game_state_includes_encounter(self) -> None:
-        """update_game_state must include the new encounter so run_encounter() doesn't see None."""
+    def test_instantiate_staged_state_includes_encounter(self) -> None:
+        """Staged game state must include the new encounter so run_encounter() doesn't see None."""
         orchestrator, repos, _agents, module = self._make_viable_orchestrator()
         result = orchestrator.prepare(
             module=module, campaign=_make_campaign(), player=_make_player()
         )
         assert isinstance(result, EncounterReady)
-        updated_state = repos.memory.update_game_state.call_args[0][0]
+        updated_state = repos.game_state.persist.call_args[0][0]
         assert updated_state.encounter is not None
         assert (
             updated_state.encounter.encounter_id == result.encounter_state.encounter_id
@@ -1154,8 +1161,8 @@ class TestTransitionThreading:
         """prepare() with transition= passes it through to the resulting encounter."""
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.return_value = DivergenceAssessment(
@@ -1189,7 +1196,7 @@ class TestRetryLogic:
         )
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
+        repos.narrative.retrieve_relevant.return_value = []
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.side_effect = RuntimeError("LLM timeout")
@@ -1217,8 +1224,8 @@ class TestRetryLogic:
         )
         repos = _make_repos()
         agents = _make_agents()
-        repos.memory.retrieve_relevant.return_value = []
-        repos.memory.load_game_state.return_value = GameState()
+        repos.narrative.retrieve_relevant.return_value = []
+        repos.game_state.load.return_value = GameState()
         repos.compendium.monster_index_path.return_value = None
 
         agents.planner.assess_divergence.side_effect = [
@@ -1239,3 +1246,76 @@ class TestRetryLogic:
         assert isinstance(result, EncounterReady)
         expected_call_count = 2
         assert agents.planner.assess_divergence.call_count == expected_call_count
+
+
+# ---------------------------------------------------------------------------
+# GameStateRepository path in _instantiate
+# ---------------------------------------------------------------------------
+
+
+def _make_gs_repo(initial: GameState | None = None) -> MagicMock:
+    if initial is None:
+        initial = GameState()
+    repo = MagicMock(spec=GameStateRepository)
+    cache: list[GameState] = [initial]
+    repo.load.side_effect = lambda: cache[-1]
+    repo.persist.side_effect = cache.append
+    return repo
+
+
+def _make_viable_agents(templates: tuple) -> EncounterPlannerOrchestratorAgents:
+    agents = _make_agents()
+    agents.planner.assess_divergence.return_value = DivergenceAssessment(
+        status="viable", reason="ok", milestone_achieved=False
+    )
+    agents.planner.plan_encounters.return_value = templates
+    return agents
+
+
+def test_instantiate_stages_to_game_state_repo_when_set() -> None:
+    """_instantiate() must call stage() on the game_state_repo."""
+    repos = EncounterPlannerOrchestratorRepositories(
+        narrative=MagicMock(spec=NarrativeMemoryRepository),
+        compendium=MagicMock(spec=CompendiumRepository),
+        game_state=_make_gs_repo(),
+    )
+    template = _make_simple_npc_template()
+    agents = _make_viable_agents((template,))
+    repos.narrative.retrieve_relevant.return_value = []
+    repos.compendium.monster_index_path.return_value = None
+
+    orch = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+    result = orch.prepare(
+        module=_make_module(planned_encounters=(template,), next_encounter_index=0),
+        campaign=_make_campaign(),
+        player=_make_player(),
+    )
+
+    assert isinstance(result, EncounterReady)
+    repos.game_state.persist.assert_called_once()
+
+
+def test_instantiate_staged_state_contains_encounter_and_actors() -> None:
+    """Staged GameState must include the new encounter and all NPC actors."""
+    initial_gs = GameState()
+    gs_repo = _make_gs_repo(initial_gs)
+    repos = EncounterPlannerOrchestratorRepositories(
+        narrative=MagicMock(spec=NarrativeMemoryRepository),
+        compendium=MagicMock(spec=CompendiumRepository),
+        game_state=gs_repo,
+    )
+    template = _make_simple_npc_template("goblin-scout")
+    agents = _make_viable_agents((template,))
+    repos.narrative.retrieve_relevant.return_value = []
+    repos.compendium.monster_index_path.return_value = None
+
+    orch = EncounterPlannerOrchestrator(repositories=repos, agents=agents)
+    orch.prepare(
+        module=_make_module(planned_encounters=(template,), next_encounter_index=0),
+        campaign=_make_campaign(),
+        player=_make_player(),
+    )
+
+    (staged_gs,) = gs_repo.persist.call_args_list[0].args
+    assert staged_gs.encounter is not None
+    assert any("goblin-scout" in aid for aid in staged_gs.actor_registry.actors)

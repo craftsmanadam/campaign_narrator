@@ -9,7 +9,9 @@ from campaignnarrator.domain.models import ActorState, PlayerIO
 from campaignnarrator.repositories.character_template_repository import (
     CharacterTemplateRepository,
 )
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 from campaignnarrator.repositories.player_repository import PlayerRepository
 
 _HELP_TRIGGERS = {"help", "help me", "assist", "write it for me", "help me write"}
@@ -22,7 +24,7 @@ class CharacterCreationRepositories:
 
     actor: PlayerRepository
     template: CharacterTemplateRepository
-    memory: MemoryRepository
+    memory: NarrativeMemoryRepository
 
 
 @dataclass(frozen=True)

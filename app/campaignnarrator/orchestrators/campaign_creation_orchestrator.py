@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from campaignnarrator.agents.campaign_generator_agent import CampaignGeneratorAgent
 from campaignnarrator.agents.module_generator_agent import ModuleGeneratorAgent
@@ -15,9 +15,10 @@ from campaignnarrator.domain.models import (
     PlayerIO,
 )
 from campaignnarrator.orchestrators.module_orchestrator import ModuleOrchestrator
-from campaignnarrator.repositories.campaign_repository import CampaignRepository
-from campaignnarrator.repositories.memory_repository import MemoryRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 _BRIEF_PROMPT = (
     "\nBefore we begin, tell me the kind of story you wish to live.\n\n"
@@ -33,9 +34,8 @@ _BRIEF_PROMPT = (
 class CampaignCreationRepositories:
     """All repositories required by CampaignCreationOrchestrator."""
 
-    campaign: CampaignRepository
-    module: ModuleRepository
-    memory: MemoryRepository
+    narrative: NarrativeMemoryRepository
+    game_state: GameStateRepository
 
 
 @dataclass(frozen=True)
@@ -109,10 +109,8 @@ class CampaignCreationOrchestrator:
             player_actor_id=self._player.actor_id,
             current_module_id=module_id,
         )
-        self._repos.campaign.save(campaign)
-
         # Write campaign setting to narrative memory
-        self._repos.memory.store_narrative(
+        self._repos.narrative.store_narrative(
             f"Campaign: {campaign.name}. Setting: {campaign.setting}.",
             {"event_type": "campaign_setting", "campaign_id": campaign_id},
         )
@@ -140,7 +138,9 @@ class CampaignCreationOrchestrator:
             summary=module_result.summary,
             guiding_milestone_id=module_result.guiding_milestone_id,
         )
-        self._repos.module.save(module)
+        # Persist campaign + module together through the state facade
+        gs = self._repos.game_state.load()
+        self._repos.game_state.persist(replace(gs, campaign=campaign, module=module))
 
         # Delegate encounter loop to ModuleOrchestrator
         self._module_orchestrator.run(campaign=campaign)

@@ -32,7 +32,10 @@ from campaignnarrator.domain.models import (
     TurnResources,
     WeaponState,
 )
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 from campaignnarrator.tools.dice import roll
 from campaignnarrator.tools.state_updates import apply_state_effects, require_int
 
@@ -170,12 +173,14 @@ class CombatOrchestrator:
         io: PlayerIO,
         adapter: object | None = None,
         _intent_agent: object | None = None,
-        memory_repository: MemoryRepository | None = None,
+        memory_repository: NarrativeMemoryRepository | None = None,
+        game_state_repository: GameStateRepository | None = None,
     ) -> None:
         self._rules_agent = rules_agent
         self._narrator_agent = narrator_agent
         self._io = io
         self._memory_repository = memory_repository
+        self._game_state_repo = game_state_repository
         if _intent_agent is not None:
             self._intent_agent = _intent_agent
         elif adapter is not None:
@@ -237,14 +242,13 @@ class CombatOrchestrator:
     def _stage_turn_in_memory(
         self, state: EncounterState, registry: ActorRegistry, result: _TurnResult
     ) -> None:
-        """Stage per-turn game state and exchange in memory repository."""
-        if self._memory_repository is None:
-            return
-        gs = self._memory_repository.load_game_state()
-        self._memory_repository.update_game_state(
-            replace(gs, encounter=state, actor_registry=registry)
-        )
-        if result.narration is not None:
+        """Persist per-turn game state and exchange in memory repository."""
+        if self._game_state_repo is not None:
+            gs = self._game_state_repo.load()
+            self._game_state_repo.persist(
+                replace(gs, encounter=state, actor_registry=registry)
+            )
+        if self._memory_repository is not None and result.narration is not None:
             self._memory_repository.log_combat_round(result.narration)
             self._memory_repository.update_exchange(
                 result.player_input, result.narration

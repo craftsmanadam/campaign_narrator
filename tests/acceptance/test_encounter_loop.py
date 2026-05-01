@@ -81,8 +81,13 @@ def _read_event_log(runtime_data_root: Path) -> list[dict[str, object]]:
 
 
 def _read_encounter(runtime_data_root: Path, encounter_id: str) -> dict[str, object]:
-    path = runtime_data_root / "state" / "encounters" / "active.json"
-    return json.loads(path.read_text())
+    blob_path = runtime_data_root / "state" / "game_state.json"
+    blob = json.loads(blob_path.read_text())
+    encounter = blob.get("encounter")
+    if encounter is None:
+        msg = f"No encounter in game_state.json (looking for {encounter_id!r})"
+        raise KeyError(msg)
+    return encounter
 
 
 @then(parsers.parse('the CLI output does not include "{unexpected}"'))

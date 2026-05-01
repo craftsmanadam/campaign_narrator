@@ -73,6 +73,24 @@ def test_save_and_load_new_fields_default_to_none(tmp_path: Path) -> None:
     assert loaded.background is None
 
 
+def test_player_file_written_at_correct_path(tmp_path: Path) -> None:
+    """Player file is written under data_root/state/actors/player.json."""
+    repo = PlayerRepository(tmp_path)
+    repo.save(TALIA)
+    expected_path = tmp_path / "state" / "actors" / "player.json"
+    assert expected_path.exists()
+
+
+def test_data_root_round_trip_with_explicit_path(tmp_path: Path) -> None:
+    """load() and save() work correctly given data_root as constructor arg."""
+    data_root = tmp_path / "game_data"
+    repo = PlayerRepository(data_root)
+    repo.save(TALIA)
+    loaded = repo.load()
+    assert loaded.actor_id == TALIA.actor_id
+    assert loaded.name == TALIA.name
+
+
 def test_player_template_from_seed_is_public() -> None:
     """player_template_from_seed should be importable as a public function."""
     fixture = (

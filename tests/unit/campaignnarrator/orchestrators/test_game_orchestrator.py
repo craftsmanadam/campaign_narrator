@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import replace
 from unittest.mock import MagicMock
 
+from campaignnarrator.domain.models import GameState
 from campaignnarrator.orchestrators.game_orchestrator import GameOrchestrator
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
 
 from tests.fixtures.fighter_talia import TALIA
 
@@ -16,7 +18,7 @@ def _make_orchestrator(
     campaign_exists: bool,
 ) -> GameOrchestrator:
     mock_actor_repo = MagicMock()
-    mock_campaign_repo = MagicMock()
+    mock_game_state_repo = MagicMock(spec=GameStateRepository)
     mock_char_creation = MagicMock()
     mock_campaign_creation = MagicMock()
     mock_startup = MagicMock()
@@ -26,11 +28,12 @@ def _make_orchestrator(
     else:
         mock_actor_repo.load.side_effect = FileNotFoundError("no player")
 
-    mock_campaign_repo.exists.return_value = campaign_exists
+    campaign_val = MagicMock() if campaign_exists else None
+    mock_game_state_repo.load.return_value = GameState(campaign=campaign_val)
 
     return GameOrchestrator(
         actor_repository=mock_actor_repo,
-        campaign_repository=mock_campaign_repo,
+        game_state_repository=mock_game_state_repo,
         character_creation_orchestrator=mock_char_creation,
         campaign_creation_orchestrator=mock_campaign_creation,
         startup_orchestrator=mock_startup,

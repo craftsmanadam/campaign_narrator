@@ -12,9 +12,10 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
 )
-from campaignnarrator.repositories.rules_repository import RulesRepository
+from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 
-_DATA_RULES_ROOT = Path(__file__).resolve().parents[2] / "data" / "rules"
+_DATA_COMPENDIUM_ROOT = Path(__file__).resolve().parents[2] / "data" / "compendium"
+_DATA_RULES_ROOT = _DATA_COMPENDIUM_ROOT / "rules"
 
 _CANNED_ADJUDICATION = RulesAdjudication(
     is_legal=True,
@@ -60,7 +61,7 @@ def test_unrecognized_hint_falls_back_to_social_interaction() -> None:
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     request = RulesAdjudicationRequest(
@@ -85,7 +86,7 @@ def test_recognized_skill_hint_loads_skill_check_topic_files() -> None:
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     request = RulesAdjudicationRequest(
@@ -110,7 +111,7 @@ def test_combat_phase_adjudication_includes_attack_resolution_rules() -> None:
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     request = RulesAdjudicationRequest(
@@ -133,7 +134,7 @@ def test_check_hint_preserves_orchestrator_recommended_check() -> None:
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     request = RulesAdjudicationRequest(
@@ -150,9 +151,6 @@ def test_check_hint_preserves_orchestrator_recommended_check() -> None:
     assert "Persuasion check" in input_text
 
 
-_DATA_COMPENDIUM_ROOT = Path(__file__).resolve().parents[2] / "data" / "compendium"
-
-
 def _rogue_class_text() -> str:
     return (
         _DATA_COMPENDIUM_ROOT / "DND.SRD.Wiki-0.5.2" / "Classes" / "Rogue.md"
@@ -165,7 +163,7 @@ def test_social_phase_with_compendium_context_includes_class_text_in_prompt() ->
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     rogue_text = _rogue_class_text()
@@ -190,7 +188,7 @@ def test_stealth_hint_includes_hiding_rules_in_prompt() -> None:
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     rogue_text = _rogue_class_text()
@@ -225,7 +223,7 @@ def test_combat_phase_with_compendium_context_includes_sneak_attack_text() -> No
     capturing = _make_capturing_agent()
     agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=RulesRepository(_DATA_RULES_ROOT),
+        compendium_repository=CompendiumRepository(_DATA_COMPENDIUM_ROOT),
         _agent=capturing,
     )
     rogue_text = _rogue_class_text()

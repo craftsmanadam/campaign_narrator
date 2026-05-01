@@ -52,6 +52,7 @@ max-args = 8
 
 [tool.ruff.lint.per-file-ignores]
 # E501: SRD attack lines in test fixtures must remain single-line for regex matching.
-"tests/**/*" = ["S", "E501"]
+# PLR0913: Test helpers and fixtures legitimately have more arguments than production code.
+"tests/**/*" = ["S", "E501", "PLR0913"]
 # StubEmbeddingAdapter uses seeded random for deterministic test doubles, not cryptography.
 "app/campaignnarrator/adapters/embedding_adapter.py" = ["S311"]

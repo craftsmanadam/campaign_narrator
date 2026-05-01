@@ -50,12 +50,19 @@ def seed_prior_encounter_record(
     """Write a prior narrative record into the runtime data root before the CLI runs."""
     memory_dir = runtime_data_root / "memory"
     memory_dir.mkdir(parents=True, exist_ok=True)
+
+    blob_path = runtime_data_root / "state" / "game_state.json"
+    campaign_id = ""
+    if blob_path.exists():
+        blob = json.loads(blob_path.read_text(encoding="utf-8"))
+        campaign_id = (blob.get("campaign") or {}).get("campaign_id", "")
+
     record = {
         "text": docstring.strip(),
         "metadata": {
             "event_type": "narration",
             "encounter_id": "goblin-camp-prior",
-            "campaign_id": "",
+            "campaign_id": campaign_id,
             "module_id": "",
         },
     }

@@ -9,7 +9,7 @@ from campaignnarrator.orchestrators.character_creation_orchestrator import (
     CharacterCreationOrchestrator,
 )
 from campaignnarrator.orchestrators.startup_orchestrator import StartupOrchestrator
-from campaignnarrator.repositories.campaign_repository import CampaignRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
 from campaignnarrator.repositories.player_repository import PlayerRepository
 
 
@@ -20,13 +20,13 @@ class GameOrchestrator:
         self,
         *,
         actor_repository: PlayerRepository,
-        campaign_repository: CampaignRepository,
+        game_state_repository: GameStateRepository,
         character_creation_orchestrator: CharacterCreationOrchestrator,
         campaign_creation_orchestrator: CampaignCreationOrchestrator,
         startup_orchestrator: StartupOrchestrator,
     ) -> None:
         self._actor_repo = actor_repository
-        self._campaign_repo = campaign_repository
+        self._game_state_repo = game_state_repository
         self._character_creation_orchestrator = character_creation_orchestrator
         self._campaign_creation_orchestrator = campaign_creation_orchestrator
         self._startup_orchestrator = startup_orchestrator
@@ -44,7 +44,7 @@ class GameOrchestrator:
             self._campaign_creation_orchestrator.run()
             return
 
-        if self._campaign_repo.exists():
+        if self._game_state_repo.load().campaign is not None:
             self._startup_orchestrator.handle_returning_with_campaign()
         else:
             self._startup_orchestrator.handle_returning_without_campaign()

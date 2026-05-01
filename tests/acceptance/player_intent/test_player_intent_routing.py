@@ -5,6 +5,7 @@ These tests inject fakes directly — no Docker, no WireMock, no live LLM.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -30,9 +31,7 @@ from campaignnarrator.orchestrators.encounter_orchestrator import (
     OrchestratorAgents,
     OrchestratorRepositories,
 )
-from campaignnarrator.repositories.encounter_repository import EncounterRepository
 from campaignnarrator.repositories.player_repository import PlayerRepository
-from campaignnarrator.repositories.state_repository import StateRepository
 from pytest_bdd import given, parsers, scenario, then, when
 
 from tests.conftest import ScriptedIO
@@ -97,6 +96,9 @@ class FakeNarratorAgent:
         self.narrate_call_count: int = 0
         self._narration_log: list[str] = []
 
+    def set_campaign_context(self, campaign_id: str) -> None:
+        pass
+
     def narrate(self, frame: NarrationFrame) -> Narration:
         self.narrate_call_count += 1
         self._narration_log.append(frame.purpose)
@@ -121,34 +123,10 @@ class FakeNarratorAgent:
 class FakeMemoryRepository:
     """Minimal memory repository that satisfies the EncounterOrchestrator contract."""
 
-    def __init__(self, state_repo: StateRepository | None = None) -> None:
-        self._state_repo = state_repo
-        self._registry_override: ActorRegistry | None = None
+    def __init__(self) -> None:
         self.appended_events: list[dict] = []
         self.stored_narratives: list[tuple[str, dict]] = []
         self.staged_narrations: list[tuple[str, dict]] = []
-
-    def override_registry(self, registry: ActorRegistry) -> None:
-        """Replace the registry used by load_game_state() for test setup."""
-        self._registry_override = registry
-
-    def load_game_state(self) -> GameState:
-        if self._state_repo is not None:
-            encounter = self._state_repo.load_encounter()
-            if self._registry_override is not None:
-                registry = self._registry_override
-            else:
-                player = self._state_repo.load_player()
-                registry = ActorRegistry().with_actor(player)
-            return GameState(
-                encounter=encounter,
-                actor_registry=registry,
-            )
-        raise ValueError("no state_repo configured")  # noqa: TRY003
-
-    def update_game_state(self, game_state: GameState) -> None:
-        if self._state_repo is not None:
-            self._state_repo.save(game_state)
 
     def update_exchange(self, player_input: str, narrator_output: str) -> None:
         pass
@@ -165,7 +143,9 @@ class FakeMemoryRepository:
     def get_exchange_buffer(self) -> tuple[str, ...]:
         return ()
 
-    def retrieve_relevant(self, query: str, limit: int = 5) -> list[str]:
+    def retrieve_relevant(
+        self, query: str, *, campaign_id: str, limit: int = 5
+    ) -> list[str]:
         return []
 
     def append_event(self, event: dict) -> None:
@@ -173,6 +153,48 @@ class FakeMemoryRepository:
 
     def store_narrative(self, text: str, metadata: dict) -> None:
         self.stored_narratives.append((text, metadata))
+
+
+class FakeGameStateRepository:
+    """Game state repository fake for acceptance tests."""
+
+    def __init__(
+        self,
+        player_repo: PlayerRepository,
+        encounter_path: Path,
+    ) -> None:
+        self._player_repo = player_repo
+        self._encounter_path = encounter_path
+        self._registry_override: ActorRegistry | None = None
+
+    def override_registry(self, registry: ActorRegistry) -> None:
+        """Replace the registry used by load() for test setup."""
+        self._registry_override = registry
+
+    def load(self) -> GameState:
+        encounter: EncounterState | None = None
+        if self._encounter_path.exists():
+            encounter = EncounterState.from_dict(
+                json.loads(self._encounter_path.read_text())
+            )
+        if self._registry_override is not None:
+            registry = self._registry_override
+        else:
+            player = self._player_repo.load()
+            registry = ActorRegistry().with_actor(player)
+        return GameState(
+            encounter=encounter,
+            actor_registry=registry,
+        )
+
+    def persist(self, game_state: GameState) -> None:
+        """Persist encounter to disk; used by the orchestrator to save state."""
+        if game_state.encounter is not None:
+            self._encounter_path.parent.mkdir(parents=True, exist_ok=True)
+            self._encounter_path.write_text(
+                json.dumps(game_state.encounter.to_dict(), indent=2, sort_keys=True)
+                + "\n"
+            )
 
 
 @dataclass
@@ -203,20 +225,23 @@ def _make_npc() -> object:
     return make_goblin_scout("npc:goblin-scout", "Goblin Scout")
 
 
-def _make_social_repository(tmp_path: Path) -> StateRepository:
+def _make_social_repository(tmp_path: Path) -> tuple[PlayerRepository, Path]:
+    """Set up encounter fixtures; returns (player_repo, encounter_path)."""
     actor_repo = PlayerRepository(tmp_path)
     actor_repo.save(_make_player())
-    encounter_repo = EncounterRepository(tmp_path)
-    encounter_repo.save(
-        EncounterState(
-            encounter_id="goblin-camp",
-            phase=EncounterPhase.SOCIAL,
-            setting="A ruined roadside camp.",
-            actor_ids=("pc:talia", "npc:goblin-scout"),
-            player_actor_id="pc:talia",
-        )
+    encounter_path = tmp_path / "encounters" / "active.json"
+    encounter_path.parent.mkdir(parents=True, exist_ok=True)
+    encounter = EncounterState(
+        encounter_id="goblin-camp",
+        phase=EncounterPhase.SOCIAL,
+        setting="A ruined roadside camp.",
+        actor_ids=("pc:talia", "npc:goblin-scout"),
+        player_actor_id="pc:talia",
     )
-    return StateRepository(player_repo=actor_repo, encounter_repo=encounter_repo)
+    encounter_path.write_text(
+        json.dumps(encounter.to_dict(), indent=2, sort_keys=True) + "\n"
+    )
+    return actor_repo, encounter_path
 
 
 # ---------------------------------------------------------------------------
@@ -273,10 +298,15 @@ def test_stealth_routes_to_skill_check() -> None:
 
 @given("an active encounter in social phase", target_fixture="social_encounter_setup")
 def active_social_encounter(tmp_path: Path, context: dict) -> dict:
-    state_repo = _make_social_repository(tmp_path)
-    memory_repo = FakeMemoryRepository(state_repo=state_repo)
-    context["state_repo"] = state_repo
+    player_repo, encounter_path = _make_social_repository(tmp_path)
+    memory_repo = FakeMemoryRepository()
+    gs_repo = FakeGameStateRepository(
+        player_repo=player_repo, encounter_path=encounter_path
+    )
+    context["player_repo"] = player_repo
+    context["encounter_path"] = encounter_path
     context["memory_repo"] = memory_repo
+    context["gs_repo"] = gs_repo
     return context
 
 
@@ -305,24 +335,25 @@ def player_inputs_with_hostile_intent(
     goblin_dead = replace(goblin_dead, hp_current=0)
     io = ScriptedIO([player_input, "end turn"])
 
-    state_repo: StateRepository = context["state_repo"]
+    player_repo: PlayerRepository = context["player_repo"]
     memory_repo: FakeMemoryRepository = context["memory_repo"]
+    gs_repo: FakeGameStateRepository = context["gs_repo"]
 
     # Patch the registry to have a dead goblin so combat resolves quickly.
     # Actors now live in ActorRegistry, not in EncounterState.
-    player = state_repo.load_player()
+    player = player_repo.load()
     updated_registry = ActorRegistry().with_actor(player).with_actor(goblin_dead)
-    memory_repo.override_registry(updated_registry)
+    gs_repo.override_registry(updated_registry)
 
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo, game_state=gs_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         io=io,
         _player_intent_agent=fake_player_intent,
         _combat_intent_agent=fake_combat_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp")
-    context["final_state"] = state_repo.load().encounter
+    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
+    context["final_state"] = gs_repo.load().encounter
 
 
 @when(parsers.parse('the player inputs "{player_input}" with scene observation intent'))
@@ -351,17 +382,17 @@ def player_inputs_with_scene_observation_intent(
     # Provide two inputs: the actual observation input and an exit command
     io = ScriptedIO([player_input, "exit"])
 
-    state_repo: StateRepository = context["state_repo"]
     memory_repo: FakeMemoryRepository = context["memory_repo"]
+    gs_repo: FakeGameStateRepository = context["gs_repo"]
 
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo, game_state=gs_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         io=io,
         _player_intent_agent=fake_player_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp")
-    context["final_state"] = state_repo.load().encounter
+    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
+    context["final_state"] = gs_repo.load().encounter
     context["narrator_agent"] = fake_narrator
 
 
@@ -382,19 +413,19 @@ def player_inputs_with_save_exit_intent(
 
     io = ScriptedIO([player_input])
 
-    state_repo: StateRepository = context["state_repo"]
     memory_repo: FakeMemoryRepository = context["memory_repo"]
+    gs_repo: FakeGameStateRepository = context["gs_repo"]
 
     narrate_count_before = fake_narrator.narrate_call_count
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo, game_state=gs_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         io=io,
         _player_intent_agent=fake_player_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp")
+    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
 
-    context["final_state"] = state_repo.load().encounter
+    context["final_state"] = gs_repo.load().encounter
     context["memory_repo"] = memory_repo
     context["narrator_agent"] = fake_narrator
     context["narrate_count_before"] = narrate_count_before
@@ -427,18 +458,18 @@ def player_inputs_with_skill_check_intent(
 
     io = ScriptedIO([player_input, "exit"])
 
-    state_repo: StateRepository = context["state_repo"]
     memory_repo: FakeMemoryRepository = context["memory_repo"]
+    gs_repo: FakeGameStateRepository = context["gs_repo"]
 
     orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(memory=memory_repo),
+        repositories=OrchestratorRepositories(memory=memory_repo, game_state=gs_repo),
         agents=OrchestratorAgents(rules=fake_rules, narrator=fake_narrator),
         io=io,
         _player_intent_agent=fake_player_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp")
+    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
 
-    context["final_state"] = state_repo.load().encounter
+    context["final_state"] = gs_repo.load().encounter
     context["rules_agent"] = fake_rules
 
 

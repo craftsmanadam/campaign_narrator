@@ -174,6 +174,7 @@ def _orchestrator(
     npc_intents: list[str] | None = None,
     assessments: list[CombatAssessment] | None = None,
     memory_repository: object | None = _SENTINEL,
+    game_state_repository: object | None = _SENTINEL,
 ) -> tuple[CombatOrchestrator, ScriptedIO, ScriptedRulesAgent, ScriptedNarratorAgent]:
     io = ScriptedIO(inputs, on_exhaust="end turn")
     rules = ScriptedRulesAgent(adjudications)
@@ -190,6 +191,8 @@ def _orchestrator(
     }
     if memory_repository is not _SENTINEL:
         kwargs["memory_repository"] = memory_repository
+    if game_state_repository is not _SENTINEL:
+        kwargs["game_state_repository"] = game_state_repository
     orchestrator = CombatOrchestrator(**kwargs)
     return orchestrator, io, rules, narrator
 
@@ -1932,11 +1935,11 @@ def test_rules_request_includes_visible_actors_context() -> None:
 
 
 class TestCombatOrchestratorMemoryCalls:
-    def test_run_calls_update_game_state_after_player_turn(self) -> None:
-        """update_game_state() must be called each time through the loop."""
-        memory = MagicMock()
+    def test_run_persists_game_state_after_player_turn(self) -> None:
+        """game_state_repo.persist() must be called each time through the loop."""
+        gs_repo = MagicMock()
         state = _make_combat_state(goblin_hp=0)
-        memory.load_game_state.return_value = GameState(
+        gs_repo.load.return_value = GameState(
             encounter=state,
             actor_registry=_make_combat_registry(goblin_hp=0),
         )
@@ -1953,19 +1956,15 @@ class TestCombatOrchestratorMemoryCalls:
                     ),
                 )
             ],
-            memory_repository=memory,
+            game_state_repository=gs_repo,
         )
         orc.run(state, _make_combat_registry(goblin_hp=0))
-        memory.update_game_state.assert_called()
+        gs_repo.persist.assert_called()
 
     def test_run_calls_log_combat_round_when_narration_produced(self) -> None:
         """log_combat_round() is called with the narrator's text."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
-        memory.load_game_state.return_value = GameState(
-            encounter=state,
-            actor_registry=_make_combat_registry(goblin_hp=7),
-        )
         orc, _, _, _ = _orchestrator(
             inputs=["attack goblin", "end turn"],
             intents=["combat_action", "end_turn"],
@@ -1988,10 +1987,6 @@ class TestCombatOrchestratorMemoryCalls:
         """update_exchange() receives the combat action text, not 'end_turn'."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
-        memory.load_game_state.return_value = GameState(
-            encounter=state,
-            actor_registry=_make_combat_registry(goblin_hp=7),
-        )
         orc, _, _, _ = _orchestrator(
             inputs=["attack goblin", "end turn"],
             intents=["combat_action", "end_turn"],
@@ -2016,10 +2011,6 @@ class TestCombatOrchestratorMemoryCalls:
         """clear_combat_memory() is called regardless of how combat ends."""
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=0)
-        memory.load_game_state.return_value = GameState(
-            encounter=state,
-            actor_registry=_make_combat_registry(goblin_hp=0),
-        )
         orc, _, _, _ = _orchestrator(
             inputs=["end turn"],
             intents=["end_turn"],
@@ -2039,10 +2030,101 @@ class TestCombatOrchestratorMemoryCalls:
         memory.clear_combat_memory.assert_called_once()
 
     def test_run_updates_registry_after_player_combat_turn(self) -> None:
-        """During combat, update_game_state is called with actor_registry containing encounter actors."""
+        """During combat, game_state_repo.persist() is called with actor_registry containing encounter actors."""
+        gs_repo = MagicMock()
+        state = _make_combat_state(goblin_hp=7)
+        gs_repo.load.return_value = GameState(
+            encounter=state,
+            actor_registry=_make_combat_registry(goblin_hp=7),
+        )
+        orc, _, _, _ = _orchestrator(
+            inputs=["attack goblin", "end turn"],
+            intents=["combat_action", "end_turn"],
+            adjudications=[_legal_attack()],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            game_state_repository=gs_repo,
+        )
+        orc.run(state, _make_combat_registry(goblin_hp=7))
+        calls = gs_repo.persist.call_args_list
+        assert any(
+            "npc:goblin-1" in call.args[0].actor_registry.actors for call in calls
+        )
+
+
+# ---------------------------------------------------------------------------
+# GameStateRepository integration
+# ---------------------------------------------------------------------------
+
+
+class TestCombatOrchestratorGameStateRepoCalls:
+    def test_persist_turn_calls_game_state_repo_persist_when_set(self) -> None:
+        """game_state_repo.persist() must be called when game_state_repository is set."""
+        gs_repo = MagicMock()
+        state = _make_combat_state(goblin_hp=0)
+        gs_repo.load.return_value = GameState(
+            encounter=state,
+            actor_registry=_make_combat_registry(goblin_hp=0),
+        )
+        orc, _, _, _ = _orchestrator(
+            inputs=["end turn"],
+            intents=["end_turn"],
+            adjudications=[],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            game_state_repository=gs_repo,
+        )
+        orc.run(state, _make_combat_registry(goblin_hp=0))
+        gs_repo.persist.assert_called()
+
+    def test_stage_turn_uses_game_state_repo_not_memory_for_state(self) -> None:
+        """When game_state_repository is set, only it is used for state staging."""
+        gs_repo = MagicMock()
+        memory = MagicMock()
+        state = _make_combat_state(goblin_hp=0)
+        gs_repo.load.return_value = GameState(
+            encounter=state,
+            actor_registry=_make_combat_registry(goblin_hp=0),
+        )
+        orc, _, _, _ = _orchestrator(
+            inputs=["end turn"],
+            intents=["end_turn"],
+            adjudications=[],
+            assessments=[
+                CombatAssessment(
+                    combat_active=False,
+                    outcome=CombatOutcome(
+                        short_description="End",
+                        full_description="Combat over.",
+                    ),
+                )
+            ],
+            memory_repository=memory,
+            game_state_repository=gs_repo,
+        )
+        orc.run(state, _make_combat_registry(goblin_hp=0))
+        gs_repo.persist.assert_called()
+
+    def test_narrative_ops_use_memory_when_game_state_repo_set(self) -> None:
+        """log_combat_round() and update_exchange() still use memory when game_state_repo set."""
+        gs_repo = MagicMock()
         memory = MagicMock()
         state = _make_combat_state(goblin_hp=7)
-        memory.load_game_state.return_value = GameState(
+        gs_repo.load.return_value = GameState(
             encounter=state,
             actor_registry=_make_combat_registry(goblin_hp=7),
         )
@@ -2060,12 +2142,11 @@ class TestCombatOrchestratorMemoryCalls:
                 )
             ],
             memory_repository=memory,
+            game_state_repository=gs_repo,
         )
         orc.run(state, _make_combat_registry(goblin_hp=7))
-        calls = memory.update_game_state.call_args_list
-        assert any(
-            "npc:goblin-1" in call.args[0].actor_registry.actors for call in calls
-        )
+        memory.log_combat_round.assert_called()
+        memory.update_exchange.assert_called()
 
 
 def test_run_returns_final_registry() -> None:

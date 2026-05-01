@@ -1,4 +1,4 @@
-"""Encounter state, phase, and game state models."""
+"""Encounter state and phase models."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from types import MappingProxyType
 
 from .actor_registry import ActorRegistry
 from .actor_state import ActorState, ActorType
-from .campaign_state import CampaignState, ModuleState
 from .npc_presence import NpcPresence, NpcPresenceStatus
 
 # Statuses that mean the NPC is physically in the scene.
@@ -276,33 +275,3 @@ def _derive_player_actor_id(actors_raw: Mapping[object, object]) -> str:
         if isinstance(v, Mapping) and v.get("actor_type") == "pc":
             return str(k)
     return ""
-
-
-@dataclass(frozen=True)
-class GameState:
-    """Top-level game state. Player lives in actor_registry."""
-
-    campaign: CampaignState | None = None
-    module: ModuleState | None = None
-    encounter: EncounterState | None = None
-    actor_registry: ActorRegistry = field(default_factory=ActorRegistry)
-
-
-@dataclass(frozen=True)
-class EncounterReady:
-    """Returned by EncounterPlannerOrchestrator.prepare() on success.
-
-    module may differ from the input module if recovery occurred.
-    Callers must use EncounterReady.module, not their local reference.
-    """
-
-    encounter_state: EncounterState
-    module: ModuleState
-
-
-@dataclass(frozen=True)
-class MilestoneAchieved:
-    """Returned by EncounterPlannerOrchestrator.prepare() when milestone is complete.
-
-    Signals ModuleOrchestrator to advance to the next module.
-    """

@@ -2,34 +2,68 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 
 from campaignnarrator.domain.models import ActorState
+from campaignnarrator.repositories.compendium_repository import CompendiumRepository
 
 
 class PlayerRepository:
-    """Persist and load the player ActorState to/from a JSON file."""
+    """Persist and load the player ActorState, with compendium reference enrichment."""
 
-    def __init__(self, root: Path | str) -> None:
-        self._root = Path(root)
-        self._player_path = self._root / "actors" / "player.json"
+    def __init__(self, data_root: Path | str) -> None:
+        root = Path(data_root)
+        self._player_path = root / "state" / "actors" / "player.json"
+        self._compendium = CompendiumRepository(root / "compendium")
 
     def load(self) -> ActorState:
-        """Load the player actor from disk. Raises FileNotFoundError if not found."""
+        """Load and enrich the player actor from disk.
+
+        Raises FileNotFoundError if the player file does not exist.
+        Compendium reference texts are populated on every load.
+        """
         if not self._player_path.exists():
             raise FileNotFoundError(  # noqa: TRY003
                 f"player actor file not found: {self._player_path}"
             )
-        return ActorState.from_dict(json.loads(self._player_path.read_text()))
+        player = ActorState.from_dict(json.loads(self._player_path.read_text()))
+        return _enrich_player_references(player, self._compendium)
 
     def save(self, player: ActorState) -> None:
-        """Persist player to disk. Strips transient fields before writing."""
+        """Strip transient references and persist player to disk."""
         self._player_path.parent.mkdir(parents=True, exist_ok=True)
+        stripped = _strip_player_references(player)
         self._player_path.write_text(
-            json.dumps(player.to_dict(), indent=2, sort_keys=True) + "\n"
+            json.dumps(stripped.to_dict(), indent=2, sort_keys=True) + "\n"
         )
+
+
+def _enrich_player_references(
+    actor: ActorState,
+    compendium: CompendiumRepository,
+) -> ActorState:
+    texts: list[str] = []
+    for feat in actor.feats:
+        if feat.reference is not None:
+            with contextlib.suppress(FileNotFoundError):
+                texts.append(compendium.load_reference_text(feat.reference))
+    for resource in actor.resources:
+        if resource.reference is not None:
+            with contextlib.suppress(FileNotFoundError):
+                texts.append(compendium.load_reference_text(resource.reference))
+    for item in actor.inventory:
+        if item.reference is not None:
+            with contextlib.suppress(FileNotFoundError):
+                texts.append(compendium.load_reference_text(item.reference))
+    return replace(actor, references=tuple(texts))
+
+
+def _strip_player_references(actor: ActorState) -> ActorState:
+    return replace(actor, references=())
 
 
 def player_template_from_seed(

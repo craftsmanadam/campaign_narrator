@@ -15,6 +15,7 @@ from campaignnarrator.domain.models import (
     CombatStatus,
     EncounterPhase,
     EncounterState,
+    GameState,
     InitiativeTurn,
     IntentCategory,
     Narration,
@@ -31,7 +32,10 @@ from campaignnarrator.domain.models import (
     public_actor_summaries,
 )
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.game_state_repository import GameStateRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 from campaignnarrator.tools.dice import roll
 from campaignnarrator.tools.state_updates import apply_state_effects
 
@@ -51,7 +55,8 @@ class EncounterRunResult:
 class OrchestratorRepositories:
     """Repository dependencies for EncounterOrchestrator."""
 
-    memory: MemoryRepository
+    memory: NarrativeMemoryRepository
+    game_state: GameStateRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +84,7 @@ class EncounterOrchestrator:
         self._narrator_agent = agents.narrator
         self._io = io
         self._memory_repository = repositories.memory
+        self._game_state_repo = repositories.game_state
         self._adapter = adapter
         self._combat_intent_agent = _combat_intent_agent
         if _player_intent_agent is not None:
@@ -92,29 +98,47 @@ class EncounterOrchestrator:
                 raise ValueError(msg)
             self._player_intent_agent = PlayerIntentAgent(adapter=adapter)
 
-    def run_encounter(self, *, encounter_id: str) -> EncounterRunResult:
-        """Run the encounter loop until an end condition is reached."""
-        game_state = self._memory_repository.load_game_state()
+    def run(
+        self,
+        game_state: GameState,
+        *,
+        campaign_id: str | None = None,
+        _collect: list[str] | None = None,
+    ) -> GameState:
+        """Primary interface: run the encounter loop and return updated GameState.
+
+        Uses GameStateRepository for all state persistence. The encounter field
+        of game_state must not be None.
+        """
         if game_state.encounter is None:
             msg = "no active encounter"
             raise ValueError(msg)
-        registry = game_state.actor_registry
-        player = get_player(registry, game_state.encounter.player_actor_id)
-        output: list[str] = []
+        resolved_campaign_id = (
+            campaign_id
+            if campaign_id is not None
+            else (game_state.campaign.campaign_id if game_state.campaign else "")
+        )
+        self._narrator_agent.set_campaign_context(resolved_campaign_id)
+
         state = game_state.encounter
+        registry = game_state.actor_registry
+        player = get_player(registry, state.player_actor_id)
+        output: list[str] = _collect if _collect is not None else []
 
         if state.phase is EncounterPhase.SCENE_OPENING:
             opening, state, registry = self._narrate(
-                _frame(state, registry, "scene_opening"), state, registry
+                _frame(state, registry, "scene_opening"),
+                state,
+                registry,
+                campaign_id=resolved_campaign_id,
             )
             state = replace(
                 state, phase=EncounterPhase.SOCIAL, scene_tone=opening.scene_tone
             )
             self._io.display(opening.text)
             output.append(opening.text)
-            self._memory_repository.update_game_state(
-                replace(game_state, encounter=state, actor_registry=registry)
-            )
+            game_state = _with_encounter_state(game_state, state, registry)
+            self._game_state_repo.persist(game_state)
             self._memory_repository.update_exchange("", opening.text)
         elif self._memory_repository.get_exchange_buffer():
             self._io.display("--- Resuming session ---")
@@ -122,7 +146,8 @@ class EncounterOrchestrator:
                 self._io.display(entry)
             self._io.display("---")
             prior_context = self._retrieve_prior_context(
-                state.current_location or state.setting
+                state.current_location or state.setting,
+                campaign_id=resolved_campaign_id,
             )
             resume_frame = replace(
                 _frame(
@@ -134,23 +159,41 @@ class EncounterOrchestrator:
                 prior_narrative_context=prior_context,
             )
             resume_narration, state, registry = self._narrate(
-                resume_frame, state, registry
+                resume_frame, state, registry, campaign_id=resolved_campaign_id
             )
             self._io.display(resume_narration.text)
             output.append(resume_narration.text)
 
         if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
-            return EncounterRunResult(
-                encounter_id=state.encounter_id,
-                output_text="\n".join(output),
-                completed=True,
-            )
+            game_state = _with_encounter_state(game_state, state, registry)
+            self._game_state_repo.persist(game_state)
+            return game_state
 
-        state = self._run_loop(state, player, registry, output)
+        state, registry = self._run_loop(
+            state,
+            player,
+            registry,
+            output,
+            campaign_id=resolved_campaign_id,
+            root_game_state=game_state,
+        )
+        game_state = _with_encounter_state(game_state, state, registry)
+        self._game_state_repo.persist(game_state)
+        return game_state
+
+    def run_encounter(
+        self, *, encounter_id: str, campaign_id: str
+    ) -> EncounterRunResult:
+        """Run the encounter loop until an end condition is reached."""
+        gs = self._game_state_repo.load()
+        collected: list[str] = []
+        updated = self.run(gs, campaign_id=campaign_id, _collect=collected)
+        encounter = updated.encounter
         return EncounterRunResult(
-            encounter_id=state.encounter_id,
-            output_text="\n".join(output),
-            completed=state.phase is EncounterPhase.ENCOUNTER_COMPLETE,
+            encounter_id=encounter_id,
+            output_text="\n".join(collected),
+            completed=encounter is None
+            or encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE,
         )
 
     def _run_loop(
@@ -159,12 +202,18 @@ class EncounterOrchestrator:
         player: ActorState,
         registry: ActorRegistry,
         output: list[str],
-    ) -> EncounterState:
+        *,
+        campaign_id: str,
+        root_game_state: GameState,
+    ) -> tuple[EncounterState, ActorRegistry]:
         """Main interaction loop — runs until combat, quit, or encounter complete."""
         while True:
             if state.phase is EncounterPhase.COMBAT:
-                combat_result = self._run_combat(state, registry, player)
+                combat_result = self._run_combat(
+                    state, registry, player, root_game_state=root_game_state
+                )
                 state = combat_result.final_state
+                registry = combat_result.final_registry
                 break
 
             if state.phase is EncounterPhase.ENCOUNTER_COMPLETE:
@@ -187,13 +236,12 @@ class EncounterOrchestrator:
                         {
                             "event_type": "encounter_partial_summary",
                             "encounter_id": state.encounter_id,
-                            "campaign_id": "",
+                            "campaign_id": campaign_id,
                             "module_id": "",
                         },
                     )
-                    gs = self._memory_repository.load_game_state()
-                    self._memory_repository.update_game_state(
-                        replace(gs, encounter=state, actor_registry=registry)
+                    self._game_state_repo.persist(
+                        _with_encounter_state(root_game_state, state, registry)
                     )
                     msg = "Game saved. You can resume this encounter later."
                     self._io.display(msg)
@@ -209,21 +257,30 @@ class EncounterOrchestrator:
                     break
                 case IntentCategory.STATUS:
                     narration, state, registry = self._narrate(
-                        _status_frame(state, registry), state, registry
+                        _status_frame(state, registry),
+                        state,
+                        registry,
+                        campaign_id=campaign_id,
                     )
                     self._io.display(narration.text)
                     output.append(narration.text)
                     continue
                 case IntentCategory.RECAP:
                     narration, state, registry = self._narrate(
-                        _recap_frame(state, registry), state, registry
+                        _recap_frame(state, registry),
+                        state,
+                        registry,
+                        campaign_id=campaign_id,
                     )
                     self._io.display(narration.text)
                     output.append(narration.text)
                     continue
                 case IntentCategory.LOOK_AROUND:
                     narration, state, registry = self._narrate(
-                        _look_frame(state, registry), state, registry
+                        _look_frame(state, registry),
+                        state,
+                        registry,
+                        campaign_id=campaign_id,
                     )
                     self._io.display(narration.text)
                     output.append(narration.text)
@@ -231,9 +288,16 @@ class EncounterOrchestrator:
 
             self._io.display("\n...\n")
             state, registry = self._apply_action(
-                state, player_input, intent, player, registry, output
+                state,
+                player_input,
+                intent,
+                player,
+                registry,
+                output,
+                campaign_id=campaign_id,
+                root_game_state=root_game_state,
             )
-        return state
+        return state, registry
 
     def _classify_intent(
         self,
@@ -266,11 +330,14 @@ class EncounterOrchestrator:
         player: ActorState,
         registry: ActorRegistry,
         output: list[str],
+        *,
+        campaign_id: str,
+        root_game_state: GameState,
     ) -> tuple[EncounterState, ActorRegistry]:
         """Apply a non-combat player action; return updated state + registry."""
         try:
             state, registry, narration = self._handle_non_combat_action(
-                state, player_input, intent, player, registry
+                state, player_input, intent, player, registry, campaign_id=campaign_id
             )
         except ValueError:
             raise
@@ -283,15 +350,19 @@ class EncounterOrchestrator:
 
         self._io.display(narration.text)
         output.append(narration.text)
-        gs = self._memory_repository.load_game_state()
-        self._memory_repository.update_game_state(
-            replace(gs, encounter=state, actor_registry=registry)
+        self._game_state_repo.persist(
+            _with_encounter_state(root_game_state, state, registry)
         )
         self._memory_repository.update_exchange(player_input.raw_text, narration.text)
         return state, registry
 
     def _run_combat(
-        self, state: EncounterState, registry: ActorRegistry, player: ActorState
+        self,
+        state: EncounterState,
+        registry: ActorRegistry,
+        player: ActorState,
+        *,
+        root_game_state: GameState,
     ) -> CombatResult:
         """Delegate the combat turn loop to CombatOrchestrator."""
         orchestrator = CombatOrchestrator(
@@ -301,6 +372,7 @@ class EncounterOrchestrator:
             adapter=self._adapter,
             _intent_agent=self._combat_intent_agent,
             memory_repository=self._memory_repository,
+            game_state_repository=self._game_state_repo,
         )
         result = orchestrator.run(state, registry)
         final_registry = result.final_registry
@@ -320,9 +392,8 @@ class EncounterOrchestrator:
             result = replace(
                 result, final_state=final_state, final_registry=final_registry
             )
-        gs = self._memory_repository.load_game_state()
-        self._memory_repository.update_game_state(
-            replace(gs, encounter=final_state, actor_registry=final_registry)
+        self._game_state_repo.persist(
+            _with_encounter_state(root_game_state, final_state, final_registry)
         )
 
         if result.status is CombatStatus.SAVED_AND_QUIT:
@@ -337,11 +408,6 @@ class EncounterOrchestrator:
             )
         return result
 
-    def current_state(self) -> EncounterState | None:
-        """Return the current persisted encounter state."""
-
-        return self._memory_repository.load_game_state().encounter
-
     def _handle_non_combat_action(
         self,
         state: EncounterState,
@@ -349,16 +415,26 @@ class EncounterOrchestrator:
         intent: PlayerIntent,
         player: ActorState,
         registry: ActorRegistry,
+        *,
+        campaign_id: str,
     ) -> tuple[EncounterState, ActorRegistry, Narration]:
         compendium_context = player.references
         match intent.category:
             case IntentCategory.HOSTILE_ACTION:
                 state, registry = _clear_player_hidden(state, registry)
-                updated_state, narration = self._enter_combat(state, registry)
+                updated_state, narration = self._enter_combat(
+                    state, registry, campaign_id=campaign_id
+                )
                 return updated_state, registry, narration
             case IntentCategory.SKILL_CHECK:
                 state, registry, narration = self._handle_action(
-                    state, player_input, intent, compendium_context, player, registry
+                    state,
+                    player_input,
+                    intent,
+                    compendium_context,
+                    player,
+                    registry,
+                    campaign_id=campaign_id,
                 )
                 return state, registry, narration
             case IntentCategory.NPC_DIALOGUE:
@@ -370,6 +446,7 @@ class EncounterOrchestrator:
                     ),
                     state,
                     registry,
+                    campaign_id=campaign_id,
                 )
                 if narration.npc_interaction_summary and intent.target_npc_id:
                     state = self._update_npc_interaction(
@@ -384,6 +461,7 @@ class EncounterOrchestrator:
                     ),
                     state,
                     registry,
+                    campaign_id=campaign_id,
                 )
                 return state, registry, narration
             case _:
@@ -397,6 +475,7 @@ class EncounterOrchestrator:
                     ),
                     state,
                     registry,
+                    campaign_id=campaign_id,
                 )
                 return state, registry, narration
 
@@ -408,6 +487,8 @@ class EncounterOrchestrator:
         compendium_context: tuple[str, ...],
         player: ActorState,
         registry: ActorRegistry,
+        *,
+        campaign_id: str,
     ) -> tuple[EncounterState, ActorRegistry, Narration]:
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
@@ -452,11 +533,16 @@ class EncounterOrchestrator:
             ),
             updated_state,
             updated_registry,
+            campaign_id=campaign_id,
         )
         return updated_state, updated_registry, narration
 
     def _enter_combat(
-        self, state: EncounterState, registry: ActorRegistry
+        self,
+        state: EncounterState,
+        registry: ActorRegistry,
+        *,
+        campaign_id: str,
     ) -> tuple[EncounterState, Narration]:
         rolls = [
             (
@@ -496,6 +582,7 @@ class EncounterOrchestrator:
             _frame(updated_state, registry, "combat_start", resolved_outcomes=(event,)),
             updated_state,
             registry,
+            campaign_id=campaign_id,
         )
         return updated_state, narration
 
@@ -542,16 +629,23 @@ class EncounterOrchestrator:
         )
         return updated_state, updated_registry, tuple(roll_events), resolved_action_type
 
-    def _retrieve_prior_context(self, query: str) -> str:
+    def _retrieve_prior_context(self, query: str, *, campaign_id: str) -> str:
         """Query memory for prior session context including recent exchanges."""
-        parts: list[str] = self._memory_repository.retrieve_relevant(query, limit=3)
+        parts: list[str] = self._memory_repository.retrieve_relevant(
+            query, campaign_id=campaign_id, limit=3
+        )
         exchange = self._memory_repository.get_exchange_buffer()
         if exchange:
             parts.append("Recent exchanges:\n" + "\n".join(exchange))
         return "\n\n".join(parts)
 
     def _narrate(
-        self, frame: NarrationFrame, state: EncounterState, registry: ActorRegistry
+        self,
+        frame: NarrationFrame,
+        state: EncounterState,
+        registry: ActorRegistry,
+        *,
+        campaign_id: str = "",
     ) -> tuple[Narration, EncounterState, ActorRegistry]:
         narration = self._narrator_agent.narrate(frame)
         self._memory_repository.store_narrative(
@@ -559,7 +653,7 @@ class EncounterOrchestrator:
             {
                 "event_type": "narration",
                 "encounter_id": state.encounter_id,
-                "campaign_id": "",
+                "campaign_id": campaign_id,
                 "module_id": "",
             },
         )
@@ -728,6 +822,15 @@ def _clear_player_hidden(
         effect_type="remove_condition", target=player_id, value="hidden"
     )
     return apply_state_effects(state, registry, (effect,))
+
+
+def _with_encounter_state(
+    root_game_state: GameState,
+    state: EncounterState,
+    registry: ActorRegistry,
+) -> GameState:
+    """Return root_game_state with encounter and actor_registry replaced."""
+    return replace(root_game_state, encounter=state, actor_registry=registry)
 
 
 def _validate_traveling_actor_ids(

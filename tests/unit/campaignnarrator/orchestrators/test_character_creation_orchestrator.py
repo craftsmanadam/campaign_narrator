@@ -10,7 +10,9 @@ from campaignnarrator.orchestrators.character_creation_orchestrator import (
     CharacterCreationOrchestrator,
     CharacterCreationRepositories,
 )
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 from tests.fixtures.fighter_talia import TALIA
 
@@ -38,7 +40,7 @@ def _make_orchestrator(
     io = _make_io(inputs)
     mock_actor_repo = MagicMock()
     mock_template_repo = MagicMock()
-    mock_memory_repo = MagicMock(spec=MemoryRepository)
+    mock_memory_repo = MagicMock(spec=NarrativeMemoryRepository)
     mock_backstory_agent = MagicMock()
 
     mock_template_repo.load.return_value = replace(

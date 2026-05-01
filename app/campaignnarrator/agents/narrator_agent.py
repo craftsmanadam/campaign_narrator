@@ -25,7 +25,9 @@ from campaignnarrator.domain.models import (
     NpcPresenceStatus,
     SceneOpeningResponse,
 )
-from campaignnarrator.repositories.memory_repository import MemoryRepository
+from campaignnarrator.repositories.narrative_memory_repository import (
+    NarrativeMemoryRepository,
+)
 
 _BASE_NARRATE_INSTRUCTIONS = BASE_NARRATE_INSTRUCTIONS
 _SCENE_OPENING_INSTRUCTIONS = SCENE_OPENING_INSTRUCTIONS
@@ -96,7 +98,7 @@ class NarratorAgent:
         *,
         adapter: PydanticAIAdapter,
         personality: str = "",
-        memory_repository: MemoryRepository | None = None,
+        memory_repository: NarrativeMemoryRepository | None = None,
         _scene_agent: object | None = None,
         _assess_agent: object | None = None,
         _narrate_agent: object | None = None,
@@ -104,6 +106,7 @@ class NarratorAgent:
         self._adapter = adapter
         self._personality = personality
         self._memory_repository = memory_repository
+        self._campaign_id: str = ""
         self._scene_instructions = self._instructions(_SCENE_OPENING_INSTRUCTIONS)
 
         if _scene_agent is not None:
@@ -250,6 +253,13 @@ class NarratorAgent:
             raise ValueError("combat_active=False but no outcome provided")  # noqa: TRY003
         return assessment
 
+    def set_campaign_context(self, campaign_id: str) -> None:
+        """Set the campaign_id used for narrative memory retrieval.
+
+        Called by EncounterOrchestrator.run_encounter() before narration begins.
+        """
+        self._campaign_id = campaign_id
+
     def retrieve_memory(self, query: str) -> str:
         """Return relevant prior narrative entries and recent exchanges for the given
         query.
@@ -257,7 +267,9 @@ class NarratorAgent:
         Designed for future pydantic-ai tool registration; call signature is stable.
         Returns a sentinel string when no records match so callers never receive None.
         """
-        results = self._memory_repository.retrieve_relevant(query, limit=5)
+        results = self._memory_repository.retrieve_relevant(
+            query, campaign_id=self._campaign_id, limit=5
+        )
         exchange = self._memory_repository.get_exchange_buffer()
         parts = list(results)
         if exchange:
@@ -292,8 +304,8 @@ class NarratorAgent:
 
         Called by ModuleOrchestrator after natural encounter completion. The summary
         is stored in both ModuleState.completed_encounter_summaries and
-        MemoryRepository. Rich summaries are essential for cross-encounter narrative
-        consistency.
+        NarrativeMemoryRepository. Rich summaries are essential for
+        cross-encounter narrative consistency.
         """
         context = {
             "encounter_id": encounter.encounter_id,

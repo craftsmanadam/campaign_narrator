@@ -152,22 +152,22 @@ def test_adjudicate_roll_request_without_purpose_produces_none() -> None:
     assert result.roll_requests[0].purpose is None
 
 
-class FakeRulesRepository:
+class FakeCompendiumRepository:
     def __init__(self, content_by_topic: dict[str, str]) -> None:
         self._content = content_by_topic
 
-    def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+    def load_rules_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(
             self._content.get(topic, f"Missing rules context: {topic}")
             for topic in topics
         )
 
 
-def test_adjudicate_without_rules_repository_passes_empty_context() -> None:
+def test_adjudicate_without_compendium_repository_passes_empty_context() -> None:
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=None, _agent=mock_agent
+        adapter=MagicMock(), compendium_repository=None, _agent=mock_agent
     )
     rules_agent.adjudicate(_make_request())
     call_args = mock_agent.run_sync.call_args[0][0]
@@ -180,14 +180,16 @@ def test_adjudicate_skill_check_hint_loads_skill_check_topic() -> None:
     captured: list[tuple[str, ...]] = []
 
     class CapturingRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             captured.append(topics)
             return ()
 
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+        adapter=MagicMock(), compendium_repository=CapturingRepo(), _agent=mock_agent
     )
     rules_agent.adjudicate(_make_request(check_hints=("Persuasion",)))
     assert "skill_check" in captured[0]
@@ -200,14 +202,16 @@ def test_adjudicate_no_hint_loads_social_interaction_topic() -> None:
     captured: list[tuple[str, ...]] = []
 
     class CapturingRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             captured.append(topics)
             return ()
 
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+        adapter=MagicMock(), compendium_repository=CapturingRepo(), _agent=mock_agent
     )
     rules_agent.adjudicate(_make_request())
     assert "social_interaction" in captured[0]
@@ -219,14 +223,16 @@ def test_adjudicate_stealth_hint_loads_skill_check_and_stealth_topics() -> None:
     captured: list[tuple[str, ...]] = []
 
     class CapturingRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             captured.append(topics)
             return ()
 
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+        adapter=MagicMock(), compendium_repository=CapturingRepo(), _agent=mock_agent
     )
     rules_agent.adjudicate(_make_request(check_hints=("Stealth",)))
     assert "skill_check" in captured[0]
@@ -239,7 +245,9 @@ def test_hide_hint_also_loads_stealth_topic() -> None:
     captured: list[tuple[str, ...]] = []
 
     class CapturingRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             captured.append(topics)
             return ()
 
@@ -247,7 +255,7 @@ def test_hide_hint_also_loads_stealth_topic() -> None:
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=CapturingRepo(),
+        compendium_repository=CapturingRepo(),
         _agent=mock_agent,
     )
     rules_agent.adjudicate(_make_request(check_hints=("hide",)))
@@ -260,7 +268,9 @@ def test_unknown_hint_does_not_expand_topics() -> None:
     captured: list[tuple[str, ...]] = []
 
     class CapturingRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             captured.append(topics)
             return ()
 
@@ -268,7 +278,7 @@ def test_unknown_hint_does_not_expand_topics() -> None:
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
         adapter=MagicMock(),
-        rules_repository=CapturingRepo(),
+        compendium_repository=CapturingRepo(),
         _agent=mock_agent,
     )
     rules_agent.adjudicate(_make_request(check_hints=("UnrecognisedHint",)))
@@ -282,14 +292,16 @@ def test_adjudicate_combat_phase_no_hint_loads_attack_resolution_topic() -> None
     captured: list[tuple[str, ...]] = []
 
     class CapturingRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             captured.append(topics)
             return ()
 
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=CapturingRepo(), _agent=mock_agent
+        adapter=MagicMock(), compendium_repository=CapturingRepo(), _agent=mock_agent
     )
     rules_agent.adjudicate(_make_request(phase=EncounterPhase.COMBAT))
     assert "attack_resolution" in captured[0]
@@ -304,13 +316,15 @@ def test_adjudicate_logs_error_when_context_exceeds_size_threshold(
     large_text = "x" * 3501
 
     class LargeRulesRepo:
-        def load_context_for_topics(self, topics: tuple[str, ...]) -> tuple[str, ...]:
+        def load_rules_context_for_topics(
+            self, topics: tuple[str, ...]
+        ) -> tuple[str, ...]:
             return (large_text,)
 
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = _canned_adjudication()
     rules_agent = RulesAgent(
-        adapter=MagicMock(), rules_repository=LargeRulesRepo(), _agent=mock_agent
+        adapter=MagicMock(), compendium_repository=LargeRulesRepo(), _agent=mock_agent
     )
     with caplog.at_level(logging.ERROR, logger="campaignnarrator.agents.rules_agent"):
         rules_agent.adjudicate(_make_request())

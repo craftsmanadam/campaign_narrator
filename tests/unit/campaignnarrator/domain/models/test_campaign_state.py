@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import dataclasses
-import tempfile
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -14,8 +13,6 @@ from campaignnarrator.domain.models import (
     Milestone,
     ModuleState,
 )
-from campaignnarrator.repositories.campaign_repository import CampaignRepository
-from campaignnarrator.repositories.module_repository import ModuleRepository
 
 
 def _make_campaign(**overrides: object) -> CampaignState:
@@ -117,26 +114,6 @@ def test_campaign_state_accepts_module_id() -> None:
     assert campaign.current_module_id == "module-001"
 
 
-def test_campaign_repository_round_trips_current_module_id() -> None:
-    campaign = _make_campaign(current_module_id="module-002")
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = CampaignRepository(tmp)
-        repo.save(campaign)
-        loaded = repo.load()
-    assert loaded is not None
-    assert loaded.current_module_id == "module-002"
-
-
-def test_campaign_repository_round_trips_null_module_id() -> None:
-    campaign = _make_campaign()
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = CampaignRepository(tmp)
-        repo.save(campaign)
-        loaded = repo.load()
-    assert loaded is not None
-    assert loaded.current_module_id is None
-
-
 def test_module_state_default_log_fields_are_empty() -> None:
     module = _make_module()
     assert module.completed_encounter_ids == ()
@@ -155,31 +132,6 @@ def test_module_state_has_no_encounters_field() -> None:
     field_names = {f.name for f in dataclasses.fields(ModuleState)}
     assert "encounters" not in field_names
     assert "current_encounter_index" not in field_names
-
-
-def test_module_repository_round_trips_new_fields() -> None:
-    module = _make_module(
-        completed_encounter_ids=("module-001-enc-001",),
-        completed_encounter_summaries=("The goblin fell at the docks.",),
-        completed=False,
-    )
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = ModuleRepository(tmp)
-        repo.save(module)
-        loaded = repo.load("module-001")
-    assert loaded is not None
-    assert loaded.completed_encounter_ids == ("module-001-enc-001",)
-    assert loaded.completed_encounter_summaries == ("The goblin fell at the docks.",)
-
-
-def test_module_repository_round_trips_empty_log() -> None:
-    module = _make_module()
-    with tempfile.TemporaryDirectory() as tmp:
-        repo = ModuleRepository(tmp)
-        repo.save(module)
-        loaded = repo.load("module-001")
-    assert loaded is not None
-    assert loaded.completed_encounter_ids == ()
 
 
 def test_module_state_planned_encounters_defaults_empty() -> None:

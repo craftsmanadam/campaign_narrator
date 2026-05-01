@@ -67,39 +67,14 @@ class _FakePlayerRepository:
         _FakePlayerRepository.captured_paths.append(path)
 
 
-class _FakeEncounterRepository:
-    captured_paths: ClassVar[list[Path]] = []
-
-    def __init__(self, path: Path) -> None:
-        _FakeEncounterRepository.captured_paths.append(path)
-
-
-class _FakeStateRepository:
-    instances: ClassVar[list[_FakeStateRepository]] = []
-
-    def __init__(
-        self,
-        *,
-        player_repo: object,
-        encounter_repo: object,
-        compendium: object = None,
-    ) -> None:
-        self.player_repo = player_repo
-        self.encounter_repo = encounter_repo
-        self.compendium = compendium
-        _FakeStateRepository.instances.append(self)
-
-
 class _FakeRulesAgent:
     def __init__(
         self,
         *,
         adapter: object,
-        rules_repository: object | None = None,
         compendium_repository: object | None = None,
     ) -> None:
         self.adapter = adapter
-        self.rules_repository = rules_repository
         self.compendium_repository = compendium_repository
 
 
@@ -224,28 +199,19 @@ def test_build_application_graph_wires_repository_paths(
 ) -> None:
     """The application graph should build repositories from data-root sub-paths."""
 
-    rules_paths: list[Path] = []
     compendium_paths: list[Path] = []
     memory_paths: list[Path] = []
     _FakePlayerRepository.captured_paths.clear()
-    _FakeEncounterRepository.captured_paths.clear()
-    _FakeStateRepository.instances.clear()
 
     af_ns = "campaignnarrator.application_factory"
     monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", object)
     monkeypatch.setattr(f"{af_ns}.PlayerRepository", _FakePlayerRepository)
-    monkeypatch.setattr(f"{af_ns}.EncounterRepository", _FakeEncounterRepository)
-    monkeypatch.setattr(f"{af_ns}.StateRepository", _FakeStateRepository)
-    monkeypatch.setattr(
-        f"{af_ns}.RulesRepository",
-        lambda path: rules_paths.append(path) or object(),
-    )
     monkeypatch.setattr(
         f"{af_ns}.CompendiumRepository",
         lambda path: compendium_paths.append(path) or object(),
     )
     monkeypatch.setattr(
-        f"{af_ns}.MemoryRepository",
+        f"{af_ns}.NarrativeMemoryRepository",
         lambda path, **_kw: memory_paths.append(path) or object(),
     )
     monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
@@ -255,8 +221,6 @@ def test_build_application_graph_wires_repository_paths(
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", lambda **_kw: object())
-    monkeypatch.setattr(f"{af_ns}.CampaignRepository", lambda _path: object())
-    monkeypatch.setattr(f"{af_ns}.ModuleRepository", lambda _path: object())
     monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", lambda _path: object())
     monkeypatch.setattr(
         f"{af_ns}.CharacterCreationOrchestrator", lambda **_kw: object()
@@ -269,9 +233,7 @@ def test_build_application_graph_wires_repository_paths(
 
     ApplicationFactory(tmp_path, stdin=StringIO(), stdout=StringIO()).build()
 
-    assert _FakePlayerRepository.captured_paths == [tmp_path / "state"]
-    assert _FakeEncounterRepository.captured_paths == [tmp_path / "state"]
-    assert rules_paths == [tmp_path / "rules"]
+    assert _FakePlayerRepository.captured_paths == [tmp_path]
     assert compendium_paths == [tmp_path / "compendium"]
     assert memory_paths == [tmp_path / "memory"]
 
@@ -284,20 +246,14 @@ def test_build_application_graph_wires_agents_and_orchestrators(
 
     adapter = object()
     _FakePlayerRepository.captured_paths.clear()
-    _FakeEncounterRepository.captured_paths.clear()
-    _FakeStateRepository.instances.clear()
 
     af_ns = "campaignnarrator.application_factory"
     monkeypatch.setattr(f"{af_ns}.PydanticAIAdapter.from_env", lambda: adapter)
     monkeypatch.setattr(f"{af_ns}.PlayerRepository", _FakePlayerRepository)
-    monkeypatch.setattr(f"{af_ns}.EncounterRepository", _FakeEncounterRepository)
-    monkeypatch.setattr(f"{af_ns}.StateRepository", _FakeStateRepository)
-    monkeypatch.setattr(f"{af_ns}.RulesRepository", lambda _path: object())
-    compendium_instance = object()
+    monkeypatch.setattr(f"{af_ns}.CompendiumRepository", lambda _path: object())
     monkeypatch.setattr(
-        f"{af_ns}.CompendiumRepository", lambda _path: compendium_instance
+        f"{af_ns}.NarrativeMemoryRepository", lambda _path, **_kw: object()
     )
-    monkeypatch.setattr(f"{af_ns}.MemoryRepository", lambda _path, **_kw: object())
     monkeypatch.setattr(f"{af_ns}.RulesAgent", _FakeRulesAgent)
     monkeypatch.setattr(f"{af_ns}.NarratorAgent", _FakeNarratorAgent)
     monkeypatch.setattr(f"{af_ns}.EncounterOrchestrator", _FakeEncounterOrchestrator)
@@ -305,8 +261,6 @@ def test_build_application_graph_wires_agents_and_orchestrators(
     monkeypatch.setattr(f"{af_ns}.BackstoryAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", lambda **_kw: object())
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", lambda **_kw: object())
-    monkeypatch.setattr(f"{af_ns}.CampaignRepository", lambda _path: object())
-    monkeypatch.setattr(f"{af_ns}.ModuleRepository", lambda _path: object())
     monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", lambda _path: object())
     monkeypatch.setattr(
         f"{af_ns}.CharacterCreationOrchestrator", lambda **_kw: object()
@@ -321,10 +275,7 @@ def test_build_application_graph_wires_agents_and_orchestrators(
 
     assert isinstance(result, ApplicationGraph)
     assert result.game_orchestrator is not None
-    state_repo = _FakeStateRepository.instances[0]
-    assert isinstance(state_repo.player_repo, _FakePlayerRepository)
-    assert isinstance(state_repo.encounter_repo, _FakeEncounterRepository)
-    assert state_repo.compendium is compendium_instance
+    assert _FakePlayerRepository.captured_paths == [tmp_path]
 
 
 # ---------------------------------------------------------------------------
@@ -389,14 +340,9 @@ def test_application_factory_build_returns_application_graph(
     monkeypatch.setattr(f"{af_ns}.CampaignGeneratorAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.ModuleGeneratorAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.PlayerRepository", _noop_repo)
-    monkeypatch.setattr(f"{af_ns}.EncounterRepository", _noop_repo)
-    monkeypatch.setattr(f"{af_ns}.CampaignRepository", _noop_repo)
-    monkeypatch.setattr(f"{af_ns}.ModuleRepository", _noop_repo)
-    monkeypatch.setattr(f"{af_ns}.RulesRepository", _noop_repo)
     monkeypatch.setattr(f"{af_ns}.CompendiumRepository", _noop_repo)
-    monkeypatch.setattr(f"{af_ns}.MemoryRepository", _noop_repo_with_kw)
+    monkeypatch.setattr(f"{af_ns}.NarrativeMemoryRepository", _noop_repo_with_kw)
     monkeypatch.setattr(f"{af_ns}.CharacterTemplateRepository", _noop_repo)
-    monkeypatch.setattr(f"{af_ns}.StateRepository", _noop_repo_kw)
     monkeypatch.setattr(f"{af_ns}.CharacterCreationOrchestrator", _noop_repo_kw)
     monkeypatch.setattr(f"{af_ns}.EncounterPlannerAgent", _noop_agent)
     monkeypatch.setattr(f"{af_ns}.EncounterPlannerOrchestrator", _noop_repo_kw)
