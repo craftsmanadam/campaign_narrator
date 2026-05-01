@@ -340,8 +340,7 @@ class EncounterOrchestrator:
                     game_state,
                 )
                 if narration.npc_interaction_summary and intent.target_npc_id:
-                    updated_enc = self._update_npc_interaction(
-                        game_state.encounter,
+                    updated_enc = game_state.encounter.update_npc_interaction(
                         intent.target_npc_id,
                         narration.npc_interaction_summary,
                     )
@@ -600,32 +599,6 @@ class EncounterOrchestrator:
             return False
         return True
 
-    def _update_npc_interaction(
-        self,
-        state: EncounterState,
-        target_npc_id: str,
-        summary: str,
-    ) -> EncounterState:
-        """Mark NPC as INTERACTED and append summary to their interaction history.
-
-        Returns state unchanged (with a warning) if no matching NpcPresence is found.
-        """
-        presences = list(state.npc_presences)
-        for i, presence in enumerate(presences):
-            if presence.actor_id == target_npc_id:
-                presences[i] = replace(
-                    presence,
-                    status=NpcPresenceStatus.INTERACTED,
-                    interaction_summaries=(*presence.interaction_summaries, summary),
-                )
-                return replace(state, npc_presences=tuple(presences))
-        _log.warning(
-            "NPC_DIALOGUE: no NpcPresence found for actor_id %r"
-            " — skipping interaction update",
-            target_npc_id,
-        )
-        return state
-
     def _append_event(self, event: dict[str, object]) -> None:
         self._memory_repository.append_event(event)
 
@@ -651,10 +624,11 @@ def _recap_frame(game_state: GameState) -> NarrationFrame:
 
 
 def _look_frame(game_state: GameState) -> NarrationFrame:
+    enc = game_state.encounter
     return _frame(
         game_state,
         "status_response",
-        resolved_outcomes=(game_state.encounter.setting,),
+        resolved_outcomes=(enc.current_location or enc.setting,),
         allowed_disclosures=("setting", "visible actors"),
     )
 

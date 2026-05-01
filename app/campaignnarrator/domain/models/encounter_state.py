@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from types import MappingProxyType
 
 from .npc_presence import NpcPresence, NpcPresenceStatus
+
+_log = logging.getLogger(__name__)
 
 
 class EncounterPhase(StrEnum):
@@ -110,6 +113,29 @@ class EncounterState:
     def with_next_location_hint(self, hint: str | None) -> EncounterState:
         """Return a copy with next_location_hint set."""
         return replace(self, next_location_hint=hint)
+
+    def update_npc_interaction(
+        self, target_npc_id: str, summary: str
+    ) -> EncounterState:
+        """Mark NPC as INTERACTED and append summary to their interaction history.
+
+        Returns state unchanged (with a warning) if no matching NpcPresence is found.
+        """
+        presences = list(self.npc_presences)
+        for i, presence in enumerate(presences):
+            if presence.actor_id == target_npc_id:
+                presences[i] = replace(
+                    presence,
+                    status=NpcPresenceStatus.INTERACTED,
+                    interaction_summaries=(*presence.interaction_summaries, summary),
+                )
+                return replace(self, npc_presences=tuple(presences))
+        _log.warning(
+            "NPC_DIALOGUE: no NpcPresence found for actor_id %r"
+            " — skipping interaction update",
+            target_npc_id,
+        )
+        return self
 
     def to_dict(self) -> dict[str, object]:
         return {

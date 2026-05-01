@@ -2456,9 +2456,8 @@ def test_update_npc_interaction_sets_status_to_interacted(make_state) -> None:
         status=NpcPresenceStatus.AVAILABLE,
     )
     state = make_state(npc_presences=(presence,))
-    orchestrator = _make_orchestrator()
-    updated = orchestrator._update_npc_interaction(
-        state, "npc:elder", "Player asked about children; Elder denied knowledge."
+    updated = state.update_npc_interaction(
+        "npc:elder", "Player asked about children; Elder denied knowledge."
     )
     updated_presence = next(
         p for p in updated.npc_presences if p.actor_id == "npc:elder"
@@ -2475,9 +2474,8 @@ def test_update_npc_interaction_appends_summary(make_state) -> None:
         status=NpcPresenceStatus.AVAILABLE,
     )
     state = make_state(npc_presences=(presence,))
-    orchestrator = _make_orchestrator()
-    updated = orchestrator._update_npc_interaction(
-        state, "npc:elder", "Player asked about children; Elder denied knowledge."
+    updated = state.update_npc_interaction(
+        "npc:elder", "Player asked about children; Elder denied knowledge."
     )
     updated_presence = next(
         p for p in updated.npc_presences if p.actor_id == "npc:elder"
@@ -2496,10 +2494,7 @@ def test_update_npc_interaction_appends_to_existing_summaries(make_state) -> Non
         interaction_summaries=("First exchange.",),
     )
     state = make_state(npc_presences=(presence,))
-    orchestrator = _make_orchestrator()
-    updated = orchestrator._update_npc_interaction(
-        state, "npc:elder", "Second exchange."
-    )
+    updated = state.update_npc_interaction("npc:elder", "Second exchange.")
     updated_presence = next(
         p for p in updated.npc_presences if p.actor_id == "npc:elder"
     )
@@ -2513,8 +2508,7 @@ def test_update_npc_interaction_returns_state_unchanged_when_actor_not_found(
     make_state,
 ) -> None:
     state = make_state(npc_presences=())
-    orchestrator = _make_orchestrator()
-    updated = orchestrator._update_npc_interaction(state, "npc:nobody", "summary")
+    updated = state.update_npc_interaction("npc:nobody", "summary")
     assert updated is state
 
 
