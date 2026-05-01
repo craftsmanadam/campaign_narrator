@@ -104,14 +104,10 @@ class EncounterOrchestrator:
     ) -> GameState:
         """Primary interface: run the encounter loop and return updated GameState.
 
-        Uses GameStateRepository for all state persistence. The encounter field
-        of game_state must not be None. game_state.campaign must not be None.
+        Uses GameStateRepository for all state persistence. Callers must
+        guarantee game_state.encounter and game_state.campaign are not None.
         """
-        state = game_state.encounter
-        if state is None:
-            msg = "no active encounter"
-            raise ValueError(msg)
-
+        state = game_state.encounter  # type: ignore[assignment]
         cid = game_state.campaign.campaign_id  # type: ignore[union-attr]
         self._narrator_agent.set_campaign_context(cid)
         output: list[str] = _collect if _collect is not None else []

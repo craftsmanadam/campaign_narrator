@@ -3213,23 +3213,6 @@ def _make_game_state_repo(initial: GameState) -> MagicMock:
     return repo
 
 
-def test_run_raises_if_no_active_encounter(tmp_path: Path) -> None:
-    """run() must raise ValueError when game_state has no encounter."""
-    gs = GameState(encounter=None)
-    gs_repo = _make_game_state_repo(gs)
-    orchestrator = EncounterOrchestrator(
-        repositories=OrchestratorRepositories(
-            memory=FakeMemoryRepository(),
-            game_state=gs_repo,
-        ),
-        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
-        io=ScriptedIO([], on_exhaust="exit"),
-        _player_intent_agent=FakePlayerIntentAgent(),
-    )
-    with pytest.raises(ValueError, match="no active encounter"):
-        orchestrator.run(gs)
-
-
 def test_run_returns_game_state(tmp_path: Path) -> None:
     """run() must return a GameState."""
     gs = _social_game_state(tmp_path)
