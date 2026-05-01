@@ -120,7 +120,6 @@ class EncounterOrchestrator:
             opening, game_state = self._narrate(
                 _frame(state, game_state.actor_registry, "scene_opening"),
                 game_state,
-                campaign_id=cid,
             )
             updated = replace(
                 game_state.encounter,
@@ -140,7 +139,7 @@ class EncounterOrchestrator:
             state = game_state.encounter
             prior_context = self._retrieve_prior_context(
                 state.current_location or state.setting,
-                campaign_id=cid,
+                campaign_id=game_state.campaign.campaign_id,  # type: ignore[union-attr]
             )
             resume_frame = replace(
                 _frame(
@@ -151,9 +150,7 @@ class EncounterOrchestrator:
                 ),
                 prior_narrative_context=prior_context,
             )
-            resume_narration, game_state = self._narrate(
-                resume_frame, game_state, campaign_id=cid
-            )
+            resume_narration, game_state = self._narrate(resume_frame, game_state)
             self._io.display(resume_narration.text)
             output.append(resume_narration.text)
 
@@ -161,7 +158,7 @@ class EncounterOrchestrator:
             self._game_state_repo.persist(game_state)
             return game_state
 
-        game_state = self._run_loop(game_state, output, campaign_id=cid)
+        game_state = self._run_loop(game_state, output)
         self._game_state_repo.persist(game_state)
         return game_state
 
@@ -184,8 +181,6 @@ class EncounterOrchestrator:
         self,
         game_state: GameState,
         output: list[str],
-        *,
-        campaign_id: str,
     ) -> GameState:
         """Main interaction loop — runs until combat, quit, or encounter complete."""
         while True:
@@ -217,7 +212,7 @@ class EncounterOrchestrator:
                         {
                             "event_type": "encounter_partial_summary",
                             "encounter_id": state.encounter_id,
-                            "campaign_id": campaign_id,
+                            "campaign_id": game_state.campaign.campaign_id,
                             "module_id": "",
                         },
                     )
@@ -238,7 +233,6 @@ class EncounterOrchestrator:
                     narration, game_state = self._narrate(
                         _status_frame(state, game_state.actor_registry),
                         game_state,
-                        campaign_id=campaign_id,
                     )
                     self._io.display(narration.text)
                     output.append(narration.text)
@@ -247,7 +241,6 @@ class EncounterOrchestrator:
                     narration, game_state = self._narrate(
                         _recap_frame(state, game_state.actor_registry),
                         game_state,
-                        campaign_id=campaign_id,
                     )
                     self._io.display(narration.text)
                     output.append(narration.text)
@@ -256,20 +249,13 @@ class EncounterOrchestrator:
                     narration, game_state = self._narrate(
                         _look_frame(state, game_state.actor_registry),
                         game_state,
-                        campaign_id=campaign_id,
                     )
                     self._io.display(narration.text)
                     output.append(narration.text)
                     continue
 
             self._io.display("\n...\n")
-            game_state = self._apply_action(
-                game_state,
-                player_input,
-                intent,
-                output,
-                campaign_id=campaign_id,
-            )
+            game_state = self._apply_action(game_state, player_input, intent, output)
         return game_state
 
     def _classify_intent(
@@ -301,13 +287,11 @@ class EncounterOrchestrator:
         player_input: PlayerInput,
         intent: PlayerIntent,
         output: list[str],
-        *,
-        campaign_id: str,
     ) -> GameState:
         """Apply a non-combat player action; return updated GameState."""
         try:
             game_state, narration = self._handle_non_combat_action(
-                game_state, player_input, intent, campaign_id=campaign_id
+                game_state, player_input, intent
             )
         except ValueError:
             raise
@@ -367,8 +351,6 @@ class EncounterOrchestrator:
         game_state: GameState,
         player_input: PlayerInput,
         intent: PlayerIntent,
-        *,
-        campaign_id: str,
     ) -> tuple[GameState, Narration]:
         """Dispatch non-combat action by intent category; return updated GameState."""
         state = game_state.encounter
@@ -381,9 +363,7 @@ class EncounterOrchestrator:
                 game_state = game_state.with_encounter(state).with_actor_registry(
                     registry
                 )
-                updated_state, narration = self._enter_combat(
-                    game_state, campaign_id=campaign_id
-                )
+                updated_state, narration = self._enter_combat(game_state)
                 return game_state.with_encounter(updated_state), narration
             case IntentCategory.SKILL_CHECK:
                 return self._handle_action(
@@ -391,7 +371,6 @@ class EncounterOrchestrator:
                     player_input,
                     intent,
                     compendium_context,
-                    campaign_id=campaign_id,
                 )
             case IntentCategory.NPC_DIALOGUE:
                 state, registry = _clear_player_hidden(state, registry)
@@ -408,7 +387,6 @@ class EncounterOrchestrator:
                         player_action=player_input.raw_text,
                     ),
                     game_state,
-                    campaign_id=campaign_id,
                 )
                 if narration.npc_interaction_summary and intent.target_npc_id:
                     updated_enc = self._update_npc_interaction(
@@ -425,7 +403,6 @@ class EncounterOrchestrator:
                         player_action=player_input.raw_text,
                     ),
                     game_state,
-                    campaign_id=campaign_id,
                 )
                 return game_state, narration
             case _:
@@ -438,7 +415,6 @@ class EncounterOrchestrator:
                         player_action=player_input.raw_text,
                     ),
                     game_state,
-                    campaign_id=campaign_id,
                 )
                 return game_state, narration
 
@@ -448,8 +424,6 @@ class EncounterOrchestrator:
         player_input: PlayerInput,
         intent: PlayerIntent,
         compendium_context: tuple[str, ...],
-        *,
-        campaign_id: str,
     ) -> tuple[GameState, Narration]:
         state = game_state.encounter
         registry = game_state.actor_registry
@@ -499,15 +473,12 @@ class EncounterOrchestrator:
                 player_action=player_input.raw_text,
             ),
             game_state,
-            campaign_id=campaign_id,
         )
         return game_state, narration
 
     def _enter_combat(
         self,
         game_state: GameState,
-        *,
-        campaign_id: str,
     ) -> tuple[EncounterState, Narration]:
         """Roll initiative and narrate combat opening.
 
@@ -554,7 +525,6 @@ class EncounterOrchestrator:
         narration, narrated_gs = self._narrate(
             _frame(updated_state, registry, "combat_start", resolved_outcomes=(event,)),
             game_state.with_encounter(updated_state),
-            campaign_id=campaign_id,
         )
         return narrated_gs.encounter, narration
 
@@ -615,8 +585,6 @@ class EncounterOrchestrator:
         self,
         frame: NarrationFrame,
         game_state: GameState,
-        *,
-        campaign_id: str = "",
     ) -> tuple[Narration, GameState]:
         state = game_state.encounter
         narration = self._narrator_agent.narrate(frame)
@@ -625,7 +593,7 @@ class EncounterOrchestrator:
             {
                 "event_type": "narration",
                 "encounter_id": state.encounter_id,
-                "campaign_id": campaign_id,
+                "campaign_id": game_state.campaign.campaign_id,
                 "module_id": "",
             },
         )

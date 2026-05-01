@@ -2496,143 +2496,154 @@ def test_update_npc_interaction_returns_state_unchanged_when_actor_not_found(
 
 
 # ---------------------------------------------------------------------------
-# Task 3: NPC_DIALOGUE case calls _update_npc_interaction
+# NPC interaction tracking — verified through run_encounter()
 # ---------------------------------------------------------------------------
 
 
-def test_npc_dialogue_updates_npc_interaction_when_summary_and_target_present(
-    make_state,
-) -> None:
-    """After npc_dialogue, NPC status becomes INTERACTED and summary is appended."""
-    presence = NpcPresence(
+def _elder_presence(
+    status: NpcPresenceStatus = NpcPresenceStatus.AVAILABLE,
+) -> NpcPresence:
+    return NpcPresence(
         actor_id="npc:elder",
         display_name="Elder Rovan",
         description="the village elder",
         name_known=True,
-        status=NpcPresenceStatus.AVAILABLE,
+        status=status,
     )
-    state = make_state(npc_presences=(presence,), phase=EncounterPhase.SOCIAL)
 
-    class _FakeNarratorWithSummary:
-        def narrate(self, frame):
+
+def _npc_dialogue_repo(
+    npc_presences: tuple[NpcPresence, ...],
+) -> FakeGameStateRepository:
+    encounter = EncounterState(
+        encounter_id="enc-npc",
+        phase=EncounterPhase.SOCIAL,
+        setting="The village square.",
+        actor_ids=(TALIA.actor_id,),
+        player_actor_id=TALIA.actor_id,
+        npc_presences=npc_presences,
+    )
+    return FakeGameStateRepository(
+        GameState(
+            campaign=_default_campaign(),
+            encounter=encounter,
+            actor_registry=ActorRegistry(actors={TALIA.actor_id: TALIA}),
+        )
+    )
+
+
+def test_npc_dialogue_updates_npc_interaction_when_summary_and_target_present() -> None:
+    """After npc_dialogue intent with a target, NPC becomes INTERACTED and summary is stored."""
+
+    class _NarratorWithSummary:
+        def set_campaign_context(self, campaign_id: str) -> None:
+            pass
+
+        def narrate(self, frame: NarrationFrame) -> Narration:
             return Narration(
                 text="Elder Rovan eyes you warily.",
                 npc_interaction_summary="Player asked about children; Elder denied knowledge.",
             )
 
-        def summarize_encounter_partial(self, encounter):
+        def summarize_encounter_partial(self, state: object) -> str:
             return "Partial summary."
 
-        def declare_npc_intent_from_json(self, context_json):
-            return "The enemy advances."
-
-        def assess_combat_from_json(self, state_json):
-            return None
-
-    orchestrator = _make_orchestrator(
-        narrator_agent=_FakeNarratorWithSummary(),
+    fake_gsr = _npc_dialogue_repo(npc_presences=(_elder_presence(),))
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            memory=FakeMemoryRepository(), game_state=fake_gsr
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(), narrator=_NarratorWithSummary()
+        ),
+        io=ScriptedIO(["hello elder", "exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(
+                    category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"
+                )
+            ]
+        ),
     )
-    registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    game_state = GameState(
-        campaign=_default_campaign(), encounter=state, actor_registry=registry
-    )
-    updated_gs, _narration = orchestrator._handle_non_combat_action(
-        game_state,
-        PlayerInput("I ask Elder Rovan about the missing children."),
-        PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"),
-        campaign_id="test-campaign",
-    )
+    orch.run_encounter(encounter_id="enc-npc", campaign_id="test-campaign")
     updated_presence = next(
-        p for p in updated_gs.encounter.npc_presences if p.actor_id == "npc:elder"
+        p for p in fake_gsr.load().encounter.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.INTERACTED
     assert len(updated_presence.interaction_summaries) == 1
 
 
-def test_npc_dialogue_skips_update_when_no_summary(make_state) -> None:
-    """If narrator returns no npc_interaction_summary, state is not updated."""
-    presence = NpcPresence(
-        actor_id="npc:elder",
-        display_name="Elder Rovan",
-        description="the village elder",
-        name_known=True,
-        status=NpcPresenceStatus.AVAILABLE,
-    )
-    state = make_state(npc_presences=(presence,), phase=EncounterPhase.SOCIAL)
+def test_npc_dialogue_skips_update_when_no_summary() -> None:
+    """If the narrator returns no npc_interaction_summary, NPC status is not updated."""
 
-    class _FakeNarratorNoSummary:
-        def narrate(self, frame):
-            return Narration(
-                text="Elder Rovan nods.",
-                npc_interaction_summary=None,
-            )
+    class _NarratorNoSummary:
+        def set_campaign_context(self, campaign_id: str) -> None:
+            pass
 
-        def summarize_encounter_partial(self, encounter):
+        def narrate(self, frame: NarrationFrame) -> Narration:
+            return Narration(text="Elder Rovan nods.", npc_interaction_summary=None)
+
+        def summarize_encounter_partial(self, state: object) -> str:
             return "Partial summary."
 
-        def declare_npc_intent_from_json(self, context_json):
-            return "The enemy advances."
-
-        def assess_combat_from_json(self, state_json):
-            return None
-
-    orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorNoSummary())
-    registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    game_state = GameState(
-        campaign=_default_campaign(), encounter=state, actor_registry=registry
+    fake_gsr = _npc_dialogue_repo(npc_presences=(_elder_presence(),))
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            memory=FakeMemoryRepository(), game_state=fake_gsr
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(), narrator=_NarratorNoSummary()
+        ),
+        io=ScriptedIO(["hello elder", "exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(
+                    category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"
+                )
+            ]
+        ),
     )
-    updated_gs, _narration = orchestrator._handle_non_combat_action(
-        game_state,
-        PlayerInput("I greet the elder."),
-        PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id="npc:elder"),
-        campaign_id="test-campaign",
-    )
+    orch.run_encounter(encounter_id="enc-npc", campaign_id="test-campaign")
     updated_presence = next(
-        p for p in updated_gs.encounter.npc_presences if p.actor_id == "npc:elder"
+        p for p in fake_gsr.load().encounter.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.AVAILABLE
 
 
-def test_npc_dialogue_skips_update_when_no_target_npc_id(make_state) -> None:
-    """If intent has no target_npc_id, state is not updated even with a summary."""
-    presence = NpcPresence(
-        actor_id="npc:elder",
-        display_name="Elder Rovan",
-        description="the village elder",
-        name_known=True,
-        status=NpcPresenceStatus.AVAILABLE,
-    )
-    state = make_state(npc_presences=(presence,), phase=EncounterPhase.SOCIAL)
+def test_npc_dialogue_skips_update_when_no_target_npc_id() -> None:
+    """If the intent carries no target_npc_id, state is not updated even with a summary."""
 
-    class _FakeNarratorWithSummaryNoTarget:
-        def narrate(self, frame):
+    class _NarratorWithSummary:
+        def set_campaign_context(self, campaign_id: str) -> None:
+            pass
+
+        def narrate(self, frame: NarrationFrame) -> Narration:
             return Narration(
                 text="Someone replies.",
                 npc_interaction_summary="Some exchange happened.",
             )
 
-        def summarize_encounter_partial(self, encounter):
+        def summarize_encounter_partial(self, state: object) -> str:
             return "Partial summary."
 
-        def declare_npc_intent_from_json(self, context_json):
-            return "The enemy advances."
-
-        def assess_combat_from_json(self, state_json):
-            return None
-
-    orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorWithSummaryNoTarget())
-    registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    game_state = GameState(
-        campaign=_default_campaign(), encounter=state, actor_registry=registry
+    fake_gsr = _npc_dialogue_repo(npc_presences=(_elder_presence(),))
+    orch = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            memory=FakeMemoryRepository(), game_state=fake_gsr
+        ),
+        agents=OrchestratorAgents(
+            rules=FakeRulesAgent(), narrator=_NarratorWithSummary()
+        ),
+        io=ScriptedIO(["hello", "exit"]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            intents=[
+                PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id=None)
+            ]
+        ),
     )
-    updated_gs, _narration = orchestrator._handle_non_combat_action(
-        game_state,
-        PlayerInput("I say hello."),
-        PlayerIntent(category=IntentCategory.NPC_DIALOGUE, target_npc_id=None),
-        campaign_id="test-campaign",
-    )
+    orch.run_encounter(encounter_id="enc-npc", campaign_id="test-campaign")
     updated_presence = next(
-        p for p in updated_gs.encounter.npc_presences if p.actor_id == "npc:elder"
+        p for p in fake_gsr.load().encounter.npc_presences if p.actor_id == "npc:elder"
     )
     assert updated_presence.status is NpcPresenceStatus.AVAILABLE
 
