@@ -85,7 +85,6 @@ class ModuleOrchestrator:
         if game_state.campaign is None or game_state.module is None:
             return
 
-        campaign = game_state.campaign
         active = game_state.encounter
 
         # No active encounter — proceed to planning
@@ -104,12 +103,7 @@ class ModuleOrchestrator:
             return
 
         # Encounter in progress — resume it; output is displayed live during the loop
-        self._encounter_orchestrator.run_encounter(
-            encounter_id=active.encounter_id, campaign_id=campaign.campaign_id
-        )
-
-        # Reload after external write (run_encounter may have persisted updates)
-        game_state = self._game_state_repo.load()
+        game_state = self._encounter_orchestrator.run(game_state)
         reloaded = game_state.encounter
         if reloaded is not None and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE:
             game_state, transition = self._archive_encounter(game_state=game_state)
@@ -118,7 +112,7 @@ class ModuleOrchestrator:
                 depth=depth,
                 transition=transition,
             )
-        # else: player quit — state already persisted by run_encounter; return
+        # else: player quit — state already persisted by run(); return
 
     def _archive_encounter(
         self,
@@ -190,21 +184,17 @@ class ModuleOrchestrator:
             return
 
         # EncounterReady: the planner has created and saved the encounter.
-        module = result.module
         encounter_id = result.encounter_state.encounter_id
-        self._encounter_orchestrator.run_encounter(
-            encounter_id=encounter_id, campaign_id=game_state.campaign.campaign_id
+        game_state = game_state.with_encounter(result.encounter_state).with_module(
+            result.module
         )
-
-        # Reload after external write (run_encounter may have persisted updates)
-        game_state = self._game_state_repo.load()
+        game_state = self._encounter_orchestrator.run(game_state)
         reloaded = game_state.encounter
         if (
             reloaded is not None
             and reloaded.encounter_id == encounter_id
             and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE
         ):
-            game_state = game_state.with_module(module)
             game_state, next_transition = self._archive_encounter(game_state=game_state)
             self._prepare_and_run(
                 game_state=game_state,

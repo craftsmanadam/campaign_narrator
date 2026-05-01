@@ -40,15 +40,6 @@ _log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
-class EncounterRunResult:
-    """Result of running one batch of player inputs through an encounter."""
-
-    encounter_id: str
-    output_text: str
-    completed: bool
-
-
-@dataclass(frozen=True, slots=True)
 class OrchestratorRepositories:
     """Repository dependencies for EncounterOrchestrator."""
 
@@ -98,8 +89,6 @@ class EncounterOrchestrator:
     def run(
         self,
         game_state: GameState,
-        *,
-        _collect: list[str] | None = None,
     ) -> GameState:
         """Primary interface: run the encounter loop and return updated GameState.
 
@@ -109,7 +98,6 @@ class EncounterOrchestrator:
         state = game_state.encounter  # type: ignore[assignment]
         cid = game_state.campaign.campaign_id  # type: ignore[union-attr]
         self._narrator_agent.set_campaign_context(cid)
-        output: list[str] = _collect if _collect is not None else []
 
         if state.phase is EncounterPhase.SCENE_OPENING:
             opening, game_state = self._narrate(
@@ -123,7 +111,6 @@ class EncounterOrchestrator:
             )
             game_state = game_state.with_encounter(updated)
             self._io.display(opening.text)
-            output.append(opening.text)
             self._game_state_repo.persist(game_state)
             self._memory_repository.update_exchange("", opening.text)
         elif self._memory_repository.get_exchange_buffer():
@@ -146,35 +133,18 @@ class EncounterOrchestrator:
             )
             resume_narration, game_state = self._narrate(resume_frame, game_state)
             self._io.display(resume_narration.text)
-            output.append(resume_narration.text)
 
         if game_state.encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE:
             self._game_state_repo.persist(game_state)
             return game_state
 
-        game_state = self._run_loop(game_state, output)
+        game_state = self._run_loop(game_state)
         self._game_state_repo.persist(game_state)
         return game_state
-
-    def run_encounter(
-        self, *, encounter_id: str, campaign_id: str
-    ) -> EncounterRunResult:
-        """Run the encounter loop until an end condition is reached."""
-        gs = self._game_state_repo.load()
-        collected: list[str] = []
-        updated = self.run(gs, _collect=collected)
-        encounter = updated.encounter
-        return EncounterRunResult(
-            encounter_id=encounter_id,
-            output_text="\n".join(collected),
-            completed=encounter is None
-            or encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE,
-        )
 
     def _run_loop(
         self,
         game_state: GameState,
-        output: list[str],
     ) -> GameState:
         """Main interaction loop — runs until combat, quit, or encounter complete."""
         while True:
@@ -209,7 +179,6 @@ class EncounterOrchestrator:
                     self._game_state_repo.persist(game_state)
                     msg = "Game saved. You can resume this encounter later."
                     self._io.display(msg)
-                    output.append(msg)
                     self._append_event(
                         {
                             "type": "encounter_saved",
@@ -225,7 +194,6 @@ class EncounterOrchestrator:
                         game_state,
                     )
                     self._io.display(narration.text)
-                    output.append(narration.text)
                     continue
                 case IntentCategory.RECAP:
                     narration, game_state = self._narrate(
@@ -233,7 +201,6 @@ class EncounterOrchestrator:
                         game_state,
                     )
                     self._io.display(narration.text)
-                    output.append(narration.text)
                     continue
                 case IntentCategory.LOOK_AROUND:
                     narration, game_state = self._narrate(
@@ -241,11 +208,10 @@ class EncounterOrchestrator:
                         game_state,
                     )
                     self._io.display(narration.text)
-                    output.append(narration.text)
                     continue
 
             self._io.display("\n...\n")
-            game_state = self._apply_action(game_state, player_input, intent, output)
+            game_state = self._apply_action(game_state, player_input, intent)
         return game_state
 
     def _classify_intent(
@@ -275,7 +241,6 @@ class EncounterOrchestrator:
         game_state: GameState,
         player_input: PlayerInput,
         intent: PlayerIntent,
-        output: list[str],
     ) -> GameState:
         """Apply a non-combat player action; return updated GameState."""
         try:
@@ -288,11 +253,9 @@ class EncounterOrchestrator:
             _log.exception("Action processing failed")
             msg = f"\n[Narrator encountered an error ({exc}). Please try again.]\n"
             self._io.display(msg)
-            output.append(msg)
             return game_state
 
         self._io.display(narration.text)
-        output.append(narration.text)
         self._game_state_repo.persist(game_state)
         self._memory_repository.update_exchange(player_input.raw_text, narration.text)
         return game_state

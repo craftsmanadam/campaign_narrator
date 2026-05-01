@@ -352,7 +352,7 @@ def player_inputs_with_hostile_intent(
         _player_intent_agent=fake_player_intent,
         _combat_intent_agent=fake_combat_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
+    orchestrator.run(gs_repo.load())
     context["final_state"] = gs_repo.load().encounter
 
 
@@ -391,7 +391,7 @@ def player_inputs_with_scene_observation_intent(
         io=io,
         _player_intent_agent=fake_player_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
+    orchestrator.run(gs_repo.load())
     context["final_state"] = gs_repo.load().encounter
     context["narrator_agent"] = fake_narrator
 
@@ -423,7 +423,7 @@ def player_inputs_with_save_exit_intent(
         io=io,
         _player_intent_agent=fake_player_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
+    orchestrator.run(gs_repo.load())
 
     context["final_state"] = gs_repo.load().encounter
     context["memory_repo"] = memory_repo
@@ -467,7 +467,7 @@ def player_inputs_with_skill_check_intent(
         io=io,
         _player_intent_agent=fake_player_intent,
     )
-    orchestrator.run_encounter(encounter_id="goblin-camp", campaign_id="test-campaign")
+    orchestrator.run(gs_repo.load())
 
     context["final_state"] = gs_repo.load().encounter
     context["rules_agent"] = fake_rules

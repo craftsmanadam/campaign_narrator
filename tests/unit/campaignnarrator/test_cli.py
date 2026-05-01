@@ -27,22 +27,6 @@ from campaignnarrator.terminal_io import TerminalIO
 # ---------------------------------------------------------------------------
 
 
-class _FakeRunResult:
-    def __init__(self, *, output_text: str, completed: bool) -> None:
-        self.output_text = output_text
-        self.completed = completed
-
-
-class _FakeApplicationOrchestrator:
-    def __init__(self, *, encounter_orchestrator: object) -> None:
-        self.encounter_orchestrator = encounter_orchestrator
-        self.encounter_id: str | None = None
-
-    def run_encounter(self, *, encounter_id: str) -> _FakeRunResult:
-        self.encounter_id = encounter_id
-        return _FakeRunResult(output_text="Encounter output\n", completed=True)
-
-
 class _FakeGameOrchestrator:
     def __init__(self) -> None:
         self.run_called = False
