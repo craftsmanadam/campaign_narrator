@@ -410,10 +410,16 @@ def test_run_displays_end_of_campaign_when_milestones_exhausted() -> None:
         player_actor_id="pc:player",
         current_module_id="module-001",
     )
-    orch, _, _, _, _ = _make_orchestrator(
+    orch, _, _, _, mock_game_state_repo = _make_orchestrator(
         active_encounter=active,
         module=_make_module(),
         encounter_ready=MilestoneAchieved(),
+    )
+    mock_game_state_repo.load.return_value = GameState(
+        campaign=campaign,
+        module=_make_module(),
+        encounter=active,
+        actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
     )
     orch.run(game_state=_make_game_state(campaign=campaign, module=_make_module()))
     orch._io.display.assert_any_call(
@@ -448,6 +454,7 @@ def test_run_planner_receive_correct_campaign_and_player() -> None:
     campaign = _make_campaign()
     expected_player = _make_player()
     mock_game_state_repo.load.return_value = GameState(
+        campaign=campaign,
         module=_make_module(),
         encounter=None,
         actor_registry=ActorRegistry(actors={"pc:player": expected_player}),
@@ -539,6 +546,7 @@ def test_run_encounter_completes_during_run_triggers_archive() -> None:
     )
     # After run_encounter, game state cache holds the completed encounter
     mock_game_state_repo.load.return_value = GameState(
+        campaign=_make_campaign(),
         module=_make_module(),
         encounter=completed,
         actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
@@ -591,10 +599,10 @@ def test_prepare_receives_post_encounter_player_not_pre_encounter_snapshot() -> 
     orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
 
     post_state = GameState(
+        campaign=_make_campaign(),
         module=_make_module(),
         actor_registry=ActorRegistry(actors={"pc:player": post_encounter_player}),
     )
-    # run() no longer calls load() — campaign/module come from the passed game_state.
     # Call 1: _run_loop() → load gs (post-encounter registry state)
     # Call 2: _prepare_and_run() → checks if planner encounter completed
     mock_game_state_repo.load.side_effect = [
@@ -614,11 +622,17 @@ def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
     orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
     player_registry = ActorRegistry(actors={"pc:player": _make_player()})
     active_gs = GameState(
-        module=_make_module(), encounter=active, actor_registry=player_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=active,
+        actor_registry=player_registry,
     )
     # First loads see the active encounter; post-persist loads see encounter cleared.
     post_persist_gs = GameState(
-        module=_make_module(), encounter=None, actor_registry=player_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=None,
+        actor_registry=player_registry,
     )
     mock_game_state_repo.load.side_effect = [
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
@@ -655,10 +669,16 @@ def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
     # Seed registry with both actors so _archive_encounter can read them.
     full_registry = ActorRegistry(actors={"pc:player": player, "npc:elara": elara})
     active_gs = GameState(
-        module=_make_module(), encounter=active, actor_registry=full_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=active,
+        actor_registry=full_registry,
     )
     post_persist_gs = GameState(
-        module=_make_module(), encounter=None, actor_registry=full_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=None,
+        actor_registry=full_registry,
     )
     mock_game_state_repo.load.side_effect = [
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
@@ -699,10 +719,16 @@ def test_run_loop_call_site_1_threads_transition_to_prepare() -> None:
     orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
     full_registry = ActorRegistry(actors={"pc:player": player, "npc:elara": elara})
     active_gs = GameState(
-        module=_make_module(), encounter=active, actor_registry=full_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=active,
+        actor_registry=full_registry,
     )
     post_persist_gs = GameState(
-        module=_make_module(), encounter=None, actor_registry=full_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=None,
+        actor_registry=full_registry,
     )
     mock_game_state_repo.load.side_effect = [
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
@@ -745,6 +771,7 @@ def test_run_loop_call_site_2_threads_transition_to_prepare() -> None:
     )
     orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
     mock_game_state_repo.load.return_value = GameState(
+        campaign=_make_campaign(),
         module=_make_module(),
         encounter=completed,
         actor_registry=ActorRegistry(actors={"pc:player": player, "npc:elara": elara}),
@@ -764,10 +791,16 @@ def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
     orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
     player_registry = ActorRegistry(actors={"pc:player": _make_player()})
     active_gs = GameState(
-        module=_make_module(), encounter=active, actor_registry=player_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=active,
+        actor_registry=player_registry,
     )
     post_persist_gs = GameState(
-        module=_make_module(), encounter=None, actor_registry=player_registry
+        campaign=_make_campaign(),
+        module=_make_module(),
+        encounter=None,
+        actor_registry=player_registry,
     )
     mock_game_state_repo.load.side_effect = [
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
@@ -799,6 +832,7 @@ def _make_orchestrator_with_gs_repo(
     """Build a ModuleOrchestrator wired with a GameStateRepository mock."""
     player_registry = ActorRegistry(actors={"pc:player": _make_player()})
     default_gs = GameState(
+        campaign=_make_campaign(),
         module=_make_module(),
         encounter=active_encounter,
         actor_registry=player_registry,

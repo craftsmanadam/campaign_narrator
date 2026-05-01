@@ -77,33 +77,31 @@ class ModuleOrchestrator:
 
     def run(self, *, game_state: GameState) -> None:
         """Detect module state and run the encounter loop."""
-        campaign = game_state.campaign
-        module = game_state.module
-        if campaign is None or module is None:
-            return
-
-        self._run_loop(campaign=campaign, module=module, depth=0)
+        self._run_loop(game_state=game_state, depth=0)
 
     def _run_loop(
         self,
         *,
-        campaign: CampaignState,
-        module: ModuleState,
+        game_state: GameState,
         depth: int = 0,
     ) -> None:
         """Inner loop: check encounter → archive if complete → prepare → run."""
-        # Read player from registry each iteration so level-ups are reflected.
-        gs = self._game_state_repo.load()
-        player = get_player(gs.actor_registry, campaign.player_actor_id)
+        game_state = self._game_state_repo.load()
+        if game_state.campaign is None or game_state.module is None:
+            return
 
-        active = gs.encounter
+        # Read player from registry each iteration so level-ups are reflected.
+        campaign = game_state.campaign
+        player = get_player(game_state.actor_registry, campaign.player_actor_id)
+
+        active = game_state.encounter
 
         # No active encounter — proceed to planning
         if active is None:
             self._prepare_and_run(
-                campaign=campaign,
+                campaign=game_state.campaign,
                 player=player,
-                module=module,
+                module=game_state.module,
                 depth=depth,
             )
             return
@@ -111,15 +109,15 @@ class ModuleOrchestrator:
         # Encounter already complete — archive then prepare
         if active.phase == EncounterPhase.ENCOUNTER_COMPLETE:
             module, transition = self._archive_encounter(
-                encounter=active, module=module, campaign=campaign
+                encounter=active, module=game_state.module, campaign=game_state.campaign
             )
             # Re-read player after archiving: encounter may have changed HP/conditions.
             player = get_player(
                 self._game_state_repo.load().actor_registry,
-                campaign.player_actor_id,
+                game_state.campaign.player_actor_id,
             )
             self._prepare_and_run(
-                campaign=campaign,
+                campaign=game_state.campaign,
                 player=player,
                 module=module,
                 depth=depth,
@@ -136,15 +134,15 @@ class ModuleOrchestrator:
         reloaded = self._game_state_repo.load().encounter
         if reloaded is not None and reloaded.phase == EncounterPhase.ENCOUNTER_COMPLETE:
             module, transition = self._archive_encounter(
-                encounter=reloaded, module=module, campaign=campaign
+                encounter=reloaded, module=game_state.module, campaign=campaign
             )
             # Re-read player after archiving: encounter may have changed HP/conditions.
             player = get_player(
                 self._game_state_repo.load().actor_registry,
-                campaign.player_actor_id,
+                game_state.campaign.player_actor_id,
             )
             self._prepare_and_run(
-                campaign=campaign,
+                campaign=game_state.campaign,
                 player=player,
                 module=module,
                 depth=depth,
@@ -305,13 +303,8 @@ class ModuleOrchestrator:
         )
 
         gs = self._game_state_repo.load()
-        self._game_state_repo.persist(
-            replace(gs, campaign=updated_campaign, module=new_module)
-        )
+        new_gs = replace(gs, campaign=updated_campaign, module=new_module)
+        self._game_state_repo.persist(new_gs)
 
         # Recurse into new module
-        self._run_loop(
-            campaign=updated_campaign,
-            module=new_module,
-            depth=depth + 1,
-        )
+        self._run_loop(game_state=new_gs, depth=depth + 1)
