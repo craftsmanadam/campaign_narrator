@@ -140,7 +140,8 @@ class CampaignCreationOrchestrator:
         )
         # Persist campaign + module together through the state facade
         gs = self._repos.game_state.load()
-        self._repos.game_state.persist(replace(gs, campaign=campaign, module=module))
+        persisted_gs = replace(gs, campaign=campaign, module=module)
+        self._repos.game_state.persist(persisted_gs)
 
         # Delegate encounter loop to ModuleOrchestrator
-        self._module_orchestrator.run(campaign=campaign)
+        self._module_orchestrator.run(game_state=persisted_gs)

@@ -13,6 +13,7 @@ from campaignnarrator.domain.models import (
     EncounterPhase,
     EncounterState,
     EncounterTransition,
+    GameState,
     MilestoneAchieved,
     ModuleState,
     PlayerIO,
@@ -74,10 +75,11 @@ class ModuleOrchestrator:
         self._encounter_orchestrator = encounter_orchestrator
         self._game_state_repo = repositories.game_state
 
-    def run(self, *, campaign: CampaignState) -> None:
+    def run(self, *, game_state: GameState) -> None:
         """Detect module state and run the encounter loop."""
-        module = self._game_state_repo.load().module
-        if module is None:
+        campaign = game_state.campaign
+        module = game_state.module
+        if campaign is None or module is None:
             return
 
         self._run_loop(campaign=campaign, module=module, depth=0)

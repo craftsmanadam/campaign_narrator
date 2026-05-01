@@ -112,6 +112,21 @@ def _make_planner_encounter() -> EncounterState:
     )
 
 
+def _make_game_state(
+    *,
+    module: ModuleState | None = None,
+    encounter: EncounterState | None = None,
+    campaign: CampaignState | None = None,
+) -> GameState:
+    player_registry = ActorRegistry(actors={"pc:player": _make_player()})
+    return GameState(
+        campaign=campaign or _make_campaign(),
+        module=module if module is not None else _make_module(),
+        encounter=encounter,
+        actor_registry=player_registry,
+    )
+
+
 def _make_orchestrator(
     *,
     module: ModuleState | None = None,
@@ -190,7 +205,7 @@ def test_run_with_in_progress_encounter_calls_run_encounter() -> None:
     """Step 2c: active encounter not complete → resume it."""
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
     orch, _, mock_enc_orch, _, _ = _make_orchestrator(active_encounter=active)
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     mock_enc_orch.run_encounter.assert_called_once_with(
         encounter_id="module-001-enc-001", campaign_id="c-1"
     )
@@ -199,14 +214,14 @@ def test_run_with_in_progress_encounter_calls_run_encounter() -> None:
 def test_run_with_no_active_encounter_calls_encounter_planner() -> None:
     """No active encounter → encounter_planner.prepare() is called."""
     orch, _, _, _, _ = _make_orchestrator(active_encounter=None)
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     orch._agents.encounter_planner.prepare.assert_called_once()
 
 
 def test_run_with_no_active_encounter_calls_run_encounter() -> None:
     """No active encounter → run_encounter is called with planner's encounter_id."""
     orch, _, mock_enc_orch, _, _ = _make_orchestrator(active_encounter=None)
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     mock_enc_orch.run_encounter.assert_called_once_with(
         encounter_id="module-001-enc-new", campaign_id="c-1"
     )
@@ -217,7 +232,7 @@ def test_run_does_not_forward_encounter_output_to_io() -> None:
     active = _make_active_encounter(phase=EncounterPhase.SCENE_OPENING)
     orch, _, mock_enc_orch, _, _ = _make_orchestrator(active_encounter=active)
     mock_enc_orch.run_encounter.return_value = MagicMock(output_text="Docks at dusk.")
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     # Output display is the encounter orchestrator's responsibility; module orchestrator
     # must not re-display it via io.display.
     for call in orch._io.display.call_args_list:
@@ -234,7 +249,7 @@ def test_run_with_completed_encounter_calls_summarize() -> None:
         active_encounter=active,
         module=_make_module(),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state(module=_make_module()))
     mock_narrator.summarize_encounter.assert_called_once()
 
 
@@ -248,7 +263,7 @@ def test_run_with_completed_encounter_stores_narrative() -> None:
         module=_make_module(),
         summarize_returns="Rich summary text.",
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state(module=_make_module()))
     mock_narrative_repo.store_narrative.assert_called_once()
     args = mock_narrative_repo.store_narrative.call_args
     assert args[0][0] == "Rich summary text."
@@ -265,7 +280,7 @@ def test_run_with_completed_encounter_clears_encounter() -> None:
         active_encounter=active,
         module=_make_module(),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state(module=_make_module()))
     mock_game_state_repo.persist.assert_called()
 
 
@@ -279,7 +294,7 @@ def test_run_with_completed_encounter_saves_updated_module() -> None:
         module=_make_module(),
         summarize_returns="Session notes.",
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state(module=_make_module()))
     # persist() called at least once (archive)
     assert mock_game_state_repo.persist.call_count >= 1
     # The persisted game state carries the updated module with the completed encounter id
@@ -304,7 +319,11 @@ def test_run_archive_increments_next_encounter_index() -> None:
         active_encounter=active,
         module=_make_module(next_encounter_index=_initial_index),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(
+        game_state=_make_game_state(
+            module=_make_module(next_encounter_index=_initial_index)
+        )
+    )
     all_staged = [call[0][0] for call in mock_game_state_repo.persist.call_args_list]
     archived = next(
         gs
@@ -334,7 +353,7 @@ def test_run_milestone_achieved_saves_new_module() -> None:
     )
     orch._agents.module_generator.generate.return_value = module_result
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state(module=_make_module()))
 
     all_staged = [call[0][0] for call in mock_game_state_repo.persist.call_args_list]
     new_module = next(
@@ -356,7 +375,13 @@ def test_run_returns_early_when_module_not_found() -> None:
         module=None,
         actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(
+        game_state=GameState(
+            campaign=_make_campaign(),
+            module=None,
+            actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
+        )
+    )
     mock_enc_orch.run_encounter.assert_not_called()
 
 
@@ -390,7 +415,7 @@ def test_run_displays_end_of_campaign_when_milestones_exhausted() -> None:
         module=_make_module(),
         encounter_ready=MilestoneAchieved(),
     )
-    orch.run(campaign=campaign)
+    orch.run(game_state=_make_game_state(campaign=campaign, module=_make_module()))
     orch._io.display.assert_any_call(
         "\nThe campaign is complete. Your legend will be remembered.\n"
     )
@@ -407,7 +432,11 @@ def test_run_with_completed_encounter_passes_updated_module_to_planner() -> None
         active_encounter=active,
         module=_make_module(next_encounter_index=_initial_index),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(
+        game_state=_make_game_state(
+            module=_make_module(next_encounter_index=_initial_index)
+        )
+    )
     prepare_call = orch._agents.encounter_planner.prepare.call_args
     passed_module = prepare_call[1]["module"]
     assert passed_module.next_encounter_index == _initial_index + 1
@@ -423,7 +452,7 @@ def test_run_planner_receive_correct_campaign_and_player() -> None:
         encounter=None,
         actor_registry=ActorRegistry(actors={"pc:player": expected_player}),
     )
-    orch.run(campaign=campaign)
+    orch.run(game_state=_make_game_state(campaign=campaign))
     prepare_call = orch._agents.encounter_planner.prepare.call_args
     assert prepare_call[1]["campaign"] is campaign
     assert prepare_call[1]["player"] is expected_player
@@ -433,7 +462,7 @@ def test_run_reads_player_from_registry() -> None:
     """ModuleOrchestrator.run() no longer accepts player param; reads from registry."""
     orch, _, _, _, _ = _make_orchestrator(active_encounter=None)
     # Should not raise — player is in registry (seeded by _make_orchestrator)
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
 
 def test_run_with_scripted_io_module_not_found_no_crash() -> None:
@@ -461,7 +490,13 @@ def test_run_with_scripted_io_module_not_found_no_crash() -> None:
         agents=agents,
         encounter_orchestrator=MagicMock(),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(
+        game_state=GameState(
+            campaign=_make_campaign(),
+            module=None,
+            actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
+        )
+    )
     mock_encounter_planner.prepare.assert_not_called()
 
 
@@ -472,7 +507,7 @@ def test_archive_encounter_calls_persist() -> None:
         outcome="victory",
     )
     orch, _, _, _, mock_game_state_repo = _make_orchestrator(active_encounter=active)
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     mock_game_state_repo.persist.assert_called_once()
 
 
@@ -488,7 +523,7 @@ def test_run_player_quits_mid_encounter_does_not_archive() -> None:
         encounter=active,
         actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     mock_narrator.summarize_encounter.assert_not_called()
     mock_game_state_repo.persist.assert_not_called()
 
@@ -508,7 +543,7 @@ def test_run_encounter_completes_during_run_triggers_archive() -> None:
         encounter=completed,
         actor_registry=ActorRegistry(actors={"pc:player": _make_player()}),
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     mock_narrator.summarize_encounter.assert_called_once()
     mock_game_state_repo.persist.assert_called()
 
@@ -542,10 +577,12 @@ def _make_completed_encounter(
 
 
 def test_prepare_receives_post_encounter_player_not_pre_encounter_snapshot() -> None:
-    """Player passed to prepare() reflects post-encounter registry state, not the
-    snapshot read at the top of _run_loop() before the encounter ran."""
+    """Player passed to prepare() reflects what _run_loop() reads from the registry,
+    not what was embedded in the game_state passed to run()."""
     post_encounter_hp = 3
-    pre_encounter_player = _make_player()  # full HP at loop start
+    pre_encounter_player = (
+        _make_player()
+    )  # full HP — same as what _make_game_state uses
     post_encounter_player = dataclasses.replace(
         pre_encounter_player, hp_current=post_encounter_hp
     )
@@ -557,23 +594,15 @@ def test_prepare_receives_post_encounter_player_not_pre_encounter_snapshot() -> 
         module=_make_module(),
         actor_registry=ActorRegistry(actors={"pc:player": post_encounter_player}),
     )
-    # Call 1: top-of-loop read (pre-encounter state) — includes module for run()
-    # Call 2: _archive_encounter() gs read for stage
-    # Call 3: _archive_encounter() traveling-actor read (post-persist)
-    # Call 4: our fix — re-read player after archive (post-encounter state)
-    # Call 5: _prepare_and_run() checks if newly-run encounter completed
+    # run() no longer calls load() — campaign/module come from the passed game_state.
+    # Call 1: _run_loop() → load gs (post-encounter registry state)
+    # Call 2: _prepare_and_run() → checks if planner encounter completed
     mock_game_state_repo.load.side_effect = [
-        GameState(
-            module=_make_module(),
-            actor_registry=ActorRegistry(actors={"pc:player": pre_encounter_player}),
-        ),
-        post_state,
-        post_state,
         post_state,
         post_state,
     ]
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
     call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
     assert call_kwargs["player"].hp_current == post_encounter_hp
@@ -592,7 +621,6 @@ def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
         module=_make_module(), encounter=None, actor_registry=player_registry
     )
     mock_game_state_repo.load.side_effect = [
-        active_gs,  # run() → load module
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
         active_gs,  # _archive_encounter() → load gs for stage
         post_persist_gs,  # _archive_encounter() → post-persist registry read
@@ -600,7 +628,7 @@ def test_archive_encounter_syncs_player_and_npcs_to_registry() -> None:
         post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
     ]
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
     mock_game_state_repo.persist.assert_called_once()
 
@@ -633,7 +661,6 @@ def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
         module=_make_module(), encounter=None, actor_registry=full_registry
     )
     mock_game_state_repo.load.side_effect = [
-        active_gs,  # run() → load module
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
         active_gs,  # _archive_encounter() → load gs for stage
         post_persist_gs,  # _archive_encounter() → post-persist registry read
@@ -641,7 +668,7 @@ def test_archive_encounter_builds_transition_with_traveling_actors() -> None:
         post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
     ]
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
     call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
     transition = call_kwargs.get("transition")
@@ -678,7 +705,6 @@ def test_run_loop_call_site_1_threads_transition_to_prepare() -> None:
         module=_make_module(), encounter=None, actor_registry=full_registry
     )
     mock_game_state_repo.load.side_effect = [
-        active_gs,  # run() → load module
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
         active_gs,  # _archive_encounter() → load gs for stage
         post_persist_gs,  # _archive_encounter() → post-persist registry read
@@ -686,7 +712,7 @@ def test_run_loop_call_site_1_threads_transition_to_prepare() -> None:
         post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
     ]
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
     call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
     transition = call_kwargs.get("transition")
@@ -724,7 +750,7 @@ def test_run_loop_call_site_2_threads_transition_to_prepare() -> None:
         actor_registry=ActorRegistry(actors={"pc:player": player, "npc:elara": elara}),
     )
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
     call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
     transition = call_kwargs.get("transition")
@@ -744,7 +770,6 @@ def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
         module=_make_module(), encounter=None, actor_registry=player_registry
     )
     mock_game_state_repo.load.side_effect = [
-        active_gs,  # run() → load module
         active_gs,  # _run_loop() → load gs (active = gs.encounter)
         active_gs,  # _archive_encounter() → load gs for stage
         post_persist_gs,  # _archive_encounter() → post-persist registry read
@@ -752,7 +777,7 @@ def test_archive_encounter_transition_empty_when_no_traveling_actors() -> None:
         post_persist_gs,  # _prepare_and_run() → check if planner encounter completed
     ]
 
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
 
     call_kwargs = orch._agents.encounter_planner.prepare.call_args.kwargs
     transition = call_kwargs.get("transition")
@@ -823,7 +848,7 @@ def _make_orchestrator_with_gs_repo(
 def test_run_loop_uses_game_state_repo_when_set() -> None:
     """_run_loop must call game_state_repo.load()."""
     orch, gs_repo, _ = _make_orchestrator_with_gs_repo()
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     gs_repo.load.assert_called()
 
 
@@ -833,6 +858,6 @@ def test_archive_encounter_persists_via_game_state_repo_when_set() -> None:
     orch, gs_repo, mock_narrative_repo = _make_orchestrator_with_gs_repo(
         active_encounter=completed,
     )
-    orch.run(campaign=_make_campaign())
+    orch.run(game_state=_make_game_state())
     gs_repo.persist.assert_called()
     mock_narrative_repo.persist.assert_not_called()

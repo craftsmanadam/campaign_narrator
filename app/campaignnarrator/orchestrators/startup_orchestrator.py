@@ -45,7 +45,8 @@ class StartupOrchestrator:
 
     def handle_returning_with_campaign(self) -> None:
         """Greet the player, offer load-or-new, route accordingly."""
-        campaign = self._game_state_repo.load().campaign
+        gs = self._game_state_repo.load()
+        campaign = gs.campaign
         if campaign is None:
             return
 
@@ -58,7 +59,7 @@ class StartupOrchestrator:
         intent = self._interpreter.interpret(raw, has_campaign=True)
 
         if intent == "load_campaign":
-            self._module_orchestrator.run(campaign=campaign)
+            self._module_orchestrator.run(game_state=gs)
         elif intent == "new_campaign":
             self._io.display(_DESTRUCTION_WARNING)
             confirm_raw = self._io.prompt("> ")
