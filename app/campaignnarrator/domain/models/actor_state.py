@@ -159,6 +159,27 @@ class ActorState:
             return self
         return replace(self, conditions=tuple(c for c in self.conditions if c != name))
 
+    def apply_change_hp(self, delta: int) -> ActorState:
+        """Return a copy with hp_current adjusted by delta, clamped to [0, hp_max]."""
+        new_hp = max(0, min(self.hp_max, self.hp_current + delta))
+        return replace(self, hp_current=new_hp)
+
+    def apply_inventory_spent(self, item_id: str) -> ActorState:
+        """Return a copy with one unit of item_id consumed.
+
+        Raises ValueError if the item is not found in inventory.
+        """
+        inventory = list(self.inventory)
+        for i, item in enumerate(inventory):
+            if item.item_id == item_id:
+                if item.count > 1:
+                    inventory[i] = replace(item, count=item.count - 1)
+                else:
+                    inventory.pop(i)
+                return replace(self, inventory=tuple(inventory))
+        msg = f"actor {self.actor_id} does not have item with item_id: {item_id}"
+        raise ValueError(msg)
+
     def narrative_summary(self) -> str:
         """Return a narration-safe actor summary using injury labels instead of numbers.
 

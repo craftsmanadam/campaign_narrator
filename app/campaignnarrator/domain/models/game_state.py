@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from .actor_registry import ActorRegistry
+from .actor_state import ActorState
 from .campaign_state import CampaignState, Milestone, ModuleState
 from .encounter_state import EncounterState
+from .encounter_state import get_player as _get_player
 from .encounter_template import EncounterTemplate
 
 
@@ -31,6 +33,30 @@ class GameState:
     module: ModuleState | None = None
     encounter: EncounterState | None = None
     actor_registry: ActorRegistry = field(default_factory=ActorRegistry)
+
+    def with_campaign(self, campaign: CampaignState) -> GameState:
+        """Return a copy with campaign replaced."""
+        return replace(self, campaign=campaign)
+
+    def with_module(self, module: ModuleState) -> GameState:
+        """Return a copy with module replaced."""
+        return replace(self, module=module)
+
+    def with_encounter(self, encounter: EncounterState) -> GameState:
+        """Return a copy with encounter set."""
+        return replace(self, encounter=encounter)
+
+    def clear_encounter(self) -> GameState:
+        """Return a copy with encounter cleared to None."""
+        return replace(self, encounter=None)
+
+    def with_actor_registry(self, registry: ActorRegistry) -> GameState:
+        """Return a copy with actor_registry replaced."""
+        return replace(self, actor_registry=registry)
+
+    def get_player(self) -> ActorState:
+        """Look up the player actor from the registry using campaign.player_actor_id."""
+        return _get_player(self.actor_registry, self.campaign.player_actor_id)  # type: ignore[union-attr]
 
     def to_json(self) -> dict[str, object]:
         """Serialise to a JSON-compatible dict.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .encounter_template import EncounterTemplate
 
@@ -43,6 +43,18 @@ class CampaignState:
     bbeg_actor_id: str | None = None
     current_module_id: str | None = None
 
+    def advance_module(self, *, module_id: str, milestone_index: int) -> CampaignState:
+        """Return a copy with current_module_id and current_milestone_index updated."""
+        return replace(
+            self,
+            current_module_id=module_id,
+            current_milestone_index=milestone_index,
+        )
+
+    def with_bbeg_actor_id(self, actor_id: str) -> CampaignState:
+        """Return a copy with bbeg_actor_id set."""
+        return replace(self, bbeg_actor_id=actor_id)
+
 
 @dataclass(frozen=True, slots=True)
 class ModuleState:
@@ -58,6 +70,33 @@ class ModuleState:
     completed: bool = False
     planned_encounters: tuple[EncounterTemplate, ...] = ()
     next_encounter_index: int = 0
+
+    def record_completed_encounter(
+        self, encounter_id: str, summary: str
+    ) -> ModuleState:
+        """Return a copy with encounter appended to history and index incremented."""
+        new_ids = (*self.completed_encounter_ids, encounter_id)
+        new_summaries = (*self.completed_encounter_summaries, summary)
+        return replace(
+            self,
+            completed_encounter_ids=new_ids,
+            completed_encounter_summaries=new_summaries,
+            next_encounter_index=self.next_encounter_index + 1,
+        )
+
+    def with_planned_encounters(
+        self, encounters: tuple[EncounterTemplate, ...]
+    ) -> ModuleState:
+        """Return a copy with planned_encounters replaced."""
+        return replace(self, planned_encounters=encounters)
+
+    def with_next_encounter_index(self, index: int) -> ModuleState:
+        """Return a copy with next_encounter_index set."""
+        return replace(self, next_encounter_index=index)
+
+    def mark_completed(self) -> ModuleState:
+        """Return a copy with completed set to True."""
+        return replace(self, completed=True)
 
 
 @dataclass(frozen=True, slots=True)

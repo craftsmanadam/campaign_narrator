@@ -154,3 +154,132 @@ def test_module_state_accepts_planned_encounters() -> None:
     module = _make_module(planned_encounters=(t,), next_encounter_index=0)
     assert len(module.planned_encounters) == 1
     assert module.planned_encounters[0].template_id == "enc-001"
+
+
+# --- CampaignState.advance_module ---
+
+
+def test_advance_module_updates_module_id_and_milestone_index() -> None:
+    campaign = _make_campaign(current_milestone_index=0, current_module_id=None)
+    result = campaign.advance_module(module_id="module-002", milestone_index=1)
+    assert result.current_module_id == "module-002"
+    assert result.current_milestone_index == 1
+
+
+def test_advance_module_does_not_mutate_original() -> None:
+    campaign = _make_campaign(current_milestone_index=0, current_module_id="module-001")
+    _ = campaign.advance_module(module_id="module-002", milestone_index=1)
+    assert campaign.current_milestone_index == 0
+    assert campaign.current_module_id == "module-001"
+
+
+def test_advance_module_preserves_other_fields() -> None:
+    campaign = _make_campaign()
+    result = campaign.advance_module(module_id="module-002", milestone_index=1)
+    assert result.campaign_id == campaign.campaign_id
+    assert result.name == campaign.name
+    assert result.player_actor_id == campaign.player_actor_id
+
+
+# --- CampaignState.with_bbeg_actor_id ---
+
+
+def test_with_bbeg_actor_id_sets_value() -> None:
+    campaign = _make_campaign()
+    result = campaign.with_bbeg_actor_id("npc:malachar")
+    assert result.bbeg_actor_id == "npc:malachar"
+
+
+def test_with_bbeg_actor_id_does_not_mutate_original() -> None:
+    campaign = _make_campaign()
+    _ = campaign.with_bbeg_actor_id("npc:malachar")
+    assert campaign.bbeg_actor_id is None
+
+
+# --- ModuleState.record_completed_encounter ---
+
+
+def test_record_completed_encounter_appends_id_and_summary() -> None:
+    module = _make_module()
+    result = module.record_completed_encounter(
+        "enc-001", "The player defeated the guards."
+    )
+    assert "enc-001" in result.completed_encounter_ids
+    assert "The player defeated the guards." in result.completed_encounter_summaries
+
+
+def test_record_completed_encounter_increments_next_index() -> None:
+    module = _make_module(next_encounter_index=2)
+    result = module.record_completed_encounter("enc-003", "A brief skirmish.")
+    assert result.next_encounter_index == 3  # noqa: PLR2004
+
+
+def test_record_completed_encounter_accumulates_across_calls() -> None:
+    module = _make_module()
+    module = module.record_completed_encounter("enc-001", "First fight.")
+    module = module.record_completed_encounter("enc-002", "Second fight.")
+    assert len(module.completed_encounter_ids) == 2  # noqa: PLR2004
+    assert module.completed_encounter_ids == ("enc-001", "enc-002")
+
+
+def test_record_completed_encounter_does_not_mutate_original() -> None:
+    module = _make_module()
+    _ = module.record_completed_encounter("enc-001", "Done.")
+    assert module.completed_encounter_ids == ()
+    assert module.next_encounter_index == 0
+
+
+# --- ModuleState.with_planned_encounters ---
+
+
+def test_with_planned_encounters_replaces_encounters() -> None:
+    t = EncounterTemplate(
+        template_id="enc-new",
+        order=0,
+        setting="The harbour.",
+        purpose="Chase.",
+        npcs=(),
+        prerequisites=(),
+        expected_outcomes=(),
+        downstream_dependencies=(),
+    )
+    module = _make_module()
+    result = module.with_planned_encounters((t,))
+    assert len(result.planned_encounters) == 1
+    assert result.planned_encounters[0].template_id == "enc-new"
+
+
+def test_with_planned_encounters_does_not_mutate_original() -> None:
+    module = _make_module()
+    _ = module.with_planned_encounters(())
+    assert module.planned_encounters == ()
+
+
+# --- ModuleState.with_next_encounter_index ---
+
+
+def test_with_next_encounter_index_sets_value() -> None:
+    module = _make_module(next_encounter_index=0)
+    result = module.with_next_encounter_index(3)
+    assert result.next_encounter_index == 3  # noqa: PLR2004
+
+
+def test_with_next_encounter_index_does_not_mutate_original() -> None:
+    module = _make_module(next_encounter_index=0)
+    _ = module.with_next_encounter_index(3)
+    assert module.next_encounter_index == 0
+
+
+# --- ModuleState.mark_completed ---
+
+
+def test_mark_completed_sets_completed_true() -> None:
+    module = _make_module()
+    result = module.mark_completed()
+    assert result.completed is True
+
+
+def test_mark_completed_does_not_mutate_original() -> None:
+    module = _make_module()
+    _ = module.mark_completed()
+    assert module.completed is False

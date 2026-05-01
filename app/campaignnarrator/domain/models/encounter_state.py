@@ -149,6 +149,39 @@ class EncounterState:
         """Return a copy of the state with an updated phase."""
         return replace(self, phase=phase)
 
+    def append_public_event(self, event: str) -> EncounterState:
+        """Return a copy with event appended to public_events."""
+        return replace(self, public_events=(*self.public_events, event))
+
+    def with_outcome(self, outcome: str) -> EncounterState:
+        """Return a copy with outcome set."""
+        return replace(self, outcome=outcome)
+
+    def with_npc_status(
+        self, actor_id: str, status: NpcPresenceStatus
+    ) -> EncounterState:
+        """Return a copy with the named NPC's presence status updated.
+
+        No-op (no error) if actor_id is not found in npc_presences.
+        """
+        presences = tuple(
+            replace(p, status=status) if p.actor_id == actor_id else p
+            for p in self.npc_presences
+        )
+        return replace(self, npc_presences=presences)
+
+    def with_current_location(self, location: str) -> EncounterState:
+        """Return a copy with current_location set."""
+        return replace(self, current_location=location)
+
+    def with_traveling_actor_ids(self, ids: tuple[str, ...]) -> EncounterState:
+        """Return a copy with traveling_actor_ids replaced."""
+        return replace(self, traveling_actor_ids=ids)
+
+    def with_next_location_hint(self, hint: str | None) -> EncounterState:
+        """Return a copy with next_location_hint set."""
+        return replace(self, next_location_hint=hint)
+
     def to_dict(self) -> dict[str, object]:
         return {
             "encounter_id": self.encounter_id,

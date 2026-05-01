@@ -809,3 +809,158 @@ def test_encounter_state_to_dict_writes_actor_ids_not_actors() -> None:
     assert "actors" not in d
     assert d["actor_ids"] == ["pc:talia", "npc:goblin-1"]
     assert d["player_actor_id"] == "pc:talia"
+
+
+def _make_enc(**overrides: object) -> EncounterState:
+    defaults: dict[str, object] = {
+        "encounter_id": "enc-001",
+        "phase": EncounterPhase.SOCIAL,
+        "setting": "The docks.",
+        "actor_ids": ("pc:talia",),
+        "player_actor_id": "pc:talia",
+    }
+    defaults.update(overrides)
+    return EncounterState(**defaults)  # type: ignore[arg-type]
+
+
+# --- EncounterState.append_public_event ---
+
+
+def test_append_public_event_adds_event() -> None:
+    state = _make_enc(public_events=("First event.",))
+    result = state.append_public_event("Second event.")
+    assert result.public_events == ("First event.", "Second event.")
+
+
+def test_append_public_event_on_empty_events() -> None:
+    state = _make_enc()
+    result = state.append_public_event("Something happened.")
+    assert result.public_events == ("Something happened.",)
+
+
+def test_append_public_event_does_not_mutate_original() -> None:
+    state = _make_enc(public_events=())
+    _ = state.append_public_event("Event.")
+    assert state.public_events == ()
+
+
+# --- EncounterState.with_outcome ---
+
+
+def test_with_outcome_sets_outcome() -> None:
+    state = _make_enc()
+    result = state.with_outcome("The player fled.")
+    assert result.outcome == "The player fled."
+
+
+def test_with_outcome_does_not_mutate_original() -> None:
+    state = _make_enc()
+    _ = state.with_outcome("Done.")
+    assert state.outcome is None
+
+
+# --- EncounterState.with_npc_status ---
+
+
+def test_with_npc_status_updates_matching_presence() -> None:
+    presence = NpcPresence(
+        actor_id="npc:mira",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=True,
+        status=NpcPresenceStatus.PRESENT,
+    )
+    state = _make_enc(npc_presences=(presence,))
+    result = state.with_npc_status("npc:mira", NpcPresenceStatus.DEPARTED)
+    assert result.npc_presences[0].status == NpcPresenceStatus.DEPARTED
+
+
+def test_with_npc_status_leaves_other_presences_unchanged() -> None:
+    mira = NpcPresence(
+        actor_id="npc:mira",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=True,
+        status=NpcPresenceStatus.PRESENT,
+    )
+    guard = NpcPresence(
+        actor_id="npc:guard",
+        display_name="Guard",
+        description="a city guard",
+        name_known=False,
+        status=NpcPresenceStatus.PRESENT,
+    )
+    state = _make_enc(npc_presences=(mira, guard))
+    result = state.with_npc_status("npc:mira", NpcPresenceStatus.DEPARTED)
+    assert result.npc_presences[0].status == NpcPresenceStatus.DEPARTED
+    assert result.npc_presences[1].status == NpcPresenceStatus.PRESENT
+
+
+def test_with_npc_status_no_op_when_actor_not_found() -> None:
+    state = _make_enc(npc_presences=())
+    result = state.with_npc_status("npc:nobody", NpcPresenceStatus.DEPARTED)
+    assert result.npc_presences == ()
+
+
+def test_with_npc_status_does_not_mutate_original() -> None:
+    presence = NpcPresence(
+        actor_id="npc:mira",
+        display_name="Mira",
+        description="the innkeeper",
+        name_known=True,
+        status=NpcPresenceStatus.PRESENT,
+    )
+    state = _make_enc(npc_presences=(presence,))
+    _ = state.with_npc_status("npc:mira", NpcPresenceStatus.DEPARTED)
+    assert state.npc_presences[0].status == NpcPresenceStatus.PRESENT
+
+
+# --- EncounterState.with_current_location ---
+
+
+def test_with_current_location_sets_location() -> None:
+    state = _make_enc()
+    result = state.with_current_location("The harbour warehouse")
+    assert result.current_location == "The harbour warehouse"
+
+
+def test_with_current_location_does_not_mutate_original() -> None:
+    state = _make_enc(setting="The docks.")
+    _ = state.with_current_location("Somewhere else")
+    assert state.current_location == "The docks."
+
+
+# --- EncounterState.with_traveling_actor_ids ---
+
+
+def test_with_traveling_actor_ids_sets_ids() -> None:
+    state = _make_enc()
+    result = state.with_traveling_actor_ids(("npc:elara", "npc:boris"))
+    assert result.traveling_actor_ids == ("npc:elara", "npc:boris")
+
+
+def test_with_traveling_actor_ids_does_not_mutate_original() -> None:
+    state = _make_enc()
+    _ = state.with_traveling_actor_ids(("npc:elara",))
+    assert state.traveling_actor_ids == ()
+
+
+# --- EncounterState.with_next_location_hint ---
+
+
+def test_with_next_location_hint_sets_hint() -> None:
+    state = _make_enc()
+    result = state.with_next_location_hint("The ruined keep to the north")
+    assert result.next_location_hint == "The ruined keep to the north"
+
+
+def test_with_next_location_hint_accepts_none() -> None:
+    state = _make_enc(next_location_hint="Old hint")
+    result = state.with_next_location_hint(None)
+    assert result.next_location_hint is None
+
+
+def test_with_next_location_hint_does_not_mutate_original() -> None:
+    state = _make_enc()
+    _ = state.with_next_location_hint("Somewhere")
+    assert state.next_location_hint is None

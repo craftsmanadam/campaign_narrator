@@ -1,12 +1,14 @@
-"""Unit tests for GameState.to_json() and GameState.from_json()."""
+"""Unit tests for GameState.to_json(), GameState.from_json(), and GameState methods."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 from campaignnarrator.domain.models import (
     ActorRegistry,
     CampaignState,
+    EncounterPhase,
     EncounterState,
     GameState,
     Milestone,
@@ -225,3 +227,103 @@ def test_round_trip_null_campaign_and_module() -> None:
     restored = GameState.from_json(original.to_json())
     assert restored.campaign is None
     assert restored.module is None
+
+
+# --- GameState update methods ---
+
+
+def _make_enc() -> EncounterState:
+    return EncounterState(
+        encounter_id="enc-001",
+        phase=EncounterPhase.SOCIAL,
+        setting="The docks.",
+    )
+
+
+def test_with_campaign_replaces_campaign() -> None:
+    gs = GameState()
+    campaign = _make_campaign()
+    result = gs.with_campaign(campaign)
+    assert result.campaign is campaign
+
+
+def test_with_campaign_does_not_mutate_original() -> None:
+    gs = GameState()
+    _ = gs.with_campaign(_make_campaign())
+    assert gs.campaign is None
+
+
+def test_with_module_replaces_module() -> None:
+    gs = GameState()
+    module = _make_module()
+    result = gs.with_module(module)
+    assert result.module is module
+
+
+def test_with_module_does_not_mutate_original() -> None:
+    gs = GameState()
+    _ = gs.with_module(_make_module())
+    assert gs.module is None
+
+
+def test_with_encounter_sets_encounter() -> None:
+    gs = GameState()
+    enc = _make_enc()
+    result = gs.with_encounter(enc)
+    assert result.encounter is enc
+
+
+def test_with_encounter_does_not_mutate_original() -> None:
+    gs = GameState()
+    _ = gs.with_encounter(_make_enc())
+    assert gs.encounter is None
+
+
+def test_clear_encounter_removes_encounter() -> None:
+    gs = GameState(encounter=_make_enc())
+    result = gs.clear_encounter()
+    assert result.encounter is None
+
+
+def test_clear_encounter_when_already_none_is_idempotent() -> None:
+    gs = GameState()
+    result = gs.clear_encounter()
+    assert result.encounter is None
+
+
+def test_clear_encounter_does_not_mutate_original() -> None:
+    enc = _make_enc()
+    gs = GameState(encounter=enc)
+    _ = gs.clear_encounter()
+    assert gs.encounter is enc
+
+
+def test_with_actor_registry_replaces_registry() -> None:
+    registry = ActorRegistry().with_actor(TALIA)
+    gs = GameState()
+    result = gs.with_actor_registry(registry)
+    assert TALIA.actor_id in result.actor_registry.actors
+
+
+def test_with_actor_registry_does_not_mutate_original() -> None:
+    registry = ActorRegistry().with_actor(TALIA)
+    gs = GameState()
+    _ = gs.with_actor_registry(registry)
+    assert TALIA.actor_id not in gs.actor_registry.actors
+
+
+# --- GameState.get_player ---
+
+
+def test_get_player_returns_player_from_registry() -> None:
+    registry = ActorRegistry().with_actor(TALIA)
+    campaign = _make_campaign(player_actor_id=TALIA.actor_id)
+    gs = GameState(campaign=campaign, actor_registry=registry)
+    assert gs.get_player() is TALIA
+
+
+def test_get_player_raises_when_player_not_in_registry() -> None:
+    campaign = _make_campaign(player_actor_id="pc:missing")
+    gs = GameState(campaign=campaign)
+    with pytest.raises(RuntimeError, match="pc:missing"):
+        gs.get_player()

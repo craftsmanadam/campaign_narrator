@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
 from campaignnarrator.domain.models import (
     ActorState,
     ActorType,
@@ -732,3 +733,67 @@ def test_actor_state_as_modifiers_negative_modifier() -> None:
     actor = replace(TALIA, strength=8)
     result = actor.as_modifiers()
     assert result["strength_mod"] == expected_mod
+
+
+# --- apply_change_hp ---
+
+
+def test_apply_change_hp_increases_hp() -> None:
+    actor = replace(TALIA, hp_current=20, hp_max=44)
+    result = actor.apply_change_hp(10)
+    assert result.hp_current == 30  # noqa: PLR2004
+
+
+def test_apply_change_hp_decreases_hp() -> None:
+    actor = replace(TALIA, hp_current=20, hp_max=44)
+    result = actor.apply_change_hp(-5)
+    assert result.hp_current == 15  # noqa: PLR2004
+
+
+def test_apply_change_hp_clamps_to_zero() -> None:
+    actor = replace(TALIA, hp_current=3, hp_max=44)
+    result = actor.apply_change_hp(-100)
+    assert result.hp_current == 0
+
+
+def test_apply_change_hp_clamps_to_hp_max() -> None:
+    actor = replace(TALIA, hp_current=40, hp_max=44)
+    result = actor.apply_change_hp(100)
+    assert result.hp_current == 44  # noqa: PLR2004
+
+
+def test_apply_change_hp_does_not_mutate_original() -> None:
+    actor = replace(TALIA, hp_current=20, hp_max=44)
+    _ = actor.apply_change_hp(-5)
+    assert actor.hp_current == 20  # noqa: PLR2004
+
+
+# --- apply_inventory_spent ---
+
+
+def test_apply_inventory_spent_removes_single_count_item() -> None:
+    item = InventoryItem(item_id="torch-1", item="Torch", count=1)
+    actor = replace(TALIA, inventory=(item,))
+    result = actor.apply_inventory_spent("torch-1")
+    assert len(result.inventory) == 0
+
+
+def test_apply_inventory_spent_decrements_multi_count_item() -> None:
+    item = InventoryItem(item_id="arrow-bundle", item="Arrows", count=20)
+    actor = replace(TALIA, inventory=(item,))
+    result = actor.apply_inventory_spent("arrow-bundle")
+    assert len(result.inventory) == 1
+    assert result.inventory[0].count == 19  # noqa: PLR2004
+
+
+def test_apply_inventory_spent_raises_when_item_not_found() -> None:
+    actor = replace(TALIA, inventory=())
+    with pytest.raises(ValueError, match="item_id: missing-item"):
+        actor.apply_inventory_spent("missing-item")
+
+
+def test_apply_inventory_spent_does_not_mutate_original() -> None:
+    item = InventoryItem(item_id="potion-1", item="Healing Potion", count=2)
+    actor = replace(TALIA, inventory=(item,))
+    _ = actor.apply_inventory_spent("potion-1")
+    assert actor.inventory[0].count == 2  # noqa: PLR2004
