@@ -55,17 +55,8 @@ class GameState:
         return replace(self, actor_registry=registry)
 
     def get_player(self) -> ActorState:
-        """Look up the player actor from the registry.
-
-        Uses campaign.player_actor_id when campaign is set; falls back to
-        encounter.player_actor_id so encounter-only contexts (e.g. tests) work.
-        """
-        if self.campaign is not None:
-            return _get_player(self.actor_registry, self.campaign.player_actor_id)
-        return _get_player(
-            self.actor_registry,
-            self.encounter.player_actor_id if self.encounter is not None else "",  # type: ignore[union-attr]
-        )
+        """Look up the player actor from the registry using campaign.player_actor_id."""
+        return _get_player(self.actor_registry, self.campaign.player_actor_id)  # type: ignore[union-attr]
 
     def to_json(self) -> dict[str, object]:
         """Serialise to a JSON-compatible dict.

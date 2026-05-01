@@ -14,6 +14,7 @@ from campaignnarrator.domain.models import (
     ActorRegistry,
     ActorState,
     ActorType,
+    CampaignState,
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
@@ -256,6 +257,24 @@ def _default_npc() -> ActorState:
     )
 
 
+def _default_campaign() -> CampaignState:
+    return CampaignState(
+        campaign_id="test-campaign",
+        name="Test Campaign",
+        setting="A test world.",
+        narrator_personality="Neutral",
+        hidden_goal="None",
+        bbeg_name="None",
+        bbeg_description="None",
+        milestones=(),
+        current_milestone_index=0,
+        starting_level=1,
+        target_level=5,
+        player_brief="You are a test character.",
+        player_actor_id="pc:talia",
+    )
+
+
 _ENCOUNTER_PATH = Path("encounters") / "active.json"
 
 
@@ -280,7 +299,9 @@ def _build_game_state(
     registry = ActorRegistry().with_actor(player)
     for actor in npc_actors:
         registry = registry.with_actor(actor)
-    return GameState(encounter=encounter, actor_registry=registry)
+    return GameState(
+        campaign=_default_campaign(), encounter=encounter, actor_registry=registry
+    )
 
 
 def _scene_opening_game_state(tmp_path: Path) -> GameState:
@@ -1825,7 +1846,9 @@ class TestHiddenConditionClearing:
             actors={"pc:talia": hidden_player, "npc:goblin-scout": npc}
         )
         encounter = EncounterState.from_dict(json.loads(enc_path.read_text()))
-        initial_state = GameState(encounter=encounter, actor_registry=registry)
+        initial_state = GameState(
+            campaign=_default_campaign(), encounter=encounter, actor_registry=registry
+        )
         return FakeGameStateRepository(initial_state)
 
     def test_npc_dialogue_clears_hidden_from_player(self, tmp_path: Path) -> None:
@@ -1874,7 +1897,9 @@ class TestHiddenConditionClearing:
             actors={"pc:talia": hidden_player, "npc:goblin-scout": goblin}
         )
         encounter = EncounterState.from_dict(json.loads(enc_path.read_text()))
-        initial_state = GameState(encounter=encounter, actor_registry=registry)
+        initial_state = GameState(
+            campaign=_default_campaign(), encounter=encounter, actor_registry=registry
+        )
         fake_gsr = FakeGameStateRepository(initial_state)
         orchestrator = EncounterOrchestrator(
             repositories=OrchestratorRepositories(
@@ -2338,6 +2363,7 @@ def _make_orchestrator(
     """Build a minimal EncounterOrchestrator for direct method tests."""
 
     fake_game_state = GameState(
+        campaign=_default_campaign(),
         encounter=_make_state(),
         actor_registry=ActorRegistry(actors={"pc:talia": _default_player()}),
     )
@@ -2507,7 +2533,9 @@ def test_npc_dialogue_updates_npc_interaction_when_summary_and_target_present(
         narrator_agent=_FakeNarratorWithSummary(),
     )
     registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    game_state = GameState(encounter=state, actor_registry=registry)
+    game_state = GameState(
+        campaign=_default_campaign(), encounter=state, actor_registry=registry
+    )
     updated_gs, _narration = orchestrator._handle_non_combat_action(
         game_state,
         PlayerInput("I ask Elder Rovan about the missing children."),
@@ -2550,7 +2578,9 @@ def test_npc_dialogue_skips_update_when_no_summary(make_state) -> None:
 
     orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorNoSummary())
     registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    game_state = GameState(encounter=state, actor_registry=registry)
+    game_state = GameState(
+        campaign=_default_campaign(), encounter=state, actor_registry=registry
+    )
     updated_gs, _narration = orchestrator._handle_non_combat_action(
         game_state,
         PlayerInput("I greet the elder."),
@@ -2592,7 +2622,9 @@ def test_npc_dialogue_skips_update_when_no_target_npc_id(make_state) -> None:
 
     orchestrator = _make_orchestrator(narrator_agent=_FakeNarratorWithSummaryNoTarget())
     registry = ActorRegistry(actors={"pc:talia": _default_player()})
-    game_state = GameState(encounter=state, actor_registry=registry)
+    game_state = GameState(
+        campaign=_default_campaign(), encounter=state, actor_registry=registry
+    )
     updated_gs, _narration = orchestrator._handle_non_combat_action(
         game_state,
         PlayerInput("I say hello."),
@@ -2628,6 +2660,7 @@ def test_narrate_sets_traveling_actor_ids_on_encounter_complete() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:elara": elara}
@@ -2682,6 +2715,7 @@ def test_narrate_filters_invalid_traveling_actor_ids_on_completion() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:elara": elara}
@@ -2733,6 +2767,7 @@ def test_narrate_excludes_player_from_traveling_actor_ids() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:elara": elara}
@@ -2790,6 +2825,7 @@ def test_narrate_logs_warning_for_invalid_traveling_actor_ids(
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:elara": elara}
@@ -2844,6 +2880,7 @@ def test_narrate_does_not_set_traveling_fields_when_encounter_not_complete() -> 
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:elara": elara}
@@ -2890,6 +2927,7 @@ def test_apply_action_syncs_dead_actor_to_registry() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin}
@@ -2940,6 +2978,7 @@ def test_run_combat_syncs_dead_actor_to_registry() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin}
@@ -2989,6 +3028,7 @@ def test_apply_action_syncs_living_actors_to_registry() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:goblin": goblin}
@@ -3043,6 +3083,7 @@ def test_run_combat_syncs_all_actors_to_registry() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:goblin": alive_goblin}
@@ -3082,11 +3123,11 @@ def test_run_combat_syncs_all_actors_to_registry() -> None:
 
 
 def test_run_encounter_sets_campaign_context_on_narrator() -> None:
-    """run_encounter must propagate campaign_id to the narrator before narrating."""
+    """run() must call set_campaign_context with the campaign_id from the loaded game state."""
     mock_narrator = MagicMock()
     orch = _make_orchestrator(narrator_agent=mock_narrator)
-    orch.run_encounter(encounter_id="enc-001", campaign_id="camp-1")
-    mock_narrator.set_campaign_context.assert_called_once_with("camp-1")
+    orch.run_encounter(encounter_id="enc-001", campaign_id="test-campaign")
+    mock_narrator.set_campaign_context.assert_called_once_with("test-campaign")
 
 
 def test_save_exit_preserves_registry_synced_by_prior_action() -> None:
@@ -3101,6 +3142,7 @@ def test_save_exit_preserves_registry_synced_by_prior_action() -> None:
     )
     fake_gsr = FakeGameStateRepository(
         GameState(
+            campaign=_default_campaign(),
             encounter=encounter,
             actor_registry=ActorRegistry(
                 actors={TALIA.actor_id: TALIA, "npc:goblin": goblin}

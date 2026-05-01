@@ -100,24 +100,20 @@ class EncounterOrchestrator:
         self,
         game_state: GameState,
         *,
-        campaign_id: str | None = None,
         _collect: list[str] | None = None,
     ) -> GameState:
         """Primary interface: run the encounter loop and return updated GameState.
 
         Uses GameStateRepository for all state persistence. The encounter field
-        of game_state must not be None.
+        of game_state must not be None. game_state.campaign must not be None.
         """
         state = game_state.encounter
         if state is None:
             msg = "no active encounter"
             raise ValueError(msg)
 
-        cid = campaign_id or (
-            game_state.campaign.campaign_id if game_state.campaign else ""
-        )
-        if cid:
-            self._narrator_agent.set_campaign_context(cid)
+        cid = game_state.campaign.campaign_id  # type: ignore[union-attr]
+        self._narrator_agent.set_campaign_context(cid)
         output: list[str] = _collect if _collect is not None else []
 
         if state.phase is EncounterPhase.SCENE_OPENING:
@@ -175,7 +171,7 @@ class EncounterOrchestrator:
         """Run the encounter loop until an end condition is reached."""
         gs = self._game_state_repo.load()
         collected: list[str] = []
-        updated = self.run(gs, campaign_id=campaign_id, _collect=collected)
+        updated = self.run(gs, _collect=collected)
         encounter = updated.encounter
         return EncounterRunResult(
             encounter_id=encounter_id,
