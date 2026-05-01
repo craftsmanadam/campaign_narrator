@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from types import MappingProxyType
@@ -72,7 +73,7 @@ class EncounterState:
     def __post_init__(self) -> None:
         """Snapshot mutable mappings so encounter state cannot be mutated externally."""
         object.__setattr__(
-            self, "hidden_facts", MappingProxyType(dict(self.hidden_facts))
+            self, "hidden_facts", MappingProxyType(deepcopy(dict(self.hidden_facts)))
         )
         if self.current_location is None:
             object.__setattr__(self, "current_location", self.setting)
