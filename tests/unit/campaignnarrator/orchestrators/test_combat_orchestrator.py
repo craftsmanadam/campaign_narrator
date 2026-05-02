@@ -148,6 +148,13 @@ def _make_combat_registry(goblin_hp: int = 7) -> ActorRegistry:
     return ActorRegistry(actors={"pc:talia": TALIA, "npc:goblin-1": goblin})
 
 
+def _make_game_state(goblin_hp: int = 7) -> GameState:
+    return GameState(
+        encounter=_make_combat_state(goblin_hp),
+        actor_registry=_make_combat_registry(goblin_hp),
+    )
+
+
 def _mock_intent_agent(intents: list[str] | None = None) -> MagicMock:
     mock = MagicMock()
     intent_queue = list(intents or [])
@@ -220,7 +227,7 @@ def test_player_ends_turn_immediately_with_no_resources_consumed() -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     # Talia's turn ended; goblin is now first in rotation
     assert result.final_state.combat_turns[0].actor_id == "npc:goblin-1"
 
@@ -243,7 +250,7 @@ def test_legal_attack_applies_hp_state_effect_to_target() -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     assert goblin.hp_current == 0
 
@@ -266,7 +273,7 @@ def test_rules_request_contains_feat_effect_summaries_in_compendium_context() ->
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) >= 1
     request = rules.requests_seen[0]
     context = " ".join(request.compendium_context)
@@ -292,7 +299,7 @@ def test_clarifying_question_does_not_consume_resources() -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.hp_current == TALIA.hp_current
 
@@ -315,7 +322,7 @@ def test_impossible_action_does_not_consume_resources() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     all_output = " ".join(io.displayed)
     assert len(all_output) > 0
 
@@ -354,7 +361,7 @@ def test_per_turn_resource_reset_at_turn_start() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) >= 1
     # RulesAdjudicationRequest no longer carries actor_resources;
     # verify the compendium_context includes Savage Attacker feat instead.
@@ -392,7 +399,7 @@ def test_movement_deducted_from_turn_resources() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     all_output = " ".join(io.displayed)
     assert "25ft" in all_output
 
@@ -426,7 +433,7 @@ def test_dead_actor_turn_is_skipped() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) == 0
 
 
@@ -457,7 +464,7 @@ def test_unconscious_actor_triggers_death_save(mocker: object) -> None:
         intents=[],
         adjudications=[_npc_attack_adjudication()],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.death_save_successes == 1
 
@@ -488,7 +495,7 @@ def test_player_down_no_allies_returns_correct_status(mocker: object) -> None:
         intents=[],
         adjudications=[_npc_attack_adjudication()],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.PLAYER_DOWN_NO_ALLIES
     assert result.death_saves_remaining == 3  # noqa: PLR2004
 
@@ -511,7 +518,7 @@ def test_all_enemies_dead_ends_combat_as_complete() -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.COMPLETE
 
 
@@ -541,7 +548,7 @@ def test_natural_1_on_death_save_counts_as_two_failures(mocker: object) -> None:
         intents=[],
         adjudications=[_npc_attack_adjudication()],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.death_save_failures == 2  # noqa: PLR2004
 
@@ -564,7 +571,7 @@ def test_status_command_during_combat_does_not_call_rules_agent() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) == 0
 
 
@@ -585,7 +592,7 @@ def test_look_around_during_combat_does_not_call_rules_agent() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) == 0
     assert any(
         any(
@@ -609,7 +616,7 @@ def test_exit_during_combat_returns_saved_and_quit_status() -> None:
     orc, _, _, _ = _orchestrator(
         inputs=["exit"], intents=["exit_session"], adjudications=[]
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.SAVED_AND_QUIT
 
 
@@ -619,7 +626,7 @@ def test_save_and_quit_during_combat_returns_saved_and_quit_status() -> None:
     orc, _, _, _ = _orchestrator(
         inputs=["save and quit"], intents=["exit_session"], adjudications=[]
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.SAVED_AND_QUIT
 
 
@@ -629,7 +636,7 @@ def test_save_and_quit_preserves_final_state() -> None:
     orc, _, _, _ = _orchestrator(
         inputs=["save and quit"], intents=["exit_session"], adjudications=[]
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     # Turn order rotates after the player's turn ends (even on exit_session),
     # but actor HP and encounter identity must be unchanged.
     assert result.final_registry.actors["pc:talia"].hp_current == TALIA.hp_current
@@ -662,7 +669,7 @@ def test_narrator_payload_includes_tone_guidance(mocker: object) -> None:
         _intent_agent=_mock_intent_agent(["combat_action", "end_turn"]),
     )
 
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
 
     assert len(narrator.frames_seen) >= 1
     frame = narrator.frames_seen[0]
@@ -707,7 +714,7 @@ def test_three_death_save_failures_kills_actor(mocker: object) -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert "dead" in talia.conditions
     assert any("died" in msg for msg in io.displayed)
@@ -738,7 +745,7 @@ def test_combat_intent_end_turn_ends_turn_without_rules_call(mocker: object) -> 
         io=io,
         _intent_agent=_mock_intent_agent(["end_turn"]),
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) == 0
 
 
@@ -758,7 +765,7 @@ def test_combat_intent_exit_session_returns_saved_and_quit(mocker: object) -> No
         io=io,
         _intent_agent=_mock_intent_agent(["exit_session"]),
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.SAVED_AND_QUIT
 
 
@@ -780,7 +787,7 @@ def test_player_hp_displayed_at_turn_start() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     hp_display = f"HP: {TALIA.hp_current}/{TALIA.hp_max}"
     assert any(hp_display in line for line in io.displayed)
 
@@ -835,7 +842,7 @@ def test_npc_turn_state_effect_applied_to_target() -> None:
             ),
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia_final = result.final_registry.actors["pc:talia"]
     assert talia_final.hp_current == TALIA.hp_current - 4
 
@@ -868,7 +875,7 @@ def test_npc_turn_narrator_intent_prompt_includes_actor_id_and_hp() -> None:
             ),
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(narrator.intent_contexts_seen) >= 1
     context = json.loads(narrator.intent_contexts_seen[0])
     assert context["actor_id"] == "npc:goblin-1"
@@ -905,7 +912,7 @@ def test_npc_turn_rules_request_includes_intent_field() -> None:
             ),
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) >= 1
     assert rules.requests_seen[0].intent == scripted_intent
 
@@ -957,7 +964,7 @@ def test_materialize_effects_converts_heal_to_change_hp_using_roll(
             ),
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia_final = result.final_registry.actors["pc:talia"]
     expected_hp = talia_wounded.hp_current + 10  # roll=7, modifier=+3 → 10 HP healed
     assert talia_final.hp_current == expected_hp
@@ -992,7 +999,7 @@ def test_combat_assessment_active_continues_loop() -> None:
             ),
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.COMPLETE
     assert len(narrator.assessment_contexts_seen) >= 2  # noqa: PLR2004
 
@@ -1024,7 +1031,7 @@ def test_combat_assessment_inactive_ends_combat_and_displays_outcome() -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.COMPLETE
     assert full_desc in " ".join(io.displayed)
 
@@ -1056,7 +1063,7 @@ def test_assess_combat_not_called_for_dead_actor_skipped_turn() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(narrator.assessment_contexts_seen) == 1
 
 
@@ -1089,7 +1096,7 @@ def test_player_down_no_allies_returned_before_narrator_assessment() -> None:
         inputs=[],
         adjudications=[npc_kill],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     assert result.status == CombatStatus.PLAYER_DOWN_NO_ALLIES
     assert len(narrator.assessment_contexts_seen) == 0
 
@@ -1123,7 +1130,7 @@ def test_assess_combat_payload_includes_actor_summaries_and_recent_events() -> N
             ),
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(narrator.assessment_contexts_seen) >= 1
     payload = json.loads(narrator.assessment_contexts_seen[0])
     assert "actor_summaries" in payload
@@ -1163,7 +1170,7 @@ def test_natural_20_on_death_save_counts_as_two_successes(mocker: object) -> Non
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.death_save_successes == 2  # noqa: PLR2004
 
@@ -1201,7 +1208,7 @@ def test_three_death_save_successes_stabilizes_pc(mocker: object) -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert "stable" in talia.conditions
     assert any("stabilizes" in msg for msg in io.displayed)
@@ -1239,7 +1246,7 @@ def test_materialize_effects_raises_on_invalid_dice_expression() -> None:
         intents=["combat_action", "end_turn"],
     )
     with pytest.raises(ValueError, match="Invalid dice expression"):
-        orc.run(state, registry)
+        orc.run(GameState(encounter=state, actor_registry=registry))
 
 
 def test_considering_rules_displayed_before_combat_adjudication() -> None:
@@ -1260,7 +1267,7 @@ def test_considering_rules_displayed_before_combat_adjudication() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert any("Considering the rules" in msg for msg in io.displayed)
 
 
@@ -1349,7 +1356,7 @@ def test_attack_hit_applies_damage_to_target(mocker: object) -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     assert goblin.hp_current == 0
     assert "dead" in goblin.conditions
@@ -1378,7 +1385,7 @@ def test_attack_miss_does_not_apply_damage(mocker: object) -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     assert goblin.hp_current == initial_hp
 
@@ -1407,7 +1414,7 @@ def test_nonzero_change_hp_with_attack_hit_applies_direct_damage(
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     expected_hp = 2  # 7 starting HP - 5 damage
     assert goblin.hp_current == expected_hp
@@ -1435,7 +1442,7 @@ def test_nonzero_change_hp_with_attack_miss_no_damage(mocker: object) -> None:
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     expected_hp = 7  # unchanged on miss
     assert goblin.hp_current == expected_hp
@@ -1491,7 +1498,7 @@ def test_attack_purpose_matching_is_case_insensitive_hit(mocker: object) -> None
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     assert goblin.hp_current == 0
 
@@ -1518,7 +1525,7 @@ def test_attack_purpose_matching_is_case_insensitive_miss(mocker: object) -> Non
             )
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     goblin = result.final_registry.actors["npc:goblin-1"]
     expected_hp = 7  # unchanged on miss
     assert goblin.hp_current == expected_hp
@@ -1557,7 +1564,7 @@ def test_npc_attack_hit_applies_damage_to_player(mocker: object) -> None:
             ),
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.hp_current == TALIA.hp_current - 20  # 44 - 20 = 24
 
@@ -1595,7 +1602,7 @@ def test_npc_attack_miss_does_not_apply_damage(mocker: object) -> None:
             ),
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.hp_current == TALIA.hp_current
 
@@ -1620,21 +1627,22 @@ def _npc_attack_adj_public_roll(target: str = "pc:talia") -> RulesAdjudication:
     )
 
 
-def _npc_combat_state() -> tuple[EncounterState, ActorRegistry]:
+def _npc_combat_state() -> GameState:
     goblin = make_goblin_scout("npc:goblin-1", "Goblin Scout 1")
-    state = EncounterState(
-        encounter_id="test-npc-public",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        actor_ids=("npc:goblin-1", "pc:talia"),
-        player_actor_id="pc:talia",
-        combat_turns=(
-            InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
-            InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
+    return GameState(
+        encounter=EncounterState(
+            encounter_id="test-npc-public",
+            phase=EncounterPhase.COMBAT,
+            setting="Forest",
+            actor_ids=("npc:goblin-1", "pc:talia"),
+            player_actor_id="pc:talia",
+            combat_turns=(
+                InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=20),
+                InitiativeTurn(actor_id="pc:talia", initiative_roll=10),
+            ),
         ),
+        actor_registry=ActorRegistry(actors={"npc:goblin-1": goblin, "pc:talia": TALIA}),
     )
-    registry = ActorRegistry(actors={"npc:goblin-1": goblin, "pc:talia": TALIA})
-    return state, registry
 
 
 _END_COMBAT = [
@@ -1649,26 +1657,26 @@ _END_COMBAT = [
 def test_npc_public_roll_is_displayed_to_player(mocker: object) -> None:
     """NPC PUBLIC roll results must appear in the player's IO output."""
     mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=15)  # type: ignore[attr-defined]
-    state, registry = _npc_combat_state()
+    gs = _npc_combat_state()
     orc, io, _, _ = _orchestrator(
         inputs=["end turn"],
         adjudications=[_npc_attack_adj_public_roll()],
         assessments=list(_END_COMBAT),
     )
-    orc.run(state, registry)
+    orc.run(gs)
     assert any("Attack roll vs Talia" in line for line in io.displayed)
 
 
 def test_npc_public_roll_events_appear_in_narrator_frame(mocker: object) -> None:
     """NPC PUBLIC roll results must be in the narrator frame's resolved_outcomes."""
     mocker.patch("campaignnarrator.domain.models.roll._roll", return_value=15)  # type: ignore[attr-defined]
-    state, registry = _npc_combat_state()
+    gs = _npc_combat_state()
     orc, _, _, narrator = _orchestrator(
         inputs=["end turn"],
         adjudications=[_npc_attack_adj_public_roll()],
         assessments=list(_END_COMBAT),
     )
-    orc.run(state, registry)
+    orc.run(gs)
     npc_frame = next(
         f for f in narrator.frames_seen if f.purpose == "npc_combat_action"
     )
@@ -1708,7 +1716,7 @@ def test_direct_change_hp_without_roll_requests_passes_through_unchanged() -> No
             ),
         ],
     )
-    result = orc.run(state, registry)
+    result = orc.run(GameState(encounter=state, actor_registry=registry))
     talia = result.final_registry.actors["pc:talia"]
     assert talia.hp_current == TALIA.hp_current - 4
 
@@ -1759,7 +1767,7 @@ def test_public_roll_request_is_displayed_to_player(mocker: object) -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert any("Roll:" in msg for msg in io.displayed)
 
 
@@ -1786,7 +1794,7 @@ def test_public_roll_event_is_included_in_narrator_frame_resolved_outcomes(
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(narrator.frames_seen) >= 1
     combat_frame = narrator.frames_seen[0]
     assert any("Roll:" in outcome for outcome in combat_frame.resolved_outcomes)
@@ -1813,7 +1821,7 @@ def test_hidden_roll_request_is_not_displayed_to_player(mocker: object) -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert not any("Roll:" in msg for msg in io.displayed)
 
 
@@ -1869,7 +1877,7 @@ def test_ally_actor_skips_npc_turn_in_combat() -> None:
             ),
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     # Only goblin's turn should have generated a rules request — one, not two.
     # If the ALLY had triggered a rules call, requests_seen would have 2 entries
     # (or ScriptedRulesAgent would have raised ValueError on an empty queue).
@@ -1894,7 +1902,7 @@ def test_rules_request_includes_equipped_weapon_in_compendium_context() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) >= 1
     context = " ".join(rules.requests_seen[0].compendium_context)
     assert "Longsword" in context
@@ -1921,7 +1929,7 @@ def test_rules_request_includes_visible_actors_context() -> None:
             )
         ],
     )
-    orc.run(state, registry)
+    orc.run(GameState(encounter=state, actor_registry=registry))
     assert len(rules.requests_seen) >= 1
     ctx = " ".join(rules.requests_seen[0].visible_actors_context)
     assert "pc:talia" in ctx
@@ -1958,7 +1966,7 @@ class TestCombatOrchestratorMemoryCalls:
             ],
             game_state_repository=gs_repo,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=0))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=0)))
         gs_repo.persist.assert_called()
 
     def test_run_calls_log_combat_round_when_narration_produced(self) -> None:
@@ -1980,7 +1988,7 @@ class TestCombatOrchestratorMemoryCalls:
             ],
             memory_repository=memory,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=7))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=7)))
         memory.log_combat_round.assert_called()
 
     def test_run_calls_update_exchange_with_player_input(self) -> None:
@@ -2002,7 +2010,7 @@ class TestCombatOrchestratorMemoryCalls:
             ],
             memory_repository=memory,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=7))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=7)))
         calls = memory.update_exchange.call_args_list
         # At least one call where player_input is "attack goblin"
         assert any(c.args[0] == "attack goblin" for c in calls)
@@ -2026,7 +2034,7 @@ class TestCombatOrchestratorMemoryCalls:
             ],
             memory_repository=memory,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=0))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=0)))
         memory.clear_combat_memory.assert_called_once()
 
     def test_run_updates_registry_after_player_combat_turn(self) -> None:
@@ -2052,7 +2060,7 @@ class TestCombatOrchestratorMemoryCalls:
             ],
             game_state_repository=gs_repo,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=7))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=7)))
         calls = gs_repo.persist.call_args_list
         assert any(
             "npc:goblin-1" in call.args[0].actor_registry.actors for call in calls
@@ -2088,7 +2096,7 @@ class TestCombatOrchestratorGameStateRepoCalls:
             ],
             game_state_repository=gs_repo,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=0))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=0)))
         gs_repo.persist.assert_called()
 
     def test_stage_turn_uses_game_state_repo_not_memory_for_state(self) -> None:
@@ -2116,7 +2124,7 @@ class TestCombatOrchestratorGameStateRepoCalls:
             memory_repository=memory,
             game_state_repository=gs_repo,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=0))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=0)))
         gs_repo.persist.assert_called()
 
     def test_narrative_ops_use_memory_when_game_state_repo_set(self) -> None:
@@ -2144,7 +2152,7 @@ class TestCombatOrchestratorGameStateRepoCalls:
             memory_repository=memory,
             game_state_repository=gs_repo,
         )
-        orc.run(state, _make_combat_registry(goblin_hp=7))
+        orc.run(GameState(encounter=state, actor_registry=_make_combat_registry(goblin_hp=7)))
         memory.log_combat_round.assert_called()
         memory.update_exchange.assert_called()
 
@@ -2166,5 +2174,5 @@ def test_run_returns_final_registry() -> None:
             )
         ],
     )
-    result = orchestrator.run(state, registry)
+    result = orchestrator.run(GameState(encounter=state, actor_registry=registry))
     assert isinstance(result.final_registry, ActorRegistry)

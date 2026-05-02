@@ -20,6 +20,7 @@ from campaignnarrator.domain.models import (
     CombatStatus,
     EncounterPhase,
     EncounterState,
+    GameState,
     InitiativeTurn,
     Narration,
     NarrationFrame,
@@ -194,8 +195,10 @@ class CombatOrchestrator:
                 "CombatOrchestrator requires adapter= or _intent_agent= to be set"
             )
 
-    def run(self, state: EncounterState, registry: ActorRegistry) -> CombatResult:
+    def run(self, game_state: GameState) -> CombatResult:
         """Run the combat loop until an end condition is reached."""
+        state: EncounterState = game_state.encounter  # type: ignore[assignment]
+        registry: ActorRegistry = game_state.actor_registry
         while state.combat_turns:
             turn = state.combat_turns[0]
             result = self._process_turn(state, registry, turn)

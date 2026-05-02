@@ -262,8 +262,6 @@ class EncounterOrchestrator:
 
     def _run_combat(self, game_state: GameState) -> GameState:
         """Delegate the combat turn loop to CombatOrchestrator."""
-        state = game_state.encounter
-        registry = game_state.actor_registry
         orchestrator = CombatOrchestrator(
             rules_agent=self._rules_agent,
             narrator_agent=self._narrator_agent,
@@ -273,7 +271,7 @@ class EncounterOrchestrator:
             memory_repository=self._memory_repository,
             game_state_repository=self._game_state_repo,
         )
-        result = orchestrator.run(state, registry)
+        result = orchestrator.run(game_state)
         final_state = result.final_state
         final_registry = result.final_registry
         if result.status is CombatStatus.COMPLETE:
