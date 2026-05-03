@@ -39,14 +39,10 @@ _HTTP_NOT_FOUND = 404
 
 _ENCOUNTER_TO_WIREMOCK_SCENARIO: dict[str, str] = {
     "fighter-vs-2-goblins": "combat-s1",
-    "fighter-vs-3-goblins": "combat-s2",
-    "fighter-vs-4-goblins": "combat-s3",
 }
 
 _WIREMOCK_SCENARIO_TERMINAL_STATE: dict[str, str] = {
     "combat-s1": "S1-Done",
-    "combat-s2": "S2-Done",
-    "combat-s3": "S3-Done",
     "startup-s1": "S1-Done",
     "startup-s2": "S2-Done",
     "startup-s3": "S3-Done",
@@ -430,6 +426,34 @@ def encounter_actor_is_defeated(
     assert "dead" in actor_data["conditions"], (
         f"{actor_id} conditions={actor_data['conditions']!r}, expected 'dead'"
     )
+
+
+@then(parsers.parse('the persisted encounter "{encounter_id}" is in phase "{phase}"'))
+def persisted_encounter_is_in_phase(
+    encounter_id: str,
+    phase: str,
+    runtime_data_root: Path,
+) -> None:
+    """The on-disk encounter state should reflect the expected phase."""
+
+    blob = json.loads((runtime_data_root / "state" / "game_state.json").read_text())
+    encounter = blob.get("encounter")
+    assert encounter is not None, "No encounter in game_state.json"
+    actual = encounter.get("phase")
+    assert actual == phase, f"Expected phase {phase!r} but got {actual!r}"
+
+
+@then(parsers.parse('the persisted encounter "{encounter_id}" has initiative order'))
+def persisted_encounter_has_initiative_order(
+    encounter_id: str,
+    runtime_data_root: Path,
+) -> None:
+    """The persisted game_state should have a non-empty combat turn order."""
+
+    blob = json.loads((runtime_data_root / "state" / "game_state.json").read_text())
+    combat_state = blob.get("combat_state") or {}
+    turns = combat_state.get("turn_order") or []
+    assert turns, f"Expected non-empty turn_order in combat_state but got {turns!r}"
 
 
 _STARTUP_SCENARIO_TO_WIREMOCK: dict[str, str] = {
