@@ -7,50 +7,16 @@ from campaignnarrator.domain.models import (
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
-    CombatResult,
     CombatStatus,
-    EncounterPhase,
-    EncounterState,
 )
 from pydantic import ValidationError
 
 
 def test_combat_status_has_expected_values() -> None:
+    assert CombatStatus.ACTIVE == "active"
     assert CombatStatus.COMPLETE == "complete"
     assert CombatStatus.PLAYER_DOWN_NO_ALLIES == "player_down_no_allies"
-
-
-def test_combat_result_carries_final_state_and_status() -> None:
-    state = EncounterState(
-        encounter_id="test",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        actor_ids=("pc:talia",),
-        player_actor_id="pc:talia",
-    )
-    result = CombatResult(
-        status=CombatStatus.COMPLETE,
-        final_state=state,
-        death_saves_remaining=None,
-    )
-    assert result.status == CombatStatus.COMPLETE
-    assert result.death_saves_remaining is None
-
-
-def test_combat_result_player_down_carries_death_saves() -> None:
-    state = EncounterState(
-        encounter_id="test",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        actor_ids=("pc:talia",),
-        player_actor_id="pc:talia",
-    )
-    result = CombatResult(
-        status=CombatStatus.PLAYER_DOWN_NO_ALLIES,
-        final_state=state,
-        death_saves_remaining=2,
-    )
-    assert result.death_saves_remaining == 2  # noqa: PLR2004
+    assert CombatStatus.SAVED_AND_QUIT == "saved_and_quit"
 
 
 def test_combat_intent_accepts_valid_literals() -> None:

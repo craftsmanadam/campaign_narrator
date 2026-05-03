@@ -18,12 +18,11 @@ from campaignnarrator.domain.models import (
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
-    CombatResult,
+    CombatState,
     CombatStatus,
     EncounterPhase,
     EncounterState,
     GameState,
-    InitiativeTurn,
     IntentCategory,
     Narration,
     NarrationFrame,
@@ -35,6 +34,7 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
+    TurnOrder,
 )
 from campaignnarrator.orchestrators.encounter_orchestrator import (
     EncounterOrchestrator,
@@ -358,10 +358,6 @@ def _combat_game_state(tmp_path: Path, goblin_hp: int = 0) -> GameState:
             setting="A ruined roadside camp.",
             actor_ids=("pc:talia", "npc:goblin-scout"),
             player_actor_id="pc:talia",
-            combat_turns=(
-                InitiativeTurn(actor_id="pc:talia", initiative_roll=18),
-                InitiativeTurn(actor_id="npc:goblin-scout", initiative_roll=12),
-            ),
             outcome="combat",
         ),
     )
@@ -735,11 +731,15 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
             phase=EncounterPhase.COMBAT,
             outcome="combat",
         )
-        mock_result = MagicMock()
-        mock_result.final_state = combat_state
-        mock_result.final_registry = initial_state.actor_registry
-        mock_result.status = None
-        mock_cls.return_value.run.return_value = mock_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=combat_state,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.ACTIVE,
+            ),
+        )
         result = orchestrator.run(initial_state)
 
     saved = fake_gsr.load().encounter
@@ -789,11 +789,15 @@ def test_enter_combat_emits_encounter_completed_event(
             phase=EncounterPhase.COMBAT,
             outcome="combat",
         )
-        mock_result = MagicMock()
-        mock_result.final_state = combat_state
-        mock_result.final_registry = initial_state.actor_registry
-        mock_result.status = None
-        mock_cls.return_value.run.return_value = mock_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=combat_state,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.ACTIVE,
+            ),
+        )
         orchestrator.run(initial_state)
 
     completed_events = [
@@ -836,11 +840,15 @@ def test_enter_combat_displays_initiative_rolls_to_player(
             phase=EncounterPhase.COMBAT,
             outcome="combat",
         )
-        mock_result = MagicMock()
-        mock_result.final_state = combat_state
-        mock_result.final_registry = initial_state.actor_registry
-        mock_result.status = None
-        mock_cls.return_value.run.return_value = mock_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=combat_state,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.ACTIVE,
+            ),
+        )
         orchestrator.run(initial_state)
 
     # The raw event string must appear as its own display call, not embedded in narration
@@ -889,16 +897,20 @@ def test_combat_orchestrator_is_invoked_when_phase_is_combat(tmp_path: Path) -> 
         post_combat_state = replace(
             initial_game_state.encounter, phase=EncounterPhase.ENCOUNTER_COMPLETE
         )
-        mock_result = MagicMock()
-        mock_result.final_state = post_combat_state
-        mock_result.final_registry = ActorRegistry(
-            actors={
-                _default_player().actor_id: _default_player(),
-                "npc:goblin-scout": dead_goblin,
-            }
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_game_state.campaign,
+            encounter=post_combat_state,
+            actor_registry=ActorRegistry(
+                actors={
+                    _default_player().actor_id: _default_player(),
+                    "npc:goblin-scout": dead_goblin,
+                }
+            ),
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.COMPLETE,
+            ),
         )
-        mock_result.status = None
-        mock_cls.return_value.run.return_value = mock_result
         orchestrator.run(initial_game_state)
 
     assert fake_gsr.load() is not None
@@ -1075,11 +1087,15 @@ def test_save_and_quit_during_combat_saves_state_and_records_event(
     with patch(
         "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
     ) as mock_cls:
-        mock_result = MagicMock()
-        mock_result.final_state = saved_state
-        mock_result.final_registry = initial_state.actor_registry
-        mock_result.status = CombatStatus.SAVED_AND_QUIT
-        mock_cls.return_value.run.return_value = mock_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=saved_state,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.SAVED_AND_QUIT,
+            ),
+        )
         orchestrator.run(initial_state)
 
     assert memory_repository.events == [
@@ -1112,11 +1128,14 @@ def test_combat_complete_transitions_encounter_to_encounter_complete(
     with patch(
         "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
     ) as mock_cls:
-        mock_cls.return_value.run.return_value = CombatResult(
-            status=CombatStatus.COMPLETE,
-            final_state=initial_state.encounter,  # still COMBAT phase
-            final_registry=initial_state.actor_registry,
-            death_saves_remaining=None,
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=initial_state.encounter,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.COMPLETE,
+            ),
         )
         result = orchestrator.run(initial_state)
 
@@ -1152,11 +1171,15 @@ def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
     with patch(
         "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
     ) as mock_cls:
-        mock_result = MagicMock()
-        mock_result.final_state = saved_state
-        mock_result.final_registry = initial_state.actor_registry
-        mock_result.status = None
-        mock_cls.return_value.run.return_value = mock_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=saved_state,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.ACTIVE,
+            ),
+        )
         orchestrator.run(initial_state)
 
     state_after = fake_gsr.load().encounter
@@ -1919,18 +1942,22 @@ class TestHiddenConditionClearing:
                 initial_state.encounter,
                 phase=EncounterPhase.COMBAT,
             )
-            mock_result = MagicMock()
-            mock_result.final_state = post_combat_state
             # Use a registry with hidden already cleared, matching what
             # _clear_player_hidden produces before _run_combat is called.
-            mock_result.final_registry = ActorRegistry(
-                actors={
-                    "pc:talia": replace(hidden_player, conditions=()),
-                    "npc:goblin-scout": goblin,
-                }
+            mock_cls.return_value.run.return_value = GameState(
+                campaign=initial_state.campaign,
+                encounter=post_combat_state,
+                actor_registry=ActorRegistry(
+                    actors={
+                        "pc:talia": replace(hidden_player, conditions=()),
+                        "npc:goblin-scout": goblin,
+                    }
+                ),
+                combat_state=CombatState(
+                    turn_order=TurnOrder(),
+                    status=CombatStatus.ACTIVE,
+                ),
             )
-            mock_result.status = None
-            mock_cls.return_value.run.return_value = mock_result
             orchestrator.run(initial_state)
         player = fake_gsr.load().actor_registry.actors["pc:talia"]
         assert not player.has_condition("hidden")
@@ -3027,12 +3054,6 @@ def test_run_combat_syncs_dead_actor_to_registry() -> None:
         encounter,
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
     )
-    mock_combat_result = MagicMock()
-    mock_combat_result.final_state = post_combat_encounter
-    mock_combat_result.final_registry = ActorRegistry(
-        actors={TALIA.actor_id: TALIA, "npc:goblin": dead_goblin}
-    )
-    mock_combat_result.status = None  # not SAVED_AND_QUIT
 
     orch = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -3047,7 +3068,17 @@ def test_run_combat_syncs_dead_actor_to_registry() -> None:
     with patch(
         "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
     ) as mock_cls:
-        mock_cls.return_value.run.return_value = mock_combat_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_gs.campaign,
+            encounter=post_combat_encounter,
+            actor_registry=ActorRegistry(
+                actors={TALIA.actor_id: TALIA, "npc:goblin": dead_goblin}
+            ),
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.COMPLETE,
+            ),
+        )
         orch.run(initial_gs)
 
     assert "npc:goblin" in fake_gsr.load().actor_registry.actors
@@ -3134,12 +3165,6 @@ def test_run_combat_syncs_all_actors_to_registry() -> None:
         encounter,
         phase=EncounterPhase.ENCOUNTER_COMPLETE,
     )
-    mock_combat_result = MagicMock()
-    mock_combat_result.final_state = post_combat_encounter
-    mock_combat_result.final_registry = ActorRegistry(
-        actors={TALIA.actor_id: TALIA, "npc:goblin": wounded_goblin}
-    )
-    mock_combat_result.status = None
 
     orch = EncounterOrchestrator(
         repositories=OrchestratorRepositories(
@@ -3153,7 +3178,17 @@ def test_run_combat_syncs_all_actors_to_registry() -> None:
     with patch(
         "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
     ) as mock_cls:
-        mock_cls.return_value.run.return_value = mock_combat_result
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_gs.campaign,
+            encounter=post_combat_encounter,
+            actor_registry=ActorRegistry(
+                actors={TALIA.actor_id: TALIA, "npc:goblin": wounded_goblin}
+            ),
+            combat_state=CombatState(
+                turn_order=TurnOrder(),
+                status=CombatStatus.COMPLETE,
+            ),
+        )
         orch.run(initial_gs)
 
     registry = fake_gsr.load().actor_registry

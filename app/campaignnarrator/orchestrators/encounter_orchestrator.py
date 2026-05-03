@@ -9,8 +9,8 @@ from campaignnarrator.agents.narrator_agent import NarratorAgent
 from campaignnarrator.agents.player_intent_agent import PlayerIntentAgent
 from campaignnarrator.agents.rules_agent import RulesAgent
 from campaignnarrator.domain.models import (
-    ActorRegistry,
     ActorState,
+    CombatState,
     CombatStatus,
     EncounterPhase,
     EncounterState,
@@ -27,6 +27,8 @@ from campaignnarrator.domain.models import (
     RulesAdjudication,
     RulesAdjudicationRequest,
     StateEffect,
+    TurnOrder,
+    TurnResources,
 )
 from campaignnarrator.orchestrators.combat_orchestrator import CombatOrchestrator
 from campaignnarrator.repositories.game_state_repository import GameStateRepository
@@ -34,7 +36,7 @@ from campaignnarrator.repositories.narrative_memory_repository import (
     NarrativeMemoryRepository,
 )
 from campaignnarrator.tools.dice import roll
-from campaignnarrator.tools.state_updates import apply_state_effects
+from campaignnarrator.tools.state_updates import require_int
 
 _log = logging.getLogger(__name__)
 
@@ -271,29 +273,26 @@ class EncounterOrchestrator:
             memory_repository=self._memory_repository,
             game_state_repository=self._game_state_repo,
         )
-        result = orchestrator.run(game_state)
-        final_state = result.final_state
-        final_registry = result.final_registry
-        if result.status is CombatStatus.COMPLETE:
-            final_state = final_state.with_phase(EncounterPhase.ENCOUNTER_COMPLETE)
-            result = replace(
-                result, final_state=final_state, final_registry=final_registry
-            )
-        game_state = game_state.with_encounter(final_state).with_actor_registry(
-            final_registry
+        game_state = orchestrator.run(game_state)
+        status = (
+            game_state.combat_state.status
+            if game_state.combat_state is not None
+            else CombatStatus.COMPLETE
         )
+        if status is CombatStatus.COMPLETE:
+            game_state = game_state.set_phase(EncounterPhase.ENCOUNTER_COMPLETE)
         self._game_state_repo.persist(game_state)
-
-        if result.status is CombatStatus.SAVED_AND_QUIT:
+        if status is CombatStatus.SAVED_AND_QUIT:
             self._io.display("Game saved. You can resume this encounter later.")
-            self._append_event(
-                {
-                    "type": "encounter_saved",
-                    "encounter_id": result.final_state.encounter_id,
-                    "phase": result.final_state.phase.value,
-                    "outcome": result.final_state.outcome,
-                }
-            )
+            if game_state.encounter is not None:
+                self._append_event(
+                    {
+                        "type": "encounter_saved",
+                        "encounter_id": game_state.encounter.encounter_id,
+                        "phase": game_state.encounter.phase.value,
+                        "outcome": game_state.encounter.outcome,
+                    }
+                )
         return game_state
 
     def _handle_non_combat_action(
@@ -303,18 +302,13 @@ class EncounterOrchestrator:
         intent: PlayerIntent,
     ) -> tuple[GameState, Narration]:
         """Dispatch non-combat action by intent category; return updated GameState."""
-        state = game_state.encounter
-        registry = game_state.actor_registry
         player = game_state.get_player()
         compendium_context = player.references
         match intent.category:
             case IntentCategory.HOSTILE_ACTION:
-                state, registry = _clear_player_hidden(state, registry)
-                game_state = game_state.with_encounter(state).with_actor_registry(
-                    registry
-                )
-                updated_state, narration = self._enter_combat(game_state)
-                return game_state.with_encounter(updated_state), narration
+                game_state = _clear_player_hidden(game_state)
+                game_state, narration = self._enter_combat(game_state)
+                return game_state, narration
             case IntentCategory.SKILL_CHECK:
                 return self._handle_action(
                     game_state,
@@ -323,10 +317,7 @@ class EncounterOrchestrator:
                     compendium_context,
                 )
             case IntentCategory.NPC_DIALOGUE:
-                state, registry = _clear_player_hidden(state, registry)
-                game_state = game_state.with_encounter(state).with_actor_registry(
-                    registry
-                )
+                game_state = _clear_player_hidden(game_state)
                 narration, game_state = self._narrate(
                     replace(
                         _frame(
@@ -374,7 +365,6 @@ class EncounterOrchestrator:
         compendium_context: tuple[str, ...],
     ) -> tuple[GameState, Narration]:
         state = game_state.encounter
-        registry = game_state.actor_registry
         player = game_state.get_player()
         request = RulesAdjudicationRequest(
             actor_id=state.player_actor_id,
@@ -388,26 +378,23 @@ class EncounterOrchestrator:
         )
         self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
-        updated_state, updated_registry, roll_events, resolved_action_type = (
-            self._apply_adjudication(state, adjudication, player, registry)
+        game_state, roll_events, resolved_action_type = self._apply_adjudication(
+            game_state, adjudication, player
         )
         for event in roll_events:
             self._io.display(event)
-        if updated_state.outcome is not None:
+        if game_state.encounter.outcome is not None:
             self._append_event(
                 {
                     "type": "encounter_completed",
-                    "encounter_id": updated_state.encounter_id,
-                    "outcome": updated_state.outcome,
+                    "encounter_id": game_state.encounter.encounter_id,
+                    "outcome": game_state.encounter.outcome,
                 }
             )
         has_dc_roll = resolved_action_type is not None
         resolved_outcomes = (
             *roll_events,
             *([] if has_dc_roll else [adjudication.summary]),
-        )
-        game_state = game_state.with_encounter(updated_state).with_actor_registry(
-            updated_registry
         )
         narration, game_state = self._narrate(
             replace(
@@ -426,12 +413,10 @@ class EncounterOrchestrator:
     def _enter_combat(
         self,
         game_state: GameState,
-    ) -> tuple[EncounterState, Narration]:
+    ) -> tuple[GameState, Narration]:
         """Roll initiative and narrate combat opening.
 
-        Returns the updated EncounterState (COMBAT phase) and narration.
-        Registry updates from the opening narration are intentionally discarded —
-        the caller retains the registry from before this call.
+        Returns the updated GameState (COMBAT phase, CombatState set) and narration.
         """
         state = game_state.encounter
         registry = game_state.actor_registry
@@ -454,36 +439,43 @@ class EncounterOrchestrator:
             + ", ".join(f"{name} {r}" for _, name, r in sorted_rolls)
             + "."
         )
-        updated_state = replace(
-            state,
-            phase=EncounterPhase.COMBAT,
-            combat_turns=ordered,
-            outcome="combat",
-            public_events=(*state.public_events, event),
+        game_state = game_state.set_phase(EncounterPhase.COMBAT)
+        game_state = game_state.set_encounter_outcome("combat")
+        game_state = game_state.append_public_event(event)
+        initial_actor = game_state.actor_registry.actors.get(
+            ordered[0].actor_id if ordered else ""
+        )
+        initial_resources = (
+            initial_actor.get_turn_resources()
+            if initial_actor is not None
+            else TurnResources()
+        )
+        game_state = game_state.with_combat_state(
+            CombatState(
+                turn_order=TurnOrder(turns=ordered),
+                current_turn_resources=initial_resources,
+            )
         )
         self._io.display(event)
         self._append_event(
             {
                 "type": "encounter_completed",
-                "encounter_id": updated_state.encounter_id,
+                "encounter_id": game_state.encounter.encounter_id,
                 "outcome": "combat",
             }
         )
-        game_state = game_state.with_encounter(updated_state)
-        narration, narrated_gs = self._narrate(
+        narration, game_state = self._narrate(
             _frame(game_state, "combat_start", resolved_outcomes=(event,)),
-            game_state.with_encounter(updated_state),
+            game_state,
         )
-        return narrated_gs.encounter, narration
+        return game_state, narration
 
     def _apply_adjudication(
         self,
-        state: EncounterState,
+        game_state: GameState,
         adjudication: RulesAdjudication,
         player: ActorState,
-        registry: ActorRegistry,
-    ) -> tuple[EncounterState, ActorRegistry, tuple[str, ...], str | None]:
-        # returns (updated_state, updated_registry, roll_events, action_type | None)
+    ) -> tuple[GameState, tuple[str, ...], str | None]:
         resolved_action_type: str | None = None
         roll_events: list[str] = []
 
@@ -496,17 +488,12 @@ class EncounterOrchestrator:
             if result.difficulty_class is not None and resolved_action_type is None:
                 resolved_action_type = "success" if result.evaluate() else "failure"
 
-        roll_effects = tuple(
-            StateEffect(
-                effect_type="append_public_event",
-                target=f"encounter:{state.encounter_id}",
-                value=event,
-            )
-            for event in roll_events
-        )
+        # Append roll results as public events directly — no StateEffect intermediary
+        for event in roll_events:
+            game_state = game_state.append_public_event(event)
 
         if resolved_action_type is not None:
-            effects_to_apply: list[StateEffect] = [
+            effects_to_apply = [
                 e
                 for e in adjudication.state_effects
                 if e.apply_on in ("always", resolved_action_type)
@@ -514,10 +501,10 @@ class EncounterOrchestrator:
         else:
             effects_to_apply = list(adjudication.state_effects)
 
-        updated_state, updated_registry = apply_state_effects(
-            state, registry, (*roll_effects, *effects_to_apply)
-        )
-        return updated_state, updated_registry, tuple(roll_events), resolved_action_type
+        for effect in effects_to_apply:
+            game_state = _apply_single_effect(game_state, effect)
+
+        return game_state, tuple(roll_events), resolved_action_type
 
     def _retrieve_prior_context(self, query: str, *, campaign_id: str) -> str:
         """Query memory for prior session context including recent exchanges."""
@@ -661,18 +648,41 @@ def _non_empty_tuple(values: tuple[str | None, ...]) -> tuple[str, ...]:
     return tuple(value for value in values if value)
 
 
-def _clear_player_hidden(
-    state: EncounterState, registry: ActorRegistry
-) -> tuple[EncounterState, ActorRegistry]:
+def _clear_player_hidden(game_state: GameState) -> GameState:
     """Clear the hidden condition from the player actor when they reveal themselves."""
-    player_id = state.player_actor_id
-    player = registry.actors.get(player_id)
+    if game_state.encounter is None:
+        return game_state
+    player_id = game_state.encounter.player_actor_id
+    player = game_state.actor_registry.actors.get(player_id)
     if player is None or not player.has_condition("hidden"):
-        return state, registry
-    effect = StateEffect(
-        effect_type="remove_condition", target=player_id, value="hidden"
-    )
-    return apply_state_effects(state, registry, (effect,))
+        return game_state
+    return game_state.remove_condition(player_id, "hidden")
+
+
+def _apply_single_effect(game_state: GameState, effect: StateEffect) -> GameState:
+    """Apply one StateEffect to game_state and return the updated GameState."""
+    match effect.effect_type:
+        case "set_phase":
+            game_state = game_state.set_phase(EncounterPhase(str(effect.value)))
+        case "set_encounter_outcome":
+            game_state = game_state.set_encounter_outcome(str(effect.value))
+        case "change_hp":
+            game_state = game_state.adjust_hit_points(
+                effect.target, require_int(effect.value, "hp delta")
+            )
+        case "add_condition":
+            game_state = game_state.add_condition(effect.target, str(effect.value))
+        case "remove_condition":
+            game_state = game_state.remove_condition(effect.target, str(effect.value))
+        case "set_npc_status":
+            game_state = game_state.set_npc_status(
+                effect.target, NpcPresenceStatus(str(effect.value))
+            )
+        case "inventory_spent":
+            game_state = game_state.spend_inventory(effect.target, str(effect.value))
+        case _:
+            _log.warning("Unknown effect type in adjudication: %s", effect.effect_type)
+    return game_state
 
 
 def _validate_traveling_actor_ids(

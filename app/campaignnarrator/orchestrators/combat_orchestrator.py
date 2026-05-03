@@ -11,21 +11,18 @@ from typing import Protocol
 from pydantic_ai import Agent
 
 from campaignnarrator.domain.models import (
-    ActorRegistry,
     ActorState,
     ActorType,
     CombatAssessment,
     CombatIntent,
-    CombatResult,
     CombatStatus,
     EncounterPhase,
-    EncounterState,
     GameState,
-    InitiativeTurn,
     Narration,
     NarrationFrame,
+    NpcPresenceStatus,
     PlayerIO,
-    RecoveryPeriod,
+    ResourceUnavailableError,
     RollVisibility,
     RulesAdjudication,
     RulesAdjudicationRequest,
@@ -38,24 +35,27 @@ from campaignnarrator.repositories.narrative_memory_repository import (
     NarrativeMemoryRepository,
 )
 from campaignnarrator.tools.dice import roll
-from campaignnarrator.tools.state_updates import apply_state_effects, require_int
+from campaignnarrator.tools.state_updates import require_int
 
 _logger = logging.getLogger(__name__)
+
+# Death save display thresholds — D&D 5e core rules (also defined in GameState)
+_DEATH_SAVE_NAT_TWENTY = 20
+_DEATH_SAVE_MIN_SUCCESS_ROLL = 10
 
 
 @dataclass(frozen=True)
 class _TurnResult:
-    """Internal return value from _process_turn and its delegates.
+    """Internal per-turn return value.
 
-    narration is None when the turn was skipped — no Narrator assessment called.
-    session_ended is True only for player exit_session — never set by NPC turns.
-    player_input is the raw combat action text; empty string for NPC/skipped turns.
+    narration is None when the turn was skipped (dead/incapacitated actor).
+    player_input is empty for NPC turns and skipped turns.
+    game_state.combat_state.status encodes terminal conditions:
+      SAVED_AND_QUIT means player exited; anything non-ACTIVE breaks the loop.
     """
 
-    state: EncounterState
-    registry: ActorRegistry
+    game_state: GameState
     narration: str | None
-    session_ended: bool = False
     player_input: str = ""
 
 
@@ -125,7 +125,7 @@ def _extract_roll_totals(
 
 
 def _resolve_hp_effect(
-    registry: ActorRegistry,
+    registry,  # ActorRegistry — avoid circular import; duck-typed
     effect: StateEffect,
     attack_total: int,
     damage_total: int | None,
@@ -145,6 +145,98 @@ def _resolve_hp_effect(
     return None  # hit with no damage roll — skip
 
 
+def _roll_heal_dice(expression: str) -> int:
+    """Roll a heal dice expression like '2d6+3' and return the HP restored."""
+    match_result = re.match(r"^(\d+)d(\d+)([+-]\d+)?$", expression)
+    if not match_result:
+        msg = f"Invalid heal dice expression: {expression!r}"
+        raise ValueError(msg)
+    num_dice = int(match_result.group(1))
+    die_size = int(match_result.group(2))
+    modifier = int(match_result.group(3) or "0")
+    return sum(roll(f"1d{die_size}") for _ in range(num_dice)) + modifier
+
+
+def _apply_encounter_state_effects(
+    game_state: GameState, effect: StateEffect
+) -> GameState:
+    """Apply encounter-level state effects (phase, outcome, events, NPC status)."""
+    match effect.effect_type:
+        case "set_phase":
+            return game_state.set_phase(EncounterPhase(str(effect.value)))
+        case "set_encounter_outcome":
+            return game_state.set_encounter_outcome(str(effect.value))
+        case "append_public_event":
+            return game_state.append_public_event(str(effect.value))
+        case "set_npc_status":
+            return game_state.set_npc_status(
+                effect.target, NpcPresenceStatus(str(effect.value))
+            )
+        case _:
+            return game_state
+
+
+def _apply_combat_effects(
+    game_state: GameState, effects: tuple[StateEffect, ...]
+) -> GameState:
+    """Apply player combat effects via GameState methods."""
+    for effect in effects:
+        match effect.effect_type:
+            case "change_hp":
+                game_state = game_state.adjust_hit_points(
+                    effect.target, require_int(effect.value, "hp delta")
+                )
+            case "heal":
+                game_state = game_state.adjust_hit_points(
+                    effect.target, _roll_heal_dice(str(effect.value))
+                )
+            case "add_condition":
+                game_state = game_state.add_condition(effect.target, str(effect.value))
+            case "remove_condition":
+                game_state = game_state.remove_condition(
+                    effect.target, str(effect.value)
+                )
+            case "inventory_spent":
+                game_state = game_state.spend_inventory(
+                    effect.target, str(effect.value)
+                )
+            case _:
+                prev = game_state
+                game_state = _apply_encounter_state_effects(game_state, effect)
+                if game_state is prev:
+                    _logger.warning(
+                        "Unknown effect type in combat: %s", effect.effect_type
+                    )
+    return game_state
+
+
+def _apply_npc_combat_effects(
+    game_state: GameState, effects: tuple[StateEffect, ...]
+) -> GameState:
+    """Apply NPC combat effects via GameState methods."""
+    for effect in effects:
+        match effect.effect_type:
+            case "change_hp":
+                game_state = game_state.adjust_hit_points(
+                    effect.target, require_int(effect.value, "hp delta")
+                )
+            case "add_condition":
+                game_state = game_state.add_condition(effect.target, str(effect.value))
+            case "remove_condition":
+                game_state = game_state.remove_condition(
+                    effect.target, str(effect.value)
+                )
+            case "set_npc_status":
+                game_state = game_state.set_npc_status(
+                    effect.target, NpcPresenceStatus(str(effect.value))
+                )
+            case _:
+                _logger.warning(
+                    "Unknown effect type in NPC combat: %s", effect.effect_type
+                )
+    return game_state
+
+
 class _RulesAgentProtocol(Protocol):
     def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication: ...
 
@@ -158,12 +250,11 @@ class _NarratorAgentProtocol(Protocol):
 class CombatOrchestrator:
     """Manage the combat turn loop for a single encounter.
 
-    Processes combat_turns in order. Player turns run the freeform input loop.
+    Processes the TurnOrder in CombatState. Player turns run the freeform input loop.
     NPC turns declare intent via the NarratorAgent, adjudicate via the RulesAgent,
-    and apply state effects including crit override. After each active turn the
-    NarratorAgent assesses whether combat is still ongoing; player-down-no-allies
-    is detected first and short-circuits the assessment.
-    Returns CombatResult when combat ends.
+    and apply state effects. After each active turn the NarratorAgent assesses whether
+    combat is still ongoing; player-down-no-allies is detected first and short-circuits
+    the assessment. Returns GameState when combat ends.
     """
 
     def __init__(
@@ -191,66 +282,47 @@ class CombatOrchestrator:
                 instructions=_COMBAT_INTENT_INSTRUCTIONS,
             )
         else:
-            raise ValueError(  # noqa: TRY003
-                "CombatOrchestrator requires adapter= or _intent_agent= to be set"
-            )
+            msg = "CombatOrchestrator requires adapter= or _intent_agent= to be set"
+            raise ValueError(msg)
 
-    def run(self, game_state: GameState) -> CombatResult:
-        """Run the combat loop until an end condition is reached."""
-        state: EncounterState = game_state.encounter  # type: ignore[assignment]
-        registry: ActorRegistry = game_state.actor_registry
-        while state.combat_turns:
-            turn = state.combat_turns[0]
-            result = self._process_turn(state, registry, turn)
-            state = result.state
-            registry = result.registry
-            self._stage_turn_in_memory(state, registry, result)
+    def run(self, game_state: GameState) -> GameState:
+        """Run the combat loop until a terminal CombatStatus is reached."""
+        while (
+            game_state.combat_state is not None
+            and game_state.combat_state.status == CombatStatus.ACTIVE
+        ):
+            result = self._process_turn(game_state)
+            game_state = result.game_state
+            self._stage_turn_in_memory(game_state, result)
 
-            if result.session_ended:
+            if (
+                game_state.combat_state is None
+                or game_state.combat_state.status != CombatStatus.ACTIVE
+            ):
                 self._flush_combat_memory()
-                return CombatResult(
-                    status=CombatStatus.SAVED_AND_QUIT,
-                    final_state=state,
-                    death_saves_remaining=None,
-                    final_registry=registry,
-                )
+                return game_state
 
             if result.narration is None:
                 continue
 
-            down_result = self._check_player_down_no_allies(state, registry)
-            if down_result is not None:
+            game_state = game_state.evaluate_combat_end_conditions()
+            if game_state.combat_state.status != CombatStatus.ACTIVE:
                 self._flush_combat_memory()
-                return down_result
+                return game_state
 
-            assessment = self._assess_combat(state, registry, result.narration)
+            assessment = self._assess_combat(game_state, result.narration)
             if not assessment.combat_active:
                 self._io.display(assessment.outcome.full_description)  # type: ignore[union-attr]
                 self._flush_combat_memory()
-                return CombatResult(
-                    status=CombatStatus.COMPLETE,
-                    final_state=state,
-                    death_saves_remaining=None,
-                    final_registry=registry,
-                )
+                return game_state.with_combat_status(CombatStatus.COMPLETE)
 
         self._flush_combat_memory()
-        return CombatResult(
-            status=CombatStatus.COMPLETE,
-            final_state=state,
-            death_saves_remaining=None,
-            final_registry=registry,
-        )
+        return game_state
 
-    def _stage_turn_in_memory(
-        self, state: EncounterState, registry: ActorRegistry, result: _TurnResult
-    ) -> None:
-        """Persist per-turn game state and exchange in memory repository."""
+    def _stage_turn_in_memory(self, game_state: GameState, result: _TurnResult) -> None:
+        """Persist per-turn state and log narration exchange."""
         if self._game_state_repo is not None:
-            gs = self._game_state_repo.load()
-            self._game_state_repo.persist(
-                replace(gs, encounter=state, actor_registry=registry)
-            )
+            self._game_state_repo.persist(game_state)
         if self._memory_repository is not None and result.narration is not None:
             self._memory_repository.log_combat_round(result.narration)
             self._memory_repository.update_exchange(
@@ -262,59 +334,85 @@ class CombatOrchestrator:
         if self._memory_repository is not None:
             self._memory_repository.clear_combat_memory()
 
-    def _process_turn(
-        self, state: EncounterState, registry: ActorRegistry, turn: InitiativeTurn
-    ) -> _TurnResult:
-        actor = registry.actors.get(turn.actor_id)
-        if actor is None:
-            return _TurnResult(
-                state=self._rotate_turns(state),
-                registry=registry,
-                narration=None,
-            )
+    def _process_turn(self, game_state: GameState) -> _TurnResult:
+        if game_state.combat_state is None:
+            return _TurnResult(game_state=game_state, narration=None)
+
+        actor_id = game_state.combat_state.turn_order.current_actor_id
+        actor = game_state.actor_registry.actors[actor_id]  # KeyError = bug — fail fast
 
         if "dead" in actor.conditions or "incapacitated" in actor.conditions:
-            return _TurnResult(
-                state=self._rotate_turns(state), registry=registry, narration=None
-            )
+            return _TurnResult(game_state=game_state.advance_turn(), narration=None)
 
         if "unconscious" in actor.conditions:
-            state, registry = self._auto_death_save(state, registry, actor)
-            return _TurnResult(
-                state=self._rotate_turns(state), registry=registry, narration=None
-            )
+            game_state = self._handle_unconscious_turn(game_state, actor)
+            return _TurnResult(game_state=game_state.advance_turn(), narration=None)
 
         if actor.actor_type == ActorType.PC:
-            result = self._run_player_turn(state, registry, actor)
+            result = self._run_player_turn(game_state, actor)
         elif actor.actor_type == ActorType.ALLY:
-            return _TurnResult(
-                state=self._rotate_turns(state), registry=registry, narration=None
-            )
+            return _TurnResult(game_state=game_state.advance_turn(), narration=None)
         else:
-            result = self._run_npc_turn(state, registry, actor)
+            result = self._run_npc_turn(game_state, actor)
 
         return _TurnResult(
-            state=self._rotate_turns(result.state),
-            registry=result.registry,
+            game_state=result.game_state.advance_turn(),
             narration=result.narration,
-            session_ended=result.session_ended,
             player_input=result.player_input,
         )
 
-    def _run_player_turn(
-        self, state: EncounterState, registry: ActorRegistry, actor: ActorState
-    ) -> _TurnResult:
-        actor = self._reset_actor_per_turn_resources(actor)
-        registry = registry.with_actor(actor)
+    def _handle_unconscious_turn(
+        self, game_state: GameState, actor: ActorState
+    ) -> GameState:
+        """Roll a death save for actor, update game_state, and display the result."""
+        roll_result = roll("1d20")
+        game_state = game_state.apply_death_save(actor.actor_id, roll_result)
+        actor_after = game_state.actor_registry.actors[actor.actor_id]
+        if "stable" in actor_after.conditions and "stable" not in actor.conditions:
+            self._io.display(f"{actor.name} stabilizes!")
+        elif "dead" in actor_after.conditions and "dead" not in actor.conditions:
+            self._io.display(f"{actor.name} has died.")
+        else:
+            is_success = (
+                roll_result == _DEATH_SAVE_NAT_TWENTY
+                or roll_result >= _DEATH_SAVE_MIN_SUCCESS_ROLL
+            )
+            outcome = "success" if is_success else "failure"
+            self._io.display(
+                f"{actor.name} makes a death saving throw..."
+                f" {outcome} (rolled {roll_result})."
+            )
+        return game_state
 
-        resources = TurnResources(movement_remaining=actor.speed)
+    def _run_player_turn(self, game_state: GameState, actor: ActorState) -> _TurnResult:
+        actor = actor.reset_turn_resources()
+        game_state = game_state.with_actor_registry(
+            game_state.actor_registry.with_actor(actor)
+        )
+        if game_state.combat_state is not None:
+            game_state = replace(
+                game_state,
+                combat_state=replace(
+                    game_state.combat_state,
+                    current_turn_resources=actor.get_turn_resources(),
+                ),
+            )
+
         self._io.display(f"--- {actor.name}'s turn ---")
         self._io.display(f"HP: {actor.hp_current}/{actor.hp_max}")
+        resources = (
+            game_state.combat_state.current_turn_resources
+            if game_state.combat_state
+            else TurnResources(movement_remaining=actor.speed)
+        )
         self._io.display(self._format_resources(resources))
 
         last_narration = ""
         last_player_input = ""
+        player_actor_id = actor.actor_id
         while True:
+            # Always read fresh actor state — stale local var may miss HP mutations
+            actor = game_state.actor_registry.actors[player_actor_id]
             raw_input = self._io.prompt("> ")
             intent = self._classify_combat_intent(raw_input)
 
@@ -323,35 +421,37 @@ class CombatOrchestrator:
 
             if intent == "exit_session":
                 return _TurnResult(
-                    state=state, registry=registry, narration="", session_ended=True
+                    game_state=game_state.with_combat_status(
+                        CombatStatus.SAVED_AND_QUIT
+                    ),
+                    narration="",
                 )
 
             if intent == "query_status":
-                self._io.display(self._format_combat_status(state, registry))
+                self._io.display(self._format_combat_status(game_state))
                 continue
 
             # intent == "combat_action"
-            state, registry, resources, narration_text = self._handle_combat_action(
-                state, registry, actor, raw_input, resources
+            game_state, narration_text = self._handle_combat_action(
+                game_state, actor, raw_input
             )
             last_narration = narration_text
             last_player_input = raw_input
 
         return _TurnResult(
-            state=state,
-            registry=registry,
+            game_state=game_state,
             narration=last_narration,
             player_input=last_player_input,
         )
 
     def _handle_combat_action(
         self,
-        state: EncounterState,
-        registry: ActorRegistry,
+        game_state: GameState,
         actor: ActorState,
         raw_input: str,
-        resources: TurnResources,
-    ) -> tuple[EncounterState, ActorRegistry, TurnResources, str]:
+    ) -> tuple[GameState, str]:
+        state = game_state.encounter  # type: ignore[assignment]
+        registry = game_state.actor_registry
         request = self._build_rules_request(state, registry, actor, raw_input)
         self._io.display("\nConsidering the rules...\n")
         adjudication = self._rules_agent.adjudicate(request)
@@ -367,15 +467,64 @@ class CombatOrchestrator:
                 )
             )
             self._io.display(narration.text)
-            return state, registry, resources, narration.text
+            return game_state, narration.text
 
-        resources, overspent = self._deduct_movement(adjudication, resources)
-        if overspent:
-            return state, registry, resources, ""
+        # Deduct movement first — bail out early if exhausted
+        for effect in adjudication.state_effects:
+            if effect.effect_type == "movement":
+                feet = require_int(effect.value, "movement feet")
+                try:
+                    game_state = game_state.spend_turn_resource("movement", feet)
+                except ResourceUnavailableError:
+                    self._io.display("You've used all your movement this turn.")
+                    return game_state, ""
 
+        roll_events, roll_totals_by_purpose = self._roll_public_dice(
+            adjudication.roll_requests, actor
+        )
+
+        # Resolve attack effects against target AC
+        actor_effects = tuple(
+            e for e in adjudication.state_effects if e.effect_type != "movement"
+        )
+        resolved_effects = self._resolve_attack_effects(
+            game_state.actor_registry, actor_effects, roll_totals_by_purpose
+        )
+
+        game_state = _apply_combat_effects(game_state, resolved_effects)
+        game_state = game_state.apply_zero_hp_conditions()
+        game_state = self._consume_action_resource(game_state, adjudication.action_type)
+
+        resources = (
+            game_state.combat_state.current_turn_resources
+            if game_state.combat_state
+            else TurnResources()
+        )
+        # Re-read actor from registry for narration (HP may have changed)
+        actor = game_state.actor_registry.actors[actor.actor_id]
+        narration = self._narrator_agent.narrate(
+            self._build_narrator_frame(
+                game_state.encounter,  # type: ignore[arg-type]
+                game_state.actor_registry,
+                actor,
+                adjudication.summary,
+                purpose="combat_turn_result",
+                roll_events=roll_events,
+            )
+        )
+        self._io.display(narration.text)
+        self._io.display(self._format_resources(resources))
+        return game_state, narration.text
+
+    def _roll_public_dice(
+        self,
+        roll_requests: tuple,  # tuple[RollRequest, ...]
+        actor: ActorState,
+    ) -> tuple[tuple[str, ...], dict[str, int]]:
+        """Roll PUBLIC dice, display results, return (events, totals_by_purpose)."""
         roll_event_strings: list[str] = []
         roll_totals_by_purpose: dict[str, int] = {}
-        for rr in adjudication.roll_requests:
+        for rr in roll_requests:
             if rr.visibility is RollVisibility.PUBLIC:
                 result = rr.roll(actor)
                 _logger.info("%s", result)
@@ -385,61 +534,122 @@ class CombatOrchestrator:
         roll_events = tuple(roll_event_strings)
         for event in roll_events:
             self._io.display(event)
+        return roll_events, roll_totals_by_purpose
 
-        actor_effects = tuple(
-            e for e in adjudication.state_effects if e.effect_type != "movement"
+    def _consume_action_resource(
+        self, game_state: GameState, action_type: str
+    ) -> GameState:
+        """Deduct the action economy resource consumed by action_type.
+
+        free_action intentionally consumes nothing. ResourceUnavailableError
+        after an approved adjudication is a rules-agent inconsistency — log it
+        but do not abort the turn.
+        """
+        if action_type == "attack":
+            try:
+                game_state = game_state.spend_turn_resource("action")
+            except ResourceUnavailableError:
+                _logger.warning(
+                    "Rules agent approved %r but action resource already spent",
+                    action_type,
+                )
+        elif action_type == "bonus_action":
+            try:
+                game_state = game_state.spend_turn_resource("bonus_action")
+            except ResourceUnavailableError:
+                _logger.warning(
+                    "Rules agent approved %r but bonus_action resource already spent",
+                    action_type,
+                )
+        return game_state
+
+    def _run_npc_turn(self, game_state: GameState, actor: ActorState) -> _TurnResult:
+        actor = actor.reset_turn_resources()
+        game_state = game_state.with_actor_registry(
+            game_state.actor_registry.with_actor(actor)
         )
-        resolved_effects = self._resolve_attack_effects(
-            registry, actor_effects, roll_totals_by_purpose
+        # Read-only extraction for LLM context building
+        state = game_state.encounter  # type: ignore[assignment]
+        registry = game_state.actor_registry
+
+        intent_payload = {
+            "actor_id": actor.actor_id,
+            "name": actor.name,
+            "hp_current": actor.hp_current,
+            "hp_max": actor.hp_max,
+            "conditions": list(actor.conditions),
+            "visible_actors": [
+                {
+                    "actor_id": registry.actors[aid].actor_id,
+                    "name": registry.actors[aid].name,
+                    "hp_current": registry.actors[aid].hp_current,
+                    "hp_max": registry.actors[aid].hp_max,
+                    "actor_type": registry.actors[aid].actor_type.value,
+                    "conditions": list(registry.actors[aid].conditions),
+                }
+                for aid in state.actor_ids
+                if aid in registry.actors and aid != actor.actor_id
+            ],
+            "setting": state.setting,
+        }
+        intent_prose = self._narrator_agent.declare_npc_intent_from_json(
+            json.dumps(intent_payload, indent=2, sort_keys=True)
         )
-        state, registry = self._materialize_effects(state, registry, resolved_effects)
-        resources = self._consume_resource(resources, adjudication.action_type)
-        narration = self._narrator_agent.narrate(
-            self._build_narrator_frame(
+
+        self._io.display("\nConsidering the rules...\n")
+        adjudication = self._rules_agent.adjudicate(
+            self._build_rules_request(
                 state,
                 registry,
                 actor,
+                intent_prose,
+                allowed_outcomes=_NPC_COMBAT_ALLOWED_OUTCOMES,
+            )
+        )
+
+        roll_event_strings: list[str] = []
+        roll_totals_by_purpose: dict[str, int] = {}
+        # NPC rolls: collect all roll totals (including hidden) for attack resolution,
+        # but display only PUBLIC rolls to the player.
+        for rr in adjudication.roll_requests:
+            result = rr.roll(actor)
+            _logger.info("%s", result)
+            if result.purpose:
+                roll_totals_by_purpose[result.purpose] = result.roll_total
+            if rr.visibility is RollVisibility.PUBLIC:
+                roll_event_strings.append(str(result))
+        for event in roll_event_strings:
+            self._io.display(event)
+        roll_events = tuple(roll_event_strings)
+
+        resolved_effects = self._resolve_attack_effects(
+            registry, adjudication.state_effects, roll_totals_by_purpose
+        )
+
+        # Apply each effect via specific GameState methods
+        game_state = _apply_npc_combat_effects(game_state, resolved_effects)
+        game_state = game_state.apply_zero_hp_conditions()
+
+        narration = self._narrator_agent.narrate(
+            self._build_narrator_frame(
+                game_state.encounter,  # type: ignore[arg-type]
+                game_state.actor_registry,
+                actor,
                 adjudication.summary,
-                purpose="combat_turn_result",
+                purpose="npc_combat_action",
                 roll_events=roll_events,
             )
         )
         self._io.display(narration.text)
-        self._io.display(self._format_resources(resources))
-        return state, registry, resources, narration.text
-
-    def _deduct_movement(
-        self, adjudication: RulesAdjudication, resources: TurnResources
-    ) -> tuple[TurnResources, bool]:
-        for effect in adjudication.state_effects:
-            if effect.effect_type == "movement":
-                feet = require_int(effect.value, "movement feet")
-                if feet > resources.movement_remaining:
-                    self._io.display("You've used all your movement this turn.")
-                    return resources, True
-                resources = replace(
-                    resources,
-                    movement_remaining=resources.movement_remaining - feet,
-                )
-        return resources, False
+        return _TurnResult(game_state=game_state, narration=narration.text)
 
     def _resolve_attack_effects(
         self,
-        registry: ActorRegistry,
+        registry,  # ActorRegistry — duck-typed to avoid import
         effects: tuple[StateEffect, ...],
         roll_totals_by_purpose: dict[str, int],
     ) -> tuple[StateEffect, ...]:
-        """Resolve change_hp effects for attack actions against target AC.
-
-        When an attack roll is present (purpose case-insensitively starts with
-        "attack roll"), all change_hp effects are gated on the AC check:
-        - Hit (attack_total >= target AC): placeholder (value=0) is replaced
-          with -damage_total; non-zero change_hp is kept as-is.
-        - Miss (attack_total < target AC): all change_hp effects are dropped.
-        When no attack roll is present, effects pass through unchanged — this
-        covers non-attack damage such as ongoing conditions.
-        Purpose matching is case-insensitive.
-        """
+        """Resolve change_hp effects for attack actions against target AC."""
         attack_total, damage_total = _extract_roll_totals(roll_totals_by_purpose)
         if attack_total is None:
             return effects
@@ -460,8 +670,8 @@ class CombatOrchestrator:
 
     def _build_rules_request(
         self,
-        state: EncounterState,
-        registry: ActorRegistry,
+        state,  # EncounterState — duck-typed
+        registry,  # ActorRegistry — duck-typed
         actor: ActorState,
         intent: str,
         allowed_outcomes: tuple[str, ...] = _COMBAT_ALLOWED_OUTCOMES,
@@ -492,8 +702,8 @@ class CombatOrchestrator:
 
     def _build_narrator_frame(
         self,
-        state: EncounterState,
-        registry: ActorRegistry,
+        state,  # EncounterState — duck-typed
+        registry,  # ActorRegistry — duck-typed
         actor: ActorState,
         summary: str,
         purpose: str,
@@ -514,218 +724,11 @@ class CombatOrchestrator:
             tone_guidance=state.scene_tone,
         )
 
-    def _reset_actor_per_turn_resources(self, actor: ActorState) -> ActorState:
-        updated = tuple(
-            replace(r, current=r.max) if r.recovers_after == RecoveryPeriod.TURN else r
-            for r in actor.resources
-        )
-        return replace(actor, resources=updated)
-
-    @staticmethod
-    def _apply_zero_hp_conditions(
-        state: EncounterState, registry: ActorRegistry
-    ) -> tuple[EncounterState, ActorRegistry]:
-        updated_actors = dict(registry.actors)
-        changed = False
-        for actor_id in state.actor_ids:
-            actor = updated_actors.get(actor_id)
-            if actor is None or actor.hp_current > 0:
-                continue
-            if actor.actor_type in (ActorType.NPC, ActorType.ALLY):
-                if "dead" not in actor.conditions:
-                    updated_actors[actor_id] = replace(
-                        actor, conditions=(*actor.conditions, "dead")
-                    )
-                    changed = True
-            elif (
-                actor.actor_type == ActorType.PC
-                and "dead" not in actor.conditions
-                and "unconscious" not in actor.conditions
-            ):
-                updated_actors[actor_id] = replace(
-                    actor, conditions=(*actor.conditions, "unconscious")
-                )
-                changed = True
-        if not changed:
-            return state, registry
-        return state, registry.with_actors(updated_actors)
-
-    def _materialize_effects(
-        self,
-        state: EncounterState,
-        registry: ActorRegistry,
-        effects: tuple[StateEffect, ...],
-    ) -> tuple[EncounterState, ActorRegistry]:
-        materialized: list[StateEffect] = []
-        for effect in effects:
-            if effect.effect_type == "heal":
-                expression = str(effect.value)
-                match = re.match(r"^(\d+)d(\d+)([+-]\d+)?$", expression)
-                if not match:
-                    msg = f"Invalid dice expression: {expression!r}"
-                    raise ValueError(msg)
-                num_dice = int(match.group(1))
-                die_size = int(match.group(2))
-                modifier = int(match.group(3) or "0")
-                total = sum(roll(f"1d{die_size}") for _ in range(num_dice)) + modifier
-                materialized.append(
-                    StateEffect(
-                        effect_type="change_hp", target=effect.target, value=total
-                    )
-                )
-            else:
-                materialized.append(effect)
-        updated_state, updated_registry = apply_state_effects(
-            state, registry, tuple(materialized)
-        )
-        return self._apply_zero_hp_conditions(updated_state, updated_registry)
-
-    def _run_npc_turn(
-        self, state: EncounterState, registry: ActorRegistry, actor: ActorState
-    ) -> _TurnResult:
-        actor = self._reset_actor_per_turn_resources(actor)
-        registry = registry.with_actor(actor)
-
-        intent_payload = {
-            "actor_id": actor.actor_id,
-            "name": actor.name,
-            "hp_current": actor.hp_current,
-            "hp_max": actor.hp_max,
-            "conditions": list(actor.conditions),
-            "visible_actors": [
-                {
-                    "actor_id": registry.actors[aid].actor_id,
-                    "name": registry.actors[aid].name,
-                    "hp_current": registry.actors[aid].hp_current,
-                    "hp_max": registry.actors[aid].hp_max,
-                    "actor_type": registry.actors[aid].actor_type.value,
-                    "conditions": list(registry.actors[aid].conditions),
-                }
-                for aid in state.actor_ids
-                if aid in registry.actors and aid != actor.actor_id
-            ],
-            "setting": state.setting,
-        }
-        intent_json = json.dumps(intent_payload, indent=2, sort_keys=True)
-        intent_prose = self._narrator_agent.declare_npc_intent_from_json(intent_json)
-
-        self._io.display("\nConsidering the rules...\n")
-        adjudication = self._rules_agent.adjudicate(
-            self._build_rules_request(
-                state,
-                registry,
-                actor,
-                intent_prose,
-                allowed_outcomes=_NPC_COMBAT_ALLOWED_OUTCOMES,
-            )
-        )
-
-        roll_event_strings: list[str] = []
-        roll_totals_by_purpose: dict[str, int] = {}
-        for rr in adjudication.roll_requests:
-            result = rr.roll(actor)
-            _logger.info("%s", result)
-            if result.purpose:
-                roll_totals_by_purpose[result.purpose] = result.roll_total
-            if rr.visibility is RollVisibility.PUBLIC:
-                roll_event_strings.append(str(result))
-        for event in roll_event_strings:
-            self._io.display(event)
-        roll_events = tuple(roll_event_strings)
-
-        resolved_effects = self._resolve_attack_effects(
-            registry, adjudication.state_effects, roll_totals_by_purpose
-        )
-        state, registry = self._materialize_effects(state, registry, resolved_effects)
-
-        narration = self._narrator_agent.narrate(
-            self._build_narrator_frame(
-                state,
-                registry,
-                actor,
-                adjudication.summary,
-                purpose="npc_combat_action",
-                roll_events=roll_events,
-            )
-        )
-        self._io.display(narration.text)
-        return _TurnResult(state=state, registry=registry, narration=narration.text)
-
-    def _consume_resource(
-        self, resources: TurnResources, action_type: str
-    ) -> TurnResources:
-        if action_type in ("attack", "free_action"):
-            return replace(resources, action_available=False)
-        if action_type == "bonus_action":
-            return replace(resources, bonus_action_available=False)
-        return resources  # move: deducted separately; other: no cost
-
-    def _format_resources(self, resources: TurnResources) -> str:
-        action = "available" if resources.action_available else "used"
-        bonus = "available" if resources.bonus_action_available else "used"
-        reaction = "available" if resources.reaction_available else "used"
-        movement = (
-            f"{resources.movement_remaining}ft remaining"
-            if resources.movement_remaining > 0
-            else "none remaining"
-        )
-        return (
-            f"Action: {action} | Bonus Action: {bonus} | "
-            f"Movement: {movement} | Reaction: {reaction}"
-        )
-
-    def _format_combat_status(
-        self, state: EncounterState, registry: ActorRegistry
-    ) -> str:
-        summaries = [
-            registry.actors[aid].narrative_summary()
-            for aid in state.actor_ids
-            if aid in registry.actors
-        ]
-        return " | ".join(summaries)
-
-    def _rotate_turns(self, state: EncounterState) -> EncounterState:
-        if not state.combat_turns:
-            return state
-        turns = state.combat_turns
-        return replace(state, combat_turns=(*turns[1:], turns[0]))
-
-    def _check_player_down_no_allies(
-        self, state: EncounterState, registry: ActorRegistry
-    ) -> CombatResult | None:
-        encounter_actors = [
-            registry.actors[aid] for aid in state.actor_ids if aid in registry.actors
-        ]
-        pc_actors = [a for a in encounter_actors if a.actor_type == ActorType.PC]
-        conscious_allies = [
-            a
-            for a in encounter_actors
-            if a.actor_type in (ActorType.PC, ActorType.ALLY)
-            and a.hp_current > 0
-            and "dead" not in a.conditions
-            and "unconscious" not in a.conditions
-        ]
-        downed_pcs = [
-            a
-            for a in pc_actors
-            if a.hp_current <= 0
-            and "dead" not in a.conditions
-            and "stable" not in a.conditions
-        ]
-        if downed_pcs and not conscious_allies:
-            downed = downed_pcs[0]
-            saves_remaining = 3 - downed.death_save_failures
-            return CombatResult(
-                status=CombatStatus.PLAYER_DOWN_NO_ALLIES,
-                final_state=state,
-                death_saves_remaining=saves_remaining,
-                final_registry=registry,
-            )
-        return None
-
     def _assess_combat(
-        self, state: EncounterState, registry: ActorRegistry, last_narration: str
+        self, game_state: GameState, last_narration: str
     ) -> CombatAssessment:
+        state = game_state.encounter  # type: ignore[assignment]
+        registry = game_state.actor_registry
         actor_summaries = [
             {
                 "actor_id": registry.actors[aid].actor_id,
@@ -748,55 +751,26 @@ class CombatOrchestrator:
             json.dumps(payload, indent=2, sort_keys=True)
         )
 
-    def _auto_death_save(
-        self, state: EncounterState, registry: ActorRegistry, actor: ActorState
-    ) -> tuple[EncounterState, ActorRegistry]:
-        roll_result = roll("1d20")
-        successes = actor.death_save_successes
-        failures = actor.death_save_failures
+    def _format_resources(self, resources: TurnResources) -> str:
+        action = "available" if resources.action_available else "used"
+        bonus = "available" if resources.bonus_action_available else "used"
+        reaction = "available" if resources.reaction_available else "used"
+        movement = (
+            f"{resources.movement_remaining}ft remaining"
+            if resources.movement_remaining > 0
+            else "none remaining"
+        )
+        return (
+            f"Action: {action} | Bonus Action: {bonus} | "
+            f"Movement: {movement} | Reaction: {reaction}"
+        )
 
-        if roll_result == 1:
-            failures += 2
-        elif roll_result == 20:  # noqa: PLR2004
-            successes += 2
-        elif roll_result >= 10:  # noqa: PLR2004
-            successes += 1
-        else:
-            failures += 1
-
-        if successes >= 3:  # noqa: PLR2004
-            updated = replace(
-                actor,
-                death_save_successes=3,
-                death_save_failures=failures,
-                conditions=(
-                    *(c for c in actor.conditions if c != "unconscious"),
-                    "stable",
-                ),
-            )
-            self._io.display(f"{actor.name} stabilizes!")
-        elif failures >= 3:  # noqa: PLR2004
-            updated = replace(
-                actor,
-                death_save_successes=successes,
-                death_save_failures=3,
-                conditions=(
-                    *(c for c in actor.conditions if c != "unconscious"),
-                    "dead",
-                ),
-            )
-            self._io.display(f"{actor.name} has died.")
-        else:
-            updated = replace(
-                actor,
-                death_save_successes=successes,
-                death_save_failures=failures,
-            )
-            is_success = roll_result == 20 or roll_result >= 10  # noqa: PLR2004
-            outcome = "success" if is_success else "failure"
-            self._io.display(
-                f"{actor.name} makes a death saving throw..."
-                f" {outcome} (rolled {roll_result})."
-            )
-
-        return state, registry.with_actor(updated)
+    def _format_combat_status(self, game_state: GameState) -> str:
+        if game_state.encounter is None:
+            return ""
+        summaries = [
+            game_state.actor_registry.actors[aid].narrative_summary()
+            for aid in game_state.encounter.actor_ids
+            if aid in game_state.actor_registry.actors
+        ]
+        return " | ".join(summaries)

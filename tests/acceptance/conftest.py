@@ -15,6 +15,17 @@ from pathlib import Path
 from subprocess import CompletedProcess, run
 
 import pytest
+from campaignnarrator.domain.models import (
+    ActorRegistry,
+    CombatState,
+    CombatStatus,
+    EncounterPhase,
+    EncounterState,
+    GameState,
+    InitiativeTurn,
+    TurnOrder,
+    TurnResources,
+)
 from pytest_bdd import given, parsers, then, when
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -55,11 +66,14 @@ def _seed_game_state_from_encounter(
     encounter_file: Path,
     runtime_data_root: Path,
 ) -> None:
-    """Patch state/game_state.json to include the encounter and its NPC actors.
+    """Construct game_state.json from an encounter fixture file using domain models.
+
+    Uses GameState.to_json() so the serialized blob always matches the current
+    domain model schema — prevents silent divergence from hand-carved JSON.
 
     Encounter fixture files use the old format with a top-level 'actors' dict.
-    This helper converts that to the new blob format: encounter gets actor_ids
-    and player_actor_id; NPC actors go into actor_registry.actors in the blob.
+    The player actor is written to actors/player.json (loaded separately by
+    PlayerRepository at runtime); NPC actors are written into actor_registry.
     """
     try:
         encounter_data = json.loads(encounter_file.read_text(encoding="utf-8"))
@@ -67,41 +81,68 @@ def _seed_game_state_from_encounter(
         return
 
     blob_path = runtime_data_root / "state" / "game_state.json"
-    blob: dict = {}
+    existing_blob: dict = {}
     if blob_path.exists():
         with contextlib.suppress(OSError, json.JSONDecodeError):
-            blob = json.loads(blob_path.read_text(encoding="utf-8"))
+            existing_blob = json.loads(blob_path.read_text(encoding="utf-8"))
 
+    # Extract actors from old fixture format
     actors_raw: dict = encounter_data.pop("actors", {})
-    if actors_raw:
-        actor_ids = list(actors_raw.keys())
-        player_actor_id = next(
-            (k for k, v in actors_raw.items() if v.get("actor_type") == "pc"),
-            "",
-        )
-        npc_actors = {
-            k: v for k, v in actors_raw.items() if v.get("actor_type") != "pc"
-        }
-        encounter_data["actor_ids"] = actor_ids
-        encounter_data["player_actor_id"] = player_actor_id
-        if player_actor_id:
-            player_path = runtime_data_root / "state" / "actors" / "player.json"
-            player_path.parent.mkdir(parents=True, exist_ok=True)
-            player_path.write_text(
-                json.dumps(actors_raw[player_actor_id], indent=2, sort_keys=True)
-                + "\n",
-                encoding="utf-8",
-            )
-    else:
-        npc_actors = {}
+    player_actor_id = next(
+        (k for k, v in actors_raw.items() if v.get("actor_type") == "pc"),
+        "",
+    )
+    npc_actors_raw = {
+        k: v for k, v in actors_raw.items() if v.get("actor_type") != "pc"
+    }
+    encounter_data["actor_ids"] = list(actors_raw.keys())
+    encounter_data["player_actor_id"] = player_actor_id
 
-    blob["encounter"] = encounter_data
-    existing_actors: dict = (blob.get("actor_registry") or {}).get("actors", {})
-    blob["actor_registry"] = {"actors": {**existing_actors, **npc_actors}}
+    # Write player to separate file (loaded by PlayerRepository at runtime)
+    if player_actor_id and player_actor_id in actors_raw:
+        player_path = runtime_data_root / "state" / "actors" / "player.json"
+        player_path.parent.mkdir(parents=True, exist_ok=True)
+        player_path.write_text(
+            json.dumps(actors_raw[player_actor_id], indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    # Construct domain objects — use GameState.to_json() so schema stays in sync
+    encounter = EncounterState.from_dict(encounter_data)
+    registry = ActorRegistry.from_dict({"actors": npc_actors_raw})
+
+    # Build CombatState when phase is combat so the CombatOrchestrator loop can run
+    combat_state: CombatState | None = None
+    if encounter.phase is EncounterPhase.COMBAT:
+        combat_turns_raw = encounter_data.get("combat_turns", [])
+        turns = tuple(
+            InitiativeTurn(
+                actor_id=str(t["actor_id"]),
+                initiative_roll=int(t["initiative_roll"]),
+            )
+            for t in combat_turns_raw
+            if isinstance(t, dict)
+        )
+        first_actor_id = turns[0].actor_id if turns else ""
+        first_actor_raw = actors_raw.get(first_actor_id, {})
+        first_actor_speed = int(first_actor_raw.get("speed", 30))
+        combat_state = CombatState(
+            turn_order=TurnOrder(turns=turns),
+            status=CombatStatus.ACTIVE,
+            current_turn_resources=TurnResources(movement_remaining=first_actor_speed),
+        )
+
+    # Preserve campaign from the base fixture; replace encounter/registry/combat_state
+    base_gs = GameState.from_json(existing_blob) if existing_blob else GameState()
+    new_gs = (
+        base_gs.with_encounter(encounter)
+        .with_actor_registry(registry)
+        .with_combat_state(combat_state)
+    )
 
     blob_path.parent.mkdir(parents=True, exist_ok=True)
     blob_path.write_text(
-        json.dumps(blob, indent=2, sort_keys=True) + "\n",
+        json.dumps(new_gs.to_json(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 

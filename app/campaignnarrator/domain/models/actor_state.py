@@ -9,6 +9,7 @@ from enum import StrEnum
 from .actor_components import (
     FeatState,
     InventoryItem,
+    RecoveryPeriod,
     ResourceState,
     WeaponState,
 )
@@ -179,6 +180,23 @@ class ActorState:
                 return replace(self, inventory=tuple(inventory))
         msg = f"actor {self.actor_id} does not have item with item_id: {item_id}"
         raise ValueError(msg)
+
+    def get_turn_resources(self) -> TurnResources:
+        """Return fresh TurnResources for this actor at the start of their turn."""
+        return TurnResources(
+            action_available=True,
+            bonus_action_available=True,
+            reaction_available=True,
+            movement_remaining=self.speed,
+        )
+
+    def reset_turn_resources(self) -> ActorState:
+        """Return a copy with per-turn ResourceState entries reset to max."""
+        updated = tuple(
+            replace(r, current=r.max) if r.recovers_after == RecoveryPeriod.TURN else r
+            for r in self.resources
+        )
+        return replace(self, resources=updated)
 
     def narrative_summary(self) -> str:
         """Return a narration-safe actor summary using injury labels instead of numbers.
@@ -379,6 +397,10 @@ class ActorState:
         )
 
 
+class ResourceUnavailableError(ValueError):
+    """Raised when a turn resource cannot be deducted because it is exhausted."""
+
+
 @dataclass(frozen=True, slots=True)
 class TurnResources:
     """Action economy remaining for the actor whose turn is currently active."""
@@ -387,3 +409,36 @@ class TurnResources:
     bonus_action_available: bool = True
     reaction_available: bool = True
     movement_remaining: int = 0  # feet; initialized from ActorState.speed at turn start
+
+    def deduct(self, resource_type: str, amount: int = 1) -> TurnResources:
+        """Return a copy with resource_type reduced by amount.
+
+        Raises ResourceUnavailableError if exhausted.
+        Valid resource_type: "action", "bonus_action", "reaction", "movement".
+        For "movement", amount is feet.
+        """
+        if resource_type == "action":
+            if not self.action_available:
+                msg = "action is already spent this turn"
+                raise ResourceUnavailableError(msg)
+            return replace(self, action_available=False)
+        if resource_type == "bonus_action":
+            if not self.bonus_action_available:
+                msg = "bonus_action is already spent this turn"
+                raise ResourceUnavailableError(msg)
+            return replace(self, bonus_action_available=False)
+        if resource_type == "reaction":
+            if not self.reaction_available:
+                msg = "reaction is already spent this turn"
+                raise ResourceUnavailableError(msg)
+            return replace(self, reaction_available=False)
+        if resource_type == "movement":
+            if amount > self.movement_remaining:
+                msg = (
+                    f"movement: requested {amount}ft but only "
+                    f"{self.movement_remaining}ft remaining"
+                )
+                raise ResourceUnavailableError(msg)
+            return replace(self, movement_remaining=self.movement_remaining - amount)
+        msg = f"unknown resource_type: {resource_type!r}"
+        raise ValueError(msg)

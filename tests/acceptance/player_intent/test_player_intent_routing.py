@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from campaignnarrator.domain.models import (
     ActorRegistry,
+    CampaignState,
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
@@ -182,9 +183,26 @@ class FakeGameStateRepository:
         else:
             player = self._player_repo.load()
             registry = ActorRegistry().with_actor(player)
+        player_actor_id = encounter.player_actor_id if encounter is not None else ""
+        campaign = CampaignState(
+            campaign_id="test-campaign",
+            name="Test Campaign",
+            setting="A test world.",
+            narrator_personality="neutral",
+            hidden_goal="test",
+            bbeg_name="test villain",
+            bbeg_description="a generic villain",
+            milestones=(),
+            current_milestone_index=0,
+            starting_level=1,
+            target_level=5,
+            player_brief="test player",
+            player_actor_id=player_actor_id,
+        )
         return GameState(
             encounter=encounter,
             actor_registry=registry,
+            campaign=campaign,
         )
 
     def persist(self, game_state: GameState) -> None:

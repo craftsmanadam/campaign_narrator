@@ -797,3 +797,93 @@ def test_apply_inventory_spent_does_not_mutate_original() -> None:
     actor = replace(TALIA, inventory=(item,))
     _ = actor.apply_inventory_spent("potion-1")
     assert actor.inventory[0].count == 2  # noqa: PLR2004
+
+
+# --- ActorState.get_turn_resources ---
+
+
+def test_get_turn_resources_action_available() -> None:
+    assert TALIA.get_turn_resources().action_available is True
+
+
+def test_get_turn_resources_bonus_action_available() -> None:
+    assert TALIA.get_turn_resources().bonus_action_available is True
+
+
+def test_get_turn_resources_reaction_available() -> None:
+    assert TALIA.get_turn_resources().reaction_available is True
+
+
+def test_get_turn_resources_movement_equals_actor_speed() -> None:
+    assert TALIA.get_turn_resources().movement_remaining == TALIA.speed
+
+
+def test_get_turn_resources_does_not_mutate_actor() -> None:
+    original_speed = TALIA.speed
+    _ = TALIA.get_turn_resources()
+    assert TALIA.speed == original_speed
+
+
+# --- ActorState.reset_turn_resources ---
+
+
+def test_reset_turn_resources_resets_turn_scoped_resource() -> None:
+    resource = ResourceState(
+        resource="savage_attacker",
+        current=0,
+        max=1,
+        recovers_after=RecoveryPeriod.TURN,
+    )
+    actor = replace(TALIA, resources=(resource,))
+    result = actor.reset_turn_resources()
+    assert result.resources[0].current == 1
+
+
+def test_reset_turn_resources_does_not_reset_short_rest_resource() -> None:
+    resource = ResourceState(
+        resource="second_wind",
+        current=0,
+        max=1,
+        recovers_after=RecoveryPeriod.SHORT_REST,
+    )
+    actor = replace(TALIA, resources=(resource,))
+    result = actor.reset_turn_resources()
+    assert result.resources[0].current == 0
+
+
+def test_reset_turn_resources_does_not_reset_long_rest_resource() -> None:
+    resource = ResourceState(
+        resource="action_surge",
+        current=0,
+        max=1,
+        recovers_after=RecoveryPeriod.LONG_REST,
+    )
+    actor = replace(TALIA, resources=(resource,))
+    result = actor.reset_turn_resources()
+    assert result.resources[0].current == 0
+
+
+def test_reset_turn_resources_does_not_mutate_original() -> None:
+    resource = ResourceState(
+        resource="savage_attacker",
+        current=0,
+        max=1,
+        recovers_after=RecoveryPeriod.TURN,
+    )
+    actor = replace(TALIA, resources=(resource,))
+    _ = actor.reset_turn_resources()
+    assert actor.resources[0].current == 0
+
+
+def test_reset_turn_resources_preserves_other_actor_fields() -> None:
+    resource = ResourceState(
+        resource="savage_attacker",
+        current=0,
+        max=1,
+        recovers_after=RecoveryPeriod.TURN,
+    )
+    actor = replace(TALIA, resources=(resource,))
+    result = actor.reset_turn_resources()
+    assert result.actor_id == actor.actor_id
+    assert result.name == actor.name
+    assert result.hp_current == actor.hp_current

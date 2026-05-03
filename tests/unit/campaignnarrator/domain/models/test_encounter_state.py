@@ -143,30 +143,6 @@ def test_initiative_turn_is_immutable() -> None:
         turn.initiative_roll = 99  # type: ignore[misc]
 
 
-def test_encounter_state_combat_turns_preserves_initiative_order() -> None:
-    turns = (
-        InitiativeTurn(actor_id="pc:talia", initiative_roll=22),
-        InitiativeTurn(actor_id="npc:goblin-1", initiative_roll=14),
-    )
-    state = EncounterState(
-        encounter_id="test-combat",
-        phase=EncounterPhase.COMBAT,
-        setting="Forest",
-        combat_turns=turns,
-    )
-    assert state.combat_turns[0].actor_id == "pc:talia"
-    assert state.combat_turns[1].initiative_roll == 14  # noqa: PLR2004
-
-
-def test_encounter_state_combat_turns_defaults_to_empty() -> None:
-    state = EncounterState(
-        encounter_id="test",
-        phase=EncounterPhase.SOCIAL,
-        setting="Forest",
-    )
-    assert state.combat_turns == ()
-
-
 def test_game_state_holds_player_with_no_encounter() -> None:
     actor = ActorState(
         actor_id="pc:talia",
@@ -401,7 +377,6 @@ def test_encounter_state_round_trips_to_dict() -> None:
         player_actor_id="pc:talia",
         public_events=("Talia entered the tavern.",),
         hidden_facts={"alarm_level": "low"},
-        combat_turns=(InitiativeTurn(actor_id="pc:talia", initiative_roll=18),),
         npc_presences=(
             NpcPresence(
                 actor_id="npc:innkeeper",
@@ -420,10 +395,6 @@ def test_encounter_state_round_trips_to_dict() -> None:
     assert result.setting == state.setting
     assert result.public_events == state.public_events
     assert result.hidden_facts == dict(state.hidden_facts)
-    assert result.combat_turns[0].actor_id == "pc:talia"
-    assert (
-        result.combat_turns[0].initiative_roll == state.combat_turns[0].initiative_roll
-    )
     assert result.npc_presences[0].display_name == "Mira"
     assert result.scene_tone == "warm and welcoming"
     assert result.outcome is None

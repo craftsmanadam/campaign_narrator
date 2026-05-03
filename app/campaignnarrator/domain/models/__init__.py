@@ -14,7 +14,7 @@ from .actor_components import (
     WeaponState,
 )
 from .actor_registry import ActorRegistry, EncounterTransition
-from .actor_state import ActorState, ActorType, TurnResources
+from .actor_state import ActorState, ActorType, ResourceUnavailableError, TurnResources
 from .background_entry import BackgroundEntry
 from .campaign_state import CampaignEvent, CampaignState, Milestone, ModuleState
 from .class_entry import ClassEntry
@@ -22,9 +22,9 @@ from .combat import (
     CombatAssessment,
     CombatIntent,
     CombatOutcome,
-    CombatResult,
     CombatStatus,
 )
+from .combat_state import CombatState, TurnOrder
 from .encounter_state import (
     EncounterPhase,
     EncounterState,
@@ -65,7 +65,7 @@ __all__ = [
     "CombatAssessment",
     "CombatIntent",
     "CombatOutcome",
-    "CombatResult",
+    "CombatState",
     "CombatStatus",
     "DivergenceAssessment",
     "EncounterNpc",
@@ -95,6 +95,7 @@ __all__ = [
     "PlayerIntent",
     "RecoveryPeriod",
     "ResourceState",
+    "ResourceUnavailableError",
     "RollRequest",
     "RollResult",
     "RollVisibility",
@@ -103,6 +104,7 @@ __all__ = [
     "RulesAdjudicationRequest",
     "SceneOpeningResponse",
     "StateEffect",
+    "TurnOrder",
     "TurnResources",
     "WeaponState",
 ]

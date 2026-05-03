@@ -2,32 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from .actor_registry import ActorRegistry
-from .encounter_state import EncounterState
-
 
 class CombatStatus(StrEnum):
-    """Terminal outcome of a combat encounter from CombatOrchestrator's perspective."""
+    """Lifecycle status of a combat encounter tracked in CombatState."""
 
+    ACTIVE = "active"
     COMPLETE = "complete"
     PLAYER_DOWN_NO_ALLIES = "player_down_no_allies"
     SAVED_AND_QUIT = "saved_and_quit"
-
-
-@dataclass(frozen=True)
-class CombatResult:
-    """Returned by CombatOrchestrator to EncounterOrchestrator when combat ends."""
-
-    status: CombatStatus
-    final_state: EncounterState
-    death_saves_remaining: int | None  # None unless status is PLAYER_DOWN_NO_ALLIES
-    final_registry: ActorRegistry = field(default_factory=ActorRegistry)
 
 
 class CombatOutcome(BaseModel):

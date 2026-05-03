@@ -58,11 +58,6 @@ class EncounterState:
     player_actor_id: str = ""
     public_events: tuple[str, ...] = field(default_factory=tuple)
     hidden_facts: Mapping[str, object] = field(default_factory=dict)
-    # TODO: combat_turns is a smell — combat-specific state embedded in the general
-    # encounter object purely for serialization convenience. Should be extracted to a
-    # CombatState dataclass (with InitiativeTurn) that EncounterState holds as an
-    # optional field: combat_state: CombatState | None = None.
-    combat_turns: tuple[InitiativeTurn, ...] = field(default_factory=tuple)
     outcome: str | None = None
     scene_tone: str | None = None
     npc_presences: tuple[NpcPresence, ...] = field(default_factory=tuple)
@@ -148,7 +143,6 @@ class EncounterState:
             "player_actor_id": self.player_actor_id,
             "public_events": list(self.public_events),
             "hidden_facts": dict(self.hidden_facts),
-            "combat_turns": [t.to_dict() for t in self.combat_turns],
             "outcome": self.outcome,
             "scene_tone": self.scene_tone,
             "npc_presences": [p.to_dict() for p in self.npc_presences],
@@ -205,16 +199,6 @@ class EncounterState:
         hidden_facts = (
             dict(hidden_facts_raw) if isinstance(hidden_facts_raw, Mapping) else {}
         )
-        combat_turns_raw = data.get("combat_turns", ())
-        combat_turns: tuple[InitiativeTurn, ...] = (
-            tuple(
-                InitiativeTurn.from_dict(t)
-                for t in combat_turns_raw
-                if isinstance(t, Mapping)
-            )
-            if isinstance(combat_turns_raw, list | tuple)
-            else ()
-        )
         npc_presences_raw = data.get("npc_presences", ())
         npc_presences: tuple[NpcPresence, ...] = (
             tuple(
@@ -246,7 +230,6 @@ class EncounterState:
             player_actor_id=player_actor_id,
             public_events=public_events,
             hidden_facts=hidden_facts,
-            combat_turns=combat_turns,
             outcome=outcome if isinstance(outcome, str) else None,
             scene_tone=scene_tone if isinstance(scene_tone, str) else None,
             npc_presences=npc_presences,

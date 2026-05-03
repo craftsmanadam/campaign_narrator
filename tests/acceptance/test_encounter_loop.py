@@ -173,11 +173,12 @@ def persisted_encounter_has_initiative_order(
     runtime_data_root: Path,
     encounter_id: str,
 ) -> None:
-    """The on-disk encounter state should have a non-empty combat turns list."""
+    """The persisted game_state should have a non-empty combat turn order."""
 
-    state = _read_encounter(runtime_data_root, encounter_id)
-    order = state.get("combat_turns", [])
-    assert order, f"Expected non-empty combat_turns but got {order!r}"
+    blob = json.loads((runtime_data_root / "state" / "game_state.json").read_text())
+    combat_state = blob.get("combat_state") or {}
+    turns = combat_state.get("turn_order") or []
+    assert turns, f"Expected non-empty turn_order in combat_state but got {turns!r}"
 
 
 @then(parsers.parse("the player state has current hit points {hp:d}"))

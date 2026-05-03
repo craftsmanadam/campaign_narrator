@@ -2,15 +2,41 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 
 from .actor_registry import ActorRegistry
-from .actor_state import ActorState, ActorType
+from .actor_state import ActorState, ActorType, ResourceUnavailableError, TurnResources
 from .campaign_state import CampaignState, Milestone, ModuleState
-from .encounter_state import EncounterState
+from .combat import CombatStatus
+from .combat_state import CombatState
+from .encounter_state import EncounterPhase, EncounterState
 from .encounter_template import EncounterTemplate
 from .npc_presence import NpcPresenceStatus
+
+__all__ = [
+    "ActorState",
+    "ActorType",
+    "CampaignState",
+    "CombatState",
+    "EncounterPhase",
+    "EncounterReady",
+    "EncounterState",
+    "GameState",
+    "MilestoneAchieved",
+    "ResourceUnavailableError",
+    "TurnResources",
+]
+
+_log = logging.getLogger(__name__)
+
+# Death saving throw thresholds
+_DEATH_SAVE_NAT_ONE = 1
+_DEATH_SAVE_NAT_TWENTY = 20
+_DEATH_SAVE_MIN_SUCCESS_ROLL = 10
+_DEATH_SAVE_SUCCESS_THRESHOLD = 3
+_DEATH_SAVE_FAILURE_THRESHOLD = 3
 
 
 class _PlayerNotFoundError(RuntimeError):
@@ -53,6 +79,7 @@ class GameState:
     module: ModuleState | None = None
     encounter: EncounterState | None = None
     actor_registry: ActorRegistry = field(default_factory=ActorRegistry)
+    combat_state: CombatState | None = None
 
     def with_campaign(self, campaign: CampaignState) -> GameState:
         """Return a copy with campaign replaced."""
@@ -73,6 +100,274 @@ class GameState:
     def with_actor_registry(self, registry: ActorRegistry) -> GameState:
         """Return a copy with actor_registry replaced."""
         return replace(self, actor_registry=registry)
+
+    def with_combat_state(self, combat_state: CombatState | None) -> GameState:
+        """Return a copy with combat_state replaced."""
+        return replace(self, combat_state=combat_state)
+
+    def with_combat_status(self, status: CombatStatus) -> GameState:
+        """Return a copy with combat_state.status updated.
+
+        No-op if combat_state is None.
+        """
+        if self.combat_state is None:
+            return self
+        return replace(self, combat_state=replace(self.combat_state, status=status))
+
+    def advance_turn(self) -> GameState:
+        """Rotate the turn order and initialize fresh TurnResources for the next actor.
+
+        Atomically rotates TurnOrder AND seeds current_turn_resources from the incoming
+        actor's speed. No-op if combat_state is None.
+        """
+        if self.combat_state is None:
+            return self
+        new_turn_order = self.combat_state.turn_order.end_turn()
+        incoming_actor = self.actor_registry.actors.get(new_turn_order.current_actor_id)
+        fresh_resources = (
+            incoming_actor.get_turn_resources()
+            if incoming_actor is not None
+            else TurnResources()
+        )
+        return replace(
+            self,
+            combat_state=replace(
+                self.combat_state,
+                turn_order=new_turn_order,
+                current_turn_resources=fresh_resources,
+            ),
+        )
+
+    def spend_turn_resource(self, resource_type: str, amount: int = 1) -> GameState:
+        """Deduct a turn resource. Raises ResourceUnavailableError if exhausted.
+
+        No-op if combat_state is None.
+        Valid resource_type: "action", "bonus_action", "reaction", "movement".
+        """
+        if self.combat_state is None:
+            return self
+        new_resources = self.combat_state.current_turn_resources.deduct(
+            resource_type, amount
+        )
+        return replace(
+            self,
+            combat_state=replace(
+                self.combat_state, current_turn_resources=new_resources
+            ),
+        )
+
+    def adjust_hit_points(self, actor_id: str, delta: int) -> GameState:
+        """Apply a HP delta to actor_id, clamped to [0, hp_max].
+
+        Raises KeyError if actor_id is not in the registry — do not call for
+        unknown actors.
+        """
+        actor = self.actor_registry.actors[actor_id]
+        return replace(
+            self,
+            actor_registry=self.actor_registry.with_actor(actor.apply_change_hp(delta)),
+        )
+
+    def add_condition(self, actor_id: str, condition: str) -> GameState:
+        """Add condition to actor_id. No-op if already present."""
+        actor = self.actor_registry.actors[actor_id]
+        return replace(
+            self,
+            actor_registry=self.actor_registry.with_actor(
+                actor.with_condition(condition)
+            ),
+        )
+
+    def remove_condition(self, actor_id: str, condition: str) -> GameState:
+        """Remove condition from actor_id. No-op if not present."""
+        actor = self.actor_registry.actors[actor_id]
+        return replace(
+            self,
+            actor_registry=self.actor_registry.with_actor(
+                actor.without_condition(condition)
+            ),
+        )
+
+    def spend_inventory(self, actor_id: str, item_id: str) -> GameState:
+        """Consume one unit of item_id from actor_id's inventory.
+
+        Raises ValueError if item not found (delegates to
+        ActorState.apply_inventory_spent).
+
+        """
+        actor = self.actor_registry.actors[actor_id]
+        return replace(
+            self,
+            actor_registry=self.actor_registry.with_actor(
+                actor.apply_inventory_spent(item_id)
+            ),
+        )
+
+    def set_phase(self, phase: EncounterPhase) -> GameState:
+        """Return a copy with the encounter's phase updated.
+
+        No-op if encounter is None.
+        """
+        if self.encounter is None:
+            return self
+        return replace(self, encounter=self.encounter.with_phase(phase))
+
+    def set_encounter_outcome(self, outcome: str) -> GameState:
+        """Return a copy with the encounter's outcome set.
+
+        No-op if encounter is None.
+        """
+        if self.encounter is None:
+            return self
+        return replace(self, encounter=self.encounter.with_outcome(outcome))
+
+    def append_public_event(self, event: str) -> GameState:
+        """Append event to encounter.public_events. No-op if encounter is None."""
+        if self.encounter is None:
+            return self
+        return replace(self, encounter=self.encounter.append_public_event(event))
+
+    def set_npc_status(self, actor_id: str, status: NpcPresenceStatus) -> GameState:
+        """Update NPC presence status.
+
+        Logs and returns self if actor_id not in presences.
+        """
+        if self.encounter is None:
+            return self
+        if not any(p.actor_id == actor_id for p in self.encounter.npc_presences):
+            _log.warning(
+                "set_npc_status: no NpcPresence for %r — effect ignored", actor_id
+            )
+            return self
+        return replace(self, encounter=self.encounter.with_npc_status(actor_id, status))
+
+    def apply_zero_hp_conditions(self) -> GameState:
+        """Apply dead/unconscious to zero-HP actors in the current encounter.
+
+        NPCs and allies at 0 HP get "dead".
+        PCs at 0 HP (not already dead or unconscious) get "unconscious".
+        No-op if encounter is None.
+        """
+        if self.encounter is None:
+            return self
+        updated_actors = dict(self.actor_registry.actors)
+        changed = False
+        for actor_id in self.encounter.actor_ids:
+            actor = updated_actors.get(actor_id)
+            if actor is None or actor.hp_current > 0:
+                continue
+            if actor.actor_type in (ActorType.NPC, ActorType.ALLY):
+                if "dead" not in actor.conditions:
+                    updated_actors[actor_id] = actor.with_condition("dead")
+                    changed = True
+            elif (
+                actor.actor_type == ActorType.PC
+                and "dead" not in actor.conditions
+                and "unconscious" not in actor.conditions
+            ):
+                updated_actors[actor_id] = actor.with_condition("unconscious")
+                changed = True
+        if not changed:
+            return self
+        return replace(
+            self, actor_registry=self.actor_registry.with_actors(updated_actors)
+        )
+
+    def evaluate_combat_end_conditions(self) -> GameState:
+        """Check if the player-down-no-allies condition is met and update status.
+
+        If a PC is at 0 HP (not dead or stable) and there are no conscious allied
+        actors, sets combat_state.status to PLAYER_DOWN_NO_ALLIES and records
+        death_saves_remaining. Returns self unchanged if the condition is not met,
+        or if encounter/combat_state is None.
+        """
+        if self.encounter is None or self.combat_state is None:
+            return self
+        encounter_actors = [
+            self.actor_registry.actors[aid]
+            for aid in self.encounter.actor_ids
+            if aid in self.actor_registry.actors
+        ]
+        pc_actors = [a for a in encounter_actors if a.actor_type == ActorType.PC]
+        conscious_allies = [
+            a
+            for a in encounter_actors
+            if a.actor_type in (ActorType.PC, ActorType.ALLY)
+            and a.hp_current > 0
+            and "dead" not in a.conditions
+            and "unconscious" not in a.conditions
+        ]
+        downed_pcs = [
+            a
+            for a in pc_actors
+            if a.hp_current <= 0
+            and "dead" not in a.conditions
+            and "stable" not in a.conditions
+        ]
+        if downed_pcs and not conscious_allies:
+            downed = downed_pcs[0]
+            return replace(
+                self,
+                combat_state=replace(
+                    self.combat_state,
+                    status=CombatStatus.PLAYER_DOWN_NO_ALLIES,
+                    death_saves_remaining=3 - downed.death_save_failures,
+                ),
+            )
+        return self
+
+    def apply_death_save(self, actor_id: str, roll_result: int) -> GameState:
+        """Apply a death saving throw roll to actor_id and return updated GameState.
+
+        - Natural 1: +2 failures
+        - Natural 20: +2 successes
+        - 10-19: +1 success
+        - 2-9: +1 failure
+        - 3+ successes: actor gains "stable", loses "unconscious"
+        - 3+ failures: actor gains "dead", loses "unconscious"
+
+        Raises KeyError if actor_id not in registry.
+        """
+        actor = self.actor_registry.actors[actor_id]
+        successes = actor.death_save_successes
+        failures = actor.death_save_failures
+
+        if roll_result == _DEATH_SAVE_NAT_ONE:
+            failures += 2
+        elif roll_result == _DEATH_SAVE_NAT_TWENTY:
+            successes += 2
+        elif roll_result >= _DEATH_SAVE_MIN_SUCCESS_ROLL:
+            successes += 1
+        else:
+            failures += 1
+
+        if successes >= _DEATH_SAVE_SUCCESS_THRESHOLD:
+            updated = replace(
+                actor,
+                death_save_successes=_DEATH_SAVE_SUCCESS_THRESHOLD,
+                death_save_failures=failures,
+                conditions=(
+                    *(c for c in actor.conditions if c != "unconscious"),
+                    "stable",
+                ),
+            )
+        elif failures >= _DEATH_SAVE_FAILURE_THRESHOLD:
+            updated = replace(
+                actor,
+                death_save_successes=successes,
+                death_save_failures=_DEATH_SAVE_FAILURE_THRESHOLD,
+                conditions=(
+                    *(c for c in actor.conditions if c != "unconscious"),
+                    "dead",
+                ),
+            )
+        else:
+            updated = replace(
+                actor,
+                death_save_successes=successes,
+                death_save_failures=failures,
+            )
+        return replace(self, actor_registry=self.actor_registry.with_actor(updated))
 
     def get_player(self) -> ActorState:
         """Look up the player actor from the registry using campaign.player_actor_id."""
@@ -135,6 +430,9 @@ class GameState:
             if self.encounter is not None
             else None,
             "actor_registry": self.actor_registry.to_dict(),
+            "combat_state": (
+                self.combat_state.to_dict() if self.combat_state is not None else None
+            ),
         }
 
     @classmethod
@@ -153,11 +451,18 @@ class GameState:
         actor_registry = ActorRegistry.from_dict(
             raw.get("actor_registry") or {"actors": {}}
         )
+        combat_state_raw = raw.get("combat_state")
+        combat_state = (
+            CombatState.from_dict(combat_state_raw)
+            if isinstance(combat_state_raw, dict)
+            else None
+        )
         return cls(
             campaign=campaign,
             module=module,
             encounter=encounter,
             actor_registry=actor_registry,
+            combat_state=combat_state,
         )
 
 
