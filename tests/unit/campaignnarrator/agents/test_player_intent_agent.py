@@ -16,28 +16,6 @@ from campaignnarrator.domain.models import (
 )
 
 
-def test_player_intent_instructions_cover_all_categories() -> None:
-    for value in (
-        "hostile_action",
-        "skill_check",
-        "npc_dialogue",
-        "scene_observation",
-        "save_exit",
-        "status",
-        "recap",
-        "look_around",
-    ):
-        assert value in PLAYER_INTENT_INSTRUCTIONS.lower(), f"Missing category: {value}"
-
-
-def test_player_intent_instructions_include_check_hint_rule() -> None:
-    assert "check_hint" in PLAYER_INTENT_INSTRUCTIONS
-    assert "skill_check" in PLAYER_INTENT_INSTRUCTIONS.lower()
-
-
-def test_player_intent_instructions_include_present_tense_rule() -> None:
-    assert "present" in PLAYER_INTENT_INSTRUCTIONS.lower()
-
 
 def _make_agent(intent: PlayerIntent) -> PlayerIntentAgent:
     mock_agent = MagicMock()

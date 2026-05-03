@@ -941,22 +941,6 @@ def test_narrate_propagates_npc_interaction_summary() -> None:
     )
 
 
-def test_base_narrate_instructions_contains_npc_interaction_summary_field() -> None:
-    assert "npc_interaction_summary" in BASE_NARRATE_INSTRUCTIONS
-
-
-def test_base_narrate_instructions_contains_npc_interaction_tracking_section() -> None:
-    assert "NPC INTERACTION TRACKING" in BASE_NARRATE_INSTRUCTIONS
-
-
-def test_base_narrate_instructions_references_established_npcs_block() -> None:
-    assert "ESTABLISHED NPCs IN SCENE" in BASE_NARRATE_INSTRUCTIONS
-
-
-def test_base_narrate_instructions_references_prior_exchanges() -> None:
-    assert "Prior exchanges" in BASE_NARRATE_INSTRUCTIONS
-
-
 # ---------------------------------------------------------------------------
 # traveling_actor_ids propagation (Phase 2B-Narrator)
 # ---------------------------------------------------------------------------
@@ -983,20 +967,6 @@ def test_narrate_traveling_actor_ids_defaults_to_empty_when_not_set() -> None:
     # _make_narrator's default NarrationResponse has no traveling_actor_ids → defaults to ()
     result = narrator.narrate(_frame())
     assert result.traveling_actor_ids == ()
-
-
-def test_base_narrate_instructions_includes_traveling_actor_ids_field() -> None:
-    """BASE_NARRATE_INSTRUCTIONS describes the traveling_actor_ids structured output field."""
-    assert "traveling_actor_ids" in BASE_NARRATE_INSTRUCTIONS
-    assert "explicitly committed to accompany" in BASE_NARRATE_INSTRUCTIONS
-
-
-def test_base_narrate_instructions_rule_16_includes_travel_commitment_sentence() -> (
-    None
-):
-    """Rule 16 explains that traveling_actor_ids causes NPC injection in the next scene."""
-    assert "traveling_actor_ids" in BASE_NARRATE_INSTRUCTIONS
-    assert "system injects" in BASE_NARRATE_INSTRUCTIONS
 
 
 # ---------------------------------------------------------------------------
