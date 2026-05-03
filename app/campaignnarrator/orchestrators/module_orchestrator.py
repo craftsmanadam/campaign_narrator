@@ -183,11 +183,11 @@ class ModuleOrchestrator:
             self._advance_module(game_state=game_state, depth=depth)
             return
 
-        # EncounterReady: the planner has created and saved the encounter.
+        # EncounterReady: the planner persisted the full encounter + actor registry.
+        # Reload so the encounter orchestrator sees all actors — not the stale
+        # in-memory registry that predates the planner's persist().
         encounter_id = result.encounter_state.encounter_id
-        game_state = game_state.with_encounter(result.encounter_state).with_module(
-            result.module
-        )
+        game_state = self._game_state_repo.load()
         game_state = self._encounter_orchestrator.run(game_state)
         reloaded = game_state.encounter
         if (

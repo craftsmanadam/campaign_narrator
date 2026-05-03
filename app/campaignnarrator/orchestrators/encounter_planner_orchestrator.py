@@ -136,7 +136,7 @@ class EncounterPlannerOrchestrator:
         )
         module = replace(module, planned_encounters=new_plans, next_encounter_index=0)
         gs = self._game_state_repo.load()
-        self._game_state_repo.persist(replace(gs, module=module))
+        self._game_state_repo.persist(gs.with_module(module))
         return module
 
     # ── Step 2 & 3: divergence check + instantiation (Plans 3b and 3c) ───────
@@ -255,7 +255,7 @@ class EncounterPlannerOrchestrator:
         new_plans = tuple(completed) + tuple(recovery.updated_templates)
         module = replace(module, planned_encounters=new_plans)
         gs = self._game_state_repo.load()
-        self._game_state_repo.persist(replace(gs, module=module))
+        self._game_state_repo.persist(gs.with_module(module))
         return module
 
     def _instantiate(
@@ -344,11 +344,7 @@ class EncounterPlannerOrchestrator:
         # in one write, so run_encounter() sees both when it loads game state.
         gs = self._game_state_repo.load()
         self._game_state_repo.persist(
-            replace(
-                gs,
-                actor_registry=gs.actor_registry.with_actors(registry_updates),
-                encounter=encounter,
-            )
+            gs.with_actors(registry_updates).with_encounter(encounter)
         )
 
         return EncounterReady(encounter_state=encounter, module=module)

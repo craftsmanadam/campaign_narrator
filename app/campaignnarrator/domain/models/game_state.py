@@ -101,6 +101,10 @@ class GameState:
         """Return a copy with actor_registry replaced."""
         return replace(self, actor_registry=registry)
 
+    def with_actors(self, updates: dict[str, ActorState]) -> GameState:
+        """Return a copy with the given actors merged into the registry."""
+        return replace(self, actor_registry=self.actor_registry.with_actors(updates))
+
     def with_combat_state(self, combat_state: CombatState | None) -> GameState:
         """Return a copy with combat_state replaced."""
         return replace(self, combat_state=combat_state)
