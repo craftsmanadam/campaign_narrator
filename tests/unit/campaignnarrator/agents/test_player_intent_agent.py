@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from campaignnarrator.agents.player_intent_agent import PlayerIntentAgent
 from campaignnarrator.agents.prompts import PLAYER_INTENT_INSTRUCTIONS
@@ -231,3 +231,13 @@ def test_classify_omits_display_name_for_unknown_npcs() -> None:
     entry = payload["npc_presences"][0]
     assert "display_name" not in entry
     assert entry["description"] == "the hooded stranger"
+
+
+@patch("campaignnarrator.agents.player_intent_agent.Agent")
+@patch("campaignnarrator.agents.player_intent_agent.PydanticAIAdapter", MagicMock)
+def test_player_intent_agent_passes_intent_instructions_to_agent(
+    mock_agent_cls: MagicMock,
+) -> None:
+    PlayerIntentAgent(adapter=MagicMock())
+    _, kwargs = mock_agent_cls.call_args
+    assert kwargs["instructions"] == PLAYER_INTENT_INSTRUCTIONS

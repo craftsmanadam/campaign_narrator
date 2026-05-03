@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from campaignnarrator.agents.prompts import RULES_INSTRUCTIONS
@@ -337,5 +337,13 @@ def test_init_raises_type_error_when_adapter_is_not_pydantic_ai_adapter() -> Non
     """RulesAgent without _agent must reject non-PydanticAIAdapter adapters."""
     with pytest.raises(TypeError, match="adapter must be a PydanticAIAdapter"):
         RulesAgent(adapter=object())
+
+
+@patch("campaignnarrator.agents.rules_agent.Agent")
+@patch("campaignnarrator.agents.rules_agent.PydanticAIAdapter", MagicMock)
+def test_rules_agent_passes_rules_instructions_to_agent(mock_agent_cls: MagicMock) -> None:
+    RulesAgent(adapter=MagicMock())
+    _, kwargs = mock_agent_cls.call_args
+    assert kwargs["instructions"] == RULES_INSTRUCTIONS
 
 

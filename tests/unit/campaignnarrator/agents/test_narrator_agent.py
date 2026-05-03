@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from campaignnarrator.adapters.pydantic_ai_adapter import PydanticAIAdapter
@@ -12,7 +12,7 @@ from campaignnarrator.agents.narrator_agent import (
     NarratorAgent,
     _serialize_npc_presences,
 )
-from campaignnarrator.agents.prompts import BASE_NARRATE_INSTRUCTIONS
+from campaignnarrator.agents.prompts import BASE_NARRATE_INSTRUCTIONS, SCENE_OPENING_INSTRUCTIONS
 from campaignnarrator.domain.models import (
     CampaignState,
     CombatAssessment,
@@ -120,6 +120,30 @@ def test_narrator_personality_is_prepended_to_instructions() -> None:
     narrator, _, __ = _make_narrator()
     instructions = narrator._instructions(BASE_NARRATE_INSTRUCTIONS)
     assert instructions.startswith("Test narrator.")
+
+
+@patch("campaignnarrator.agents.narrator_agent.Agent")
+def test_narrator_agent_passes_base_narrate_instructions_to_narrate_agent(
+    mock_agent_cls: MagicMock,
+) -> None:
+    NarratorAgent(adapter=MagicMock())
+    instructions_by_type = {
+        c.kwargs["output_type"]: c.kwargs["instructions"]
+        for c in mock_agent_cls.call_args_list
+    }
+    assert instructions_by_type[NarrationResponse] == BASE_NARRATE_INSTRUCTIONS
+
+
+@patch("campaignnarrator.agents.narrator_agent.Agent")
+def test_narrator_agent_passes_scene_opening_instructions_to_scene_agent(
+    mock_agent_cls: MagicMock,
+) -> None:
+    NarratorAgent(adapter=MagicMock())
+    instructions_by_type = {
+        c.kwargs["output_type"]: c.kwargs["instructions"]
+        for c in mock_agent_cls.call_args_list
+    }
+    assert instructions_by_type[SceneOpeningResponse] == SCENE_OPENING_INSTRUCTIONS
 
 
 def test_narrate_scene_opening_calls_scene_agent() -> None:
