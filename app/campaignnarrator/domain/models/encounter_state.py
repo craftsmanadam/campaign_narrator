@@ -110,6 +110,10 @@ class EncounterState:
         """Return a copy with next_location_hint set."""
         return replace(self, next_location_hint=hint)
 
+    def with_scene_tone(self, tone: str | None) -> EncounterState:
+        """Return a copy with scene_tone set."""
+        return replace(self, scene_tone=tone)
+
     def update_npc_interaction(
         self, target_npc_id: str, summary: str
     ) -> EncounterState:

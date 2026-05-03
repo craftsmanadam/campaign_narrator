@@ -97,3 +97,7 @@ class CombatState:
             current_turn_resources=resources,
             death_saves_remaining=death_saves_remaining,
         )
+
+    def with_current_turn_resources(self, resources: TurnResources) -> CombatState:
+        """Return a copy with current_turn_resources replaced."""
+        return replace(self, current_turn_resources=resources)

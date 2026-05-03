@@ -148,6 +148,10 @@ class ActorState:
         """Return True if the condition is currently active."""
         return name in self.conditions
 
+    def with_references(self, refs: tuple[str, ...]) -> ActorState:
+        """Return a copy with references replaced."""
+        return replace(self, references=refs)
+
     def with_condition(self, name: str) -> ActorState:
         """Return a copy with condition added. No-op if already present."""
         if name in self.conditions:
