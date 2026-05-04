@@ -33,6 +33,7 @@ class RollRequest(BaseModel):
     @field_validator("expression")
     @classmethod
     def valid_dice(cls, v: str) -> str:
+        """Normalize and validate the dice expression; raise ValueError if invalid."""
         # Normalize whitespace around operators (Ollama sometimes adds spaces).
         normalized = re.sub(r"\s*([+-])\s*", r"\1", v.strip())
         # Auto-brace bare known token names (Ollama sometimes omits braces).
@@ -84,6 +85,7 @@ class RollRequest(BaseModel):
         )
 
     def __str__(self) -> str:
+        """Return a compact human-readable description of the roll request."""
         purpose_part = f", purpose={self.purpose!r}" if self.purpose else ""
         dc_part = (
             f", dc={self.difficulty_class}" if self.difficulty_class is not None else ""
@@ -116,6 +118,7 @@ class RollResult(BaseModel):
         return self.roll_total >= self.difficulty_class
 
     def __str__(self) -> str:
+        """Return a human-readable roll outcome, including DC pass/fail if present."""
         label = self.purpose or self.resolved_expression
         base = f"Roll: {label} = {self.roll_total}"
         if self.difficulty_class is not None:

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 
 def __getattr__(name: str) -> Any:
+    """Lazy-import heavy agent modules to avoid circular imports at startup."""
     if name == "NarratorAgent":
         return import_module("campaignnarrator.agents.narrator_agent").NarratorAgent
     if name == "RulesAgent":

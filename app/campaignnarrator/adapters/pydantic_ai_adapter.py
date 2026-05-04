@@ -41,6 +41,7 @@ class PydanticAIAdapter:
         timeout_seconds: float | None = None,
         llm_provider: str = "ollama",
     ) -> None:
+        """Wire the model backend based on llm_provider ('openai' or 'ollama')."""
         if llm_provider == "openai":
             provider: OllamaProvider | OpenAIProvider = OpenAIProvider(
                 api_key=api_key, base_url=base_url
@@ -105,6 +106,7 @@ class PydanticAIAdapter:
         return output_text
 
     def _model_settings(self) -> ModelSettings:
+        """Return ModelSettings with timeout when set, empty dict otherwise."""
         if self.timeout_seconds is None:
             return {}
         return {"timeout": self.timeout_seconds}

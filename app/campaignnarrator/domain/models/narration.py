@@ -48,6 +48,7 @@ class _MissingCompletionHint(ValueError):
     """Raised when encounter_complete is True but next_location_hint is absent."""
 
     def __init__(self) -> None:
+        """Raise with a fixed validation message."""
         super().__init__("next_location_hint required when encounter_complete=True")
 
 
@@ -55,6 +56,7 @@ class _MissingCompletionReason(ValueError):
     """Raised when encounter_complete is True but completion_reason is absent."""
 
     def __init__(self) -> None:
+        """Raise with a fixed validation message."""
         super().__init__("completion_reason required when encounter_complete=True")
 
 
@@ -73,6 +75,7 @@ class NarrationResponse(BaseModel):
 
     @model_validator(mode="after")
     def _validate_completion_fields(self) -> Self:
+        """Require completion_reason and next_location_hint when encounter is done."""
         if self.encounter_complete and not self.completion_reason:
             raise _MissingCompletionReason()
         if self.encounter_complete and not self.next_location_hint:

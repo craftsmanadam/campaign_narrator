@@ -22,6 +22,7 @@ class ActorRegistry:
     actors: Mapping[str, ActorState] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Freeze actors into a MappingProxyType to prevent external mutation."""
         object.__setattr__(self, "actors", MappingProxyType(dict(self.actors)))
 
     def with_actor(self, actor: ActorState) -> ActorRegistry:
@@ -70,6 +71,7 @@ class EncounterTransition:
     traveling_presences: tuple[NpcPresence, ...]
 
     def __post_init__(self) -> None:
+        """Freeze traveling_actors into a MappingProxyType."""
         object.__setattr__(
             self, "traveling_actors", MappingProxyType(dict(self.traveling_actors))
         )

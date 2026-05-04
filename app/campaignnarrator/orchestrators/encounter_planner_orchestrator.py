@@ -59,6 +59,7 @@ class EncounterPlannerOrchestrator:
         game_state: GameStateRepository,
         planner: EncounterPlannerAgent,
     ) -> None:
+        """Build the compendium reference and store collaborator references."""
         self._compendium = CompendiumRepository(data_root / "compendium")
         self._narrative = narrative
         self._game_state_repo = game_state

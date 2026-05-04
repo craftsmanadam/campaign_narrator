@@ -26,6 +26,7 @@ class FeatState:
     per_turn_uses: int | None  # None = passive; int = resource reset each turn
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {
             "name": self.name,
             "effect_summary": self.effect_summary,
@@ -35,6 +36,7 @@ class FeatState:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> FeatState:
+        """Restore from to_dict(). Missing keys fall back to empty strings."""
         name = data.get("name", "")
         effect_summary = data.get("effect_summary", "")
         reference = data.get("reference")
@@ -61,6 +63,7 @@ class WeaponState:
     properties: tuple[str, ...]  # e.g. ("versatile (1d10)", "finesse")
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {
             "name": self.name,
             "attack_bonus": self.attack_bonus,
@@ -72,6 +75,7 @@ class WeaponState:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> WeaponState:
+        """Restore from to_dict(). Missing keys fall back to safe defaults."""
         return cls(
             name=str(data.get("name", "")),
             attack_bonus=int(data.get("attack_bonus", 0)),
@@ -95,6 +99,7 @@ class ResourceState:
     reference: str | None = None  # e.g. "class_features.json#second-wind"
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {
             "resource": self.resource,
             "current": self.current,
@@ -105,6 +110,7 @@ class ResourceState:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> ResourceState:
+        """Restore from to_dict(). Defaults recovers_after to long_rest."""
         recovers_raw = data.get("recovers_after", "long_rest")
         return cls(
             resource=str(data.get("resource", "")),
@@ -132,6 +138,7 @@ class InventoryItem:
     reference: str | None = None  # None for narrative-only items
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {
             "item_id": self.item_id,
             "item": self.item,
@@ -146,6 +153,7 @@ class InventoryItem:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> InventoryItem:
+        """Restore from to_dict(). Optional fields default to None."""
         recovers_raw = data.get("recovers_after")
         charges_raw = data.get("charges")
         max_charges_raw = data.get("max_charges")

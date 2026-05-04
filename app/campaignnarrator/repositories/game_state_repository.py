@@ -16,6 +16,7 @@ class _PlayerMissingFromRegistryError(RuntimeError):
     """Player actor was not found in the registry during persist()."""
 
     def __init__(self, player_actor_id: str) -> None:
+        """Raise with the offending player_actor_id in the message."""
         super().__init__(
             f"Player actor {player_actor_id!r} missing from registry "
             "during persist(). Registry must contain the player at all times."
@@ -40,6 +41,7 @@ class GameStateRepository:
         state_path: Path,
         player_repo: PlayerRepository,
     ) -> None:
+        """Store the state blob path and PlayerRepository reference."""
         self._state_path = state_path
         self._player_repo = player_repo
         self._player_actor_id: str | None = None

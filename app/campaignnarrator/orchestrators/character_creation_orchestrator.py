@@ -44,6 +44,7 @@ class CharacterCreationOrchestrator:
         repositories: CharacterCreationRepositories,
         agents: CharacterCreationAgents,
     ) -> None:
+        """Store I/O, repositories, and agents used during character creation."""
         self._io = io
         self._repos = repositories
         self._agents = agents
@@ -82,6 +83,7 @@ class CharacterCreationOrchestrator:
         return actor
 
     def _choose_class(self) -> str:
+        """Present numbered class menu and return the chosen class name."""
         classes = list(self._repos.template.available_classes())
         menu = "\n".join(f"  {i + 1}. {name}" for i, name in enumerate(classes))
         self._io.display(f"\nPlease choose a class:\n{menu}\n")
@@ -96,10 +98,12 @@ class CharacterCreationOrchestrator:
             self._io.display("Invalid choice, please try again.\n")
 
     def _choose_name(self) -> str:
+        """Prompt for and return the character's name."""
         self._io.display("\nWhat are you called?\n")
         return self._io.prompt("> ").strip()
 
     def _choose_race(self) -> str:
+        """Prompt for and return the character's race/heritage."""
         self._io.display(
             "\nWhat is your heritage? (Human, Elf, Dwarf, Halfling, Half-Elf, "
             "Half-Orc, Gnome, Dragonborn, Tiefling)\n"
@@ -109,6 +113,7 @@ class CharacterCreationOrchestrator:
     def _choose_background(
         self, *, character_name: str, race: str, class_name: str
     ) -> str:
+        """Prompt for backstory; delegate to LLM draft loop if player asks for help."""
         self._io.display(
             "\nDescribe your past in your own words. "
             "You can paste multiple lines — press Enter twice when done. "
@@ -125,6 +130,7 @@ class CharacterCreationOrchestrator:
     def _draft_backstory_with_help(
         self, *, character_name: str, race: str, class_name: str
     ) -> str:
+        """Run up to three LLM draft/refine rounds and return the accepted backstory."""
         fragments = f"{character_name}, a {race} {class_name}"
         draft = ""
         for _ in range(3):
@@ -143,6 +149,7 @@ class CharacterCreationOrchestrator:
         return draft
 
     def _choose_description(self) -> str:
+        """Prompt for and return the character's physical appearance."""
         self._io.display(
             "\nDescribe your appearance. "
             "You can write as much as you like — press Enter twice when done.\n"

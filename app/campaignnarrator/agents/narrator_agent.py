@@ -103,6 +103,7 @@ class NarratorAgent:
         _assess_agent: object | None = None,
         _narrate_agent: object | None = None,
     ) -> None:
+        """Build narration agents; accept test doubles via the private parameters."""
         self._adapter = adapter
         self._personality = personality
         self._memory_repository = memory_repository

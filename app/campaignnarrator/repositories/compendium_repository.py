@@ -24,6 +24,7 @@ class CompendiumRepository:
     _MISSING_RULES_CONTEXT_MARKER: ClassVar[str] = "Missing rules context:"
 
     def __init__(self, root: Path | str) -> None:
+        """Resolve the compendium root and rules sub-root for path validation."""
         self._root = Path(root)
         self._resolved_rules_root = (self._root / "rules").resolve()
 
@@ -199,6 +200,7 @@ class CompendiumRepository:
         return tuple(contexts)
 
     def _load_rule_index_or_empty(self) -> dict[str, list[str]]:
+        """Return the rule index, or an empty dict if the index file is missing."""
         try:
             return self.load_rule_index()
         except FileNotFoundError:
@@ -209,6 +211,7 @@ class CompendiumRepository:
         topic: str,
         rule_index: dict[str, list[str]],
     ) -> str:
+        """Load and join all markdown files for topic; return missing marker if none."""
         relative_paths = rule_index.get(topic)
         if not relative_paths:
             return f"{self._MISSING_RULES_CONTEXT_MARKER} {topic}"
@@ -266,6 +269,7 @@ class CompendiumRepository:
         collection_key: str,
         id_key: str,
     ) -> dict[str, dict[str, Any]]:
+        """Build an id-keyed dict from all JSON files in directory."""
         entries: dict[str, dict[str, Any]] = {}
         if not directory.exists():
             return entries
@@ -285,6 +289,7 @@ class CompendiumRepository:
         payload: Any,
         collection_key: str,
     ) -> list[Any]:
+        """Extract the entry list from a payload dict or list."""
         if isinstance(payload, dict):
             collection = payload.get(collection_key)
             if isinstance(collection, list):
@@ -307,6 +312,7 @@ class CompendiumRepository:
         entry_id: str,
         entries: dict[str, dict[str, Any]],
     ) -> str:
+        """Return JSON for entry_id or a missing-context marker string."""
         entry = entries.get(entry_id)
         if entry is None:
             return f"{self._MISSING_CONTEXT_MARKER} {entry_id}"

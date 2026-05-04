@@ -15,6 +15,7 @@ class PlayerRepository:
     """Persist and load the player ActorState, with compendium reference enrichment."""
 
     def __init__(self, data_root: Path | str) -> None:
+        """Resolve player file path and instantiate a CompendiumRepository."""
         root = Path(data_root)
         self._player_path = root / "state" / "actors" / "player.json"
         self._compendium = CompendiumRepository(root / "compendium")
@@ -45,6 +46,7 @@ def _enrich_player_references(
     actor: ActorState,
     compendium: CompendiumRepository,
 ) -> ActorState:
+    """Populate actor.references with compendium text for each feat/resource/item."""
     texts: list[str] = []
     for feat in actor.feats:
         if feat.reference is not None:
@@ -62,6 +64,7 @@ def _enrich_player_references(
 
 
 def _strip_player_references(actor: ActorState) -> ActorState:
+    """Clear transient compendium references before persisting to disk."""
     return actor.with_references(())
 
 

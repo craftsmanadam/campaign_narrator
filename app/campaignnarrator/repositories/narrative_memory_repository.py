@@ -21,6 +21,7 @@ _logger = logging.getLogger(__name__)
 
 
 def _build_schema(dimensions: int) -> pa.Schema:
+    """Return the PyArrow schema for the narrative_memory LanceDB table."""
     return pa.schema(
         [
             pa.field("id", pa.string()),
@@ -65,6 +66,7 @@ class NarrativeMemoryRepository:
         embedding_adapter: EmbeddingAdapter | None = None,
         lancedb_path: Path | str | None = None,
     ) -> None:
+        """Initialize paths, optionally connect to LanceDB, restore exchange buffer."""
         self._root = Path(root)
         self._event_log_path = self._root / "event_log.jsonl"
         self._narrative_path = self._root / "narrative_memory.jsonl"
@@ -94,6 +96,7 @@ class NarrativeMemoryRepository:
         lancedb_path: Path,
         embedding_adapter: EmbeddingAdapter,
     ) -> object:
+        """Open or create the narrative_memory LanceDB table and run migration."""
         lancedb_path.mkdir(parents=True, exist_ok=True)
         db = lancedb.connect(str(lancedb_path))
         schema = _build_schema(embedding_adapter.dimensions)

@@ -102,6 +102,7 @@ class _LazyGameOrchestrator:
         make_campaign_creation: Callable[[ActorState], CampaignCreationOrchestrator],
         make_startup: Callable[[ActorState], StartupOrchestrator],
     ) -> None:
+        """Store repositories and factory callables for sub-orchestrator creation."""
         self._actor_repo = actor_repository
         self._game_state_repo = game_state_repository
         self._narrative_repo = narrative_repository
@@ -151,6 +152,7 @@ class ApplicationFactory:
     """
 
     def __init__(self, data_root: Path, stdin: TextIO, stdout: TextIO) -> None:
+        """Store data root and I/O streams for later use during graph construction."""
         self._data_root = data_root
         self._stdin = stdin
         self._stdout = stdout
@@ -162,6 +164,7 @@ class ApplicationFactory:
         return self._build_graph(repos, agents)
 
     def _build_repositories(self) -> _Repositories:
+        """Construct and wire all repository instances from settings."""
         settings = Settings()
         embedding_adapter = _build_embedding_adapter(settings)
         lancedb_path = (
@@ -191,6 +194,7 @@ class ApplicationFactory:
         )
 
     def _build_agents(self, repos: _Repositories) -> _Agents:
+        """Construct all agent instances from a shared PydanticAI adapter."""
         adapter = PydanticAIAdapter.from_env()
         return _Agents(
             rules=RulesAgent(
@@ -209,6 +213,7 @@ class ApplicationFactory:
         )
 
     def _build_graph(self, repos: _Repositories, agents: _Agents) -> ApplicationGraph:
+        """Wire orchestrators together and return the application graph."""
         io = TerminalIO(stdin=self._stdin, stdout=self._stdout)
 
         encounter_orchestrator = EncounterOrchestrator(
@@ -247,6 +252,7 @@ class ApplicationFactory:
         )
 
         def _make_campaign_creation(player: ActorState) -> CampaignCreationOrchestrator:
+            """Build a CampaignCreationOrchestrator bound to the given player."""
             return CampaignCreationOrchestrator(
                 io=io,
                 player=player,
@@ -262,6 +268,7 @@ class ApplicationFactory:
             )
 
         def _make_startup(player: ActorState) -> StartupOrchestrator:
+            """Build a StartupOrchestrator bound to the given player."""
             return StartupOrchestrator(
                 io=io,
                 player=player,

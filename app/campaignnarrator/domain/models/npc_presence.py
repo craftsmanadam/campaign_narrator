@@ -47,6 +47,7 @@ class NpcPresence:
         return replace(self, status=status)
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict. Omits empty interaction_summaries."""
         d: dict[str, object] = {
             "actor_id": self.actor_id,
             "display_name": self.display_name,
@@ -60,6 +61,7 @@ class NpcPresence:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> NpcPresence:
+        """Restore from to_dict(). Handles legacy visible: bool saves."""
         actor_id = data.get("actor_id")
         display_name = data.get("display_name")
         description = data.get("description")

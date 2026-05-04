@@ -36,6 +36,7 @@ class _PlayerNotFoundError(RuntimeError):
     """Player actor was not found in the registry."""
 
     def __init__(self, player_actor_id: str) -> None:
+        """Raise with the missing player_actor_id embedded in the message."""
         super().__init__(
             f"Player actor '{player_actor_id}' not found in registry. "
             "Registry may not have been bootstrapped before this call."
@@ -444,6 +445,7 @@ class MilestoneAchieved:
 
 
 def _campaign_to_json(c: CampaignState) -> dict[str, object]:
+    """Serialize a CampaignState to a JSON-compatible dict."""
     return {
         "campaign_id": c.campaign_id,
         "name": c.name,
@@ -464,6 +466,7 @@ def _campaign_to_json(c: CampaignState) -> dict[str, object]:
 
 
 def _milestone_to_json(m: Milestone) -> dict[str, object]:
+    """Serialize a Milestone to a JSON-compatible dict."""
     return {
         "milestone_id": m.milestone_id,
         "title": m.title,
@@ -473,6 +476,7 @@ def _milestone_to_json(m: Milestone) -> dict[str, object]:
 
 
 def _campaign_from_seed(seed: object) -> CampaignState:
+    """Deserialize a CampaignState from a raw dict seed."""
     if not isinstance(seed, Mapping):
         raise _InvalidCampaignSeedError()
     return CampaignState(
@@ -503,6 +507,7 @@ def _campaign_from_seed(seed: object) -> CampaignState:
 
 
 def _milestone_from_seed(seed: object) -> Milestone:
+    """Deserialize a Milestone from a raw dict seed."""
     if not isinstance(seed, Mapping):
         raise _InvalidMilestoneSeedError()
     return Milestone(
@@ -517,6 +522,7 @@ def _milestone_from_seed(seed: object) -> Milestone:
 
 
 def _module_to_json(m: ModuleState) -> dict[str, object]:
+    """Serialize a ModuleState to a JSON-compatible dict."""
     return {
         "module_id": m.module_id,
         "campaign_id": m.campaign_id,
@@ -532,6 +538,7 @@ def _module_to_json(m: ModuleState) -> dict[str, object]:
 
 
 def _module_from_seed(seed: object) -> ModuleState:
+    """Deserialize a ModuleState from a raw dict seed."""
     if not isinstance(seed, Mapping):
         raise _InvalidModuleSeedError()
     raw = dict(seed)

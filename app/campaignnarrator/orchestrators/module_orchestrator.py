@@ -65,6 +65,7 @@ class ModuleOrchestrator:
         agents: ModuleOrchestratorAgents,
         encounter_orchestrator: EncounterOrchestrator,
     ) -> None:
+        """Store collaborators used during the encounter loop."""
         self._io = io
         self._repos = repositories
         self._agents = agents

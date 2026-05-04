@@ -70,6 +70,7 @@ class EncounterOrchestrator:
         _player_intent_agent: object | None = None,
         _combat_intent_agent: object | None = None,
     ) -> None:
+        """Store collaborators; build PlayerIntentAgent from adapter or test double."""
         self._rules_agent = agents.rules
         self._narrator_agent = agents.narrator
         self._io = io
@@ -219,6 +220,7 @@ class EncounterOrchestrator:
         game_state: GameState,
         player_input: PlayerInput,
     ) -> PlayerIntent:
+        """Classify player_input into a typed PlayerIntent via the intent agent."""
         result = self._player_intent_agent.classify(
             player_input.raw_text,
             phase=game_state.encounter.phase,
@@ -362,6 +364,7 @@ class EncounterOrchestrator:
         intent: PlayerIntent,
         compendium_context: tuple[str, ...],
     ) -> tuple[GameState, Narration]:
+        """Adjudicate a skill-check action and narrate the outcome."""
         state = game_state.encounter
         player = game_state.get_player()
         request = RulesAdjudicationRequest(
@@ -474,6 +477,7 @@ class EncounterOrchestrator:
         adjudication: RulesAdjudication,
         player: ActorState,
     ) -> tuple[GameState, tuple[str, ...], str | None]:
+        """Roll public dice, apply state effects; return (state, events, outcome)."""
         resolved_action_type: str | None = None
         roll_events: list[str] = []
 
@@ -519,6 +523,7 @@ class EncounterOrchestrator:
         frame: NarrationFrame,
         game_state: GameState,
     ) -> tuple[Narration, GameState]:
+        """Call the NarratorAgent and apply location/completion side-effects."""
         state = game_state.encounter
         narration = self._narrator_agent.narrate(frame)
         self._memory_repository.store_narrative(
@@ -583,10 +588,12 @@ class EncounterOrchestrator:
         return True
 
     def _append_event(self, event: dict[str, object]) -> None:
+        """Append a structured event to the narrative event log."""
         self._memory_repository.append_event(event)
 
 
 def _status_frame(game_state: GameState) -> NarrationFrame:
+    """Build a NarrationFrame scoped to HP/inventory/visible-actor status."""
     return _frame(
         game_state,
         "status_response",
@@ -596,6 +603,7 @@ def _status_frame(game_state: GameState) -> NarrationFrame:
 
 
 def _recap_frame(game_state: GameState) -> NarrationFrame:
+    """Build a NarrationFrame covering all public events and current outcome."""
     enc = game_state.encounter
     outcome = () if enc.outcome is None else (f"Outcome: {enc.outcome}",)
     return _frame(
@@ -607,6 +615,7 @@ def _recap_frame(game_state: GameState) -> NarrationFrame:
 
 
 def _look_frame(game_state: GameState) -> NarrationFrame:
+    """Build a NarrationFrame for a look-around observation of the current location."""
     enc = game_state.encounter
     return _frame(
         game_state,
@@ -624,6 +633,7 @@ def _frame(
     allowed_disclosures: tuple[str, ...] = ("public encounter state",),
     compendium_context: tuple[str, ...] = (),
 ) -> NarrationFrame:
+    """Assemble a NarrationFrame from the current encounter and actor state."""
     return NarrationFrame(
         purpose=purpose,
         phase=game_state.encounter.phase,
@@ -643,6 +653,7 @@ def _frame(
 
 
 def _non_empty_tuple(values: tuple[str | None, ...]) -> tuple[str, ...]:
+    """Filter None and empty-string values from a mixed tuple."""
     return tuple(value for value in values if value)
 
 

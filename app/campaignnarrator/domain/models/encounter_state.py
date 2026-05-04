@@ -32,10 +32,12 @@ class InitiativeTurn:
     initiative_roll: int
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {"actor_id": self.actor_id, "initiative_roll": self.initiative_roll}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> InitiativeTurn:
+        """Restore from to_dict(). Raises TypeError on missing/invalid fields."""
         actor_id = data.get("actor_id")
         roll = data.get("initiative_roll")
         if not isinstance(actor_id, str):
@@ -138,6 +140,7 @@ class EncounterState:
         return self
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {
             "encounter_id": self.encounter_id,
             "phase": self.phase.value,
@@ -156,6 +159,7 @@ class EncounterState:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> EncounterState:
+        """Restore from to_dict(). Raises TypeError on missing required fields."""
         encounter_id = data.get("encounter_id")
         if not isinstance(encounter_id, str):
             msg = "EncounterState: encounter_id must be str"

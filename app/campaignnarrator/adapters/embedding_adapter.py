@@ -16,6 +16,7 @@ class _EmptyEmbeddingError(EmbeddingError):
     """Raised when an embedding provider returns an empty vector."""
 
     def __init__(self) -> None:
+        """Raise with a fixed 'empty embedding' message."""
         super().__init__("empty embedding")
 
 
@@ -23,6 +24,7 @@ class _HttpStatusEmbeddingError(EmbeddingError):
     """Raised when Ollama returns an HTTP error status."""
 
     def __init__(self, exc: Exception) -> None:
+        """Raise wrapping the original HTTP exception in the message."""
         super().__init__(f"Ollama HTTP error: {exc}")
 
 
@@ -64,6 +66,7 @@ class OllamaEmbeddingAdapter:
     dimensions: int = 768
 
     def __init__(self, base_url: str, model: str) -> None:
+        """Store Ollama base URL (trailing slash stripped) and model name."""
         self._base_url = base_url.rstrip("/")
         self._model = model
 

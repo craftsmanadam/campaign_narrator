@@ -9,10 +9,12 @@ class TerminalIO:
     """PlayerIO implementation backed by stdin/stdout."""
 
     def __init__(self, stdin: TextIO, stdout: TextIO) -> None:
+        """Store references to the I/O streams used for all terminal interaction."""
         self._stdin = stdin
         self._stdout = stdout
 
     def prompt(self, text: str) -> str:
+        """Display text and return the first non-empty line; treats EOF as 'exit'."""
         self._stdout.write(text)
         self._stdout.flush()
         while True:
@@ -24,11 +26,13 @@ class TerminalIO:
                 return line
 
     def prompt_optional(self, text: str) -> str:
+        """Display text and return one line verbatim, including empty lines."""
         self._stdout.write(text)
         self._stdout.flush()
         return self._stdin.readline().rstrip("\r\n")
 
     def prompt_multiline(self, text: str) -> str:
+        """Display text then collect lines until a blank line or EOF."""
         self._stdout.write(text)
         self._stdout.flush()
         lines: list[str] = []
@@ -43,5 +47,6 @@ class TerminalIO:
         return "\n".join(lines)
 
     def display(self, text: str) -> None:
+        """Write text followed by a newline to stdout."""
         self._stdout.write(text + "\n")
         self._stdout.flush()

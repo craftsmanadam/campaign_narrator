@@ -2,7 +2,7 @@
 
 This document records the current architectural understanding for
 CampaignNarrator. It is a living design reference, not a replacement for
-time-scoped feature specs or the engineering rules in `AGENTS.md`.
+time-scoped feature specs or the project engineering rules.
 
 ## Purpose
 
@@ -18,37 +18,23 @@ mechanical authority, state changes, and test boundaries explicit.
 
 Inside the deployment unit:
 
-- CLI or future UI boundary
+- CLI entry point (`cli.py`)
 - Orchestrators
-- Rules Agent
-- Narrative Director
-- Narrator Agent
-- repositories
-- tool layer
-- runtime state
-- real OpenAI adapter
-- real dice library usage
+- Agents
+- Repositories
+- Tool layer
+- Adapters (PydanticAI and embedding)
+- Domain models and all game state
 
 Outside the deployment unit:
 
 - OpenAI HTTP API
-- future network dependencies
+- Ollama HTTP API (embeddings and optionally LLM)
 
-Acceptance tests may fake external network dependencies, such as OpenAI, but
+Acceptance tests may fake external network dependencies (OpenAI, Ollama) but
 must not mock production code inside the deployment unit.
 
-## Core Responsibilities
-
-### CLI
-
-The CLI is the temporary user interface. It owns terminal interaction through
-`STDIN` and `STDOUT`.
-
-The CLI should not contain game logic, scripted player behavior, rules
-adjudication, or narration decisions. It wires the application graph and
-delegates entirely to the Application Orchestrator.
-
-### Orchestration Hierarchy
+## Orchestration Hierarchy
 
 Orchestrators are the application's control authorities. Each owns a specific
 lifecycle boundary and delegates to subordinate orchestrators or agents for
@@ -57,260 +43,261 @@ belong to another layer.
 
 Orchestrators live under `app/campaignnarrator/orchestrators/`.
 
-#### Application Orchestrator
+### Game Orchestrator (`_LazyGameOrchestrator` in `application_factory.py`)
 
-The Application Orchestrator is the top-level router. It reads persisted state
-on startup and routes to the appropriate sub-orchestrator based on what the
-current game state requires:
+The top-level router. Reads persisted state on startup and delegates to the
+appropriate sub-orchestrator based on what the game state contains:
 
-- No campaign exists → Campaign Orchestrator
-- Campaign exists but no character → Character Creation Orchestrator
-- Campaign and character exist → Session Orchestrator
+- No player file → `CharacterCreationOrchestrator`, then `CampaignCreationOrchestrator`
+- Player exists, no campaign → `CampaignCreationOrchestrator`
+- Player and campaign exist → `StartupOrchestrator`
 
-The Application Orchestrator also handles in-progress state detection. If an
-encounter was saved mid-session, the Session Orchestrator is responsible for
-detecting and resuming it. The Application Orchestrator delegates that decision
-rather than routing directly to the Encounter Orchestrator.
+Also exposes `save_state()`, which flushes in-memory session state to disk.
+Called on `SIGTERM` and `KeyboardInterrupt`.
 
-#### Campaign Orchestrator
+### Startup Orchestrator (`startup_orchestrator.py`)
 
-The Campaign Orchestrator owns campaign creation. It turns player preferences
-such as tone, genre, setting inspiration, and desired play style into
-structured campaign canon, including campaign premise, constraints, DM
-personality, major conflicts, starting locations, important NPC seeds, and
-content boundaries.
+Owns the returning-player flow. Reads the persisted campaign and asks the
+player what they want to do. Supports loading an existing campaign, starting a
+new one (with confirmation to destroy the old one), or abandoning a partial
+state. Delegates active play to `ModuleOrchestrator`.
 
-#### Character Creation Orchestrator
+### Campaign Creation Orchestrator (`campaign_creation_orchestrator.py`)
 
-The Character Creation Orchestrator owns the character build flow. It guides
-the player through species, origin or background, class, ability scores,
-proficiencies, equipment, spells, and derived statistics. It relies heavily on
-the rules and compendium repositories and produces a validated player character
-state object.
+Owns campaign creation. Collects the player's story brief, calls
+`CampaignGeneratorAgent` to produce structured campaign canon (name, setting,
+narrator personality, BBEG, hidden goal, milestones), then calls
+`ModuleGeneratorAgent` to produce the first module. Persists both to
+`GameStateRepository` and delegates the encounter loop to `ModuleOrchestrator`.
 
-#### Session Orchestrator
+### Character Creation Orchestrator (`character_creation_orchestrator.py`)
 
-The Session Orchestrator owns a single play window. A session is a real-world
-calendar event bounded by player availability, not by game state. The Session
-Orchestrator does not own the encounter lifecycle.
+Owns the character build flow. Guides the player through class selection, name,
+race, background, and appearance. Uses `BackstoryAgent` if the player requests
+help writing a backstory. Persists the player `ActorState` via
+`PlayerRepository` and writes the backstory to `NarrativeMemoryRepository`.
 
-It loads campaign canon, mutable runtime state, and derived memory at the
-start of a play window. During the session it routes player input to the
-correct workflow:
+### Module Orchestrator (`module_orchestrator.py`)
 
-- If an encounter is in progress (saved state exists) → Encounter Orchestrator (resume)
-- If no active encounter → await player intent
-  - Player initiates an encounter → Encounter Orchestrator (new)
-  - Player explores, rests, or takes other narrative actions → future flows
-  - Player saves and quits → session ends; encounter state is already persisted
+Owns module progression. Runs a loop over encounters within one story module.
+After each encounter completes it archives the result, checks whether the
+module's guiding milestone is achieved, and either advances to the next
+encounter via `EncounterPlannerOrchestrator` or generates a new module via
+`ModuleGeneratorAgent`. Summarizes completed encounters into narrative memory
+via `NarratorAgent.summarize_encounter()`.
 
-When an encounter completes, control returns to the Session Orchestrator, which
-then waits for the next player intent. Multiple encounters may start and
-complete within a single session. A session may also end mid-encounter without
-that encounter ending.
+### Encounter Planner Orchestrator (`encounter_planner_orchestrator.py`)
 
-The Session Orchestrator records session-level events such as session started
-and session ended, including a summary of what occurred during the play window.
+Prepares a ready-to-run `EncounterState` before a scene opens. Called by
+`ModuleOrchestrator` only when no active encounter exists. Responsibilities:
 
-#### Encounter Orchestrator
+1. **Planning** — if the module has no planned encounters, calls
+   `EncounterPlannerAgent.plan_encounters()` and persists the result.
+2. **Divergence check** — calls `EncounterPlannerAgent.assess_divergence()` to
+   verify the next template still fits the narrative. If not, calls
+   `EncounterPlannerAgent.recover_encounters()` to bridge, replace, or replan.
+3. **Instantiation** — resolves NPC templates against the compendium via
+   `build_npc_actor()` and `scale_encounter_npcs()`, builds the `EncounterState`
+   and actor registry entries, and stages them in `GameStateRepository`.
 
-The Encounter Orchestrator owns tactical encounter resolution. It is the
-current implemented steel thread in `app/campaignnarrator/orchestrators/encounter_orchestrator.py`.
+Retries up to three times on transient LLM failure with exponential back-off.
 
-It tracks encounter phase, routes player input, requests rules adjudication,
-executes dice and state effects, constructs narration frames, and determines
-when an encounter completes. Encounter state persists independently of session
-boundaries, so an encounter may begin in one session and complete in another.
+### Encounter Orchestrator (`encounter_orchestrator.py`)
 
-### Narrative Director
+Owns tactical encounter resolution. Manages the phase state machine
+(`SCENE_OPENING → SOCIAL → RULES_RESOLUTION → COMBAT → ENCOUNTER_COMPLETE`).
+On each turn it:
 
-The Narrative Director owns story-level authority. It is distinct from the
-Narrator Agent, which only converts resolved facts into prose.
+1. Opens the scene via `NarratorAgent` on first entry.
+2. Reads player input and classifies intent via `PlayerIntentAgent`.
+3. Routes to `RulesAgent` for adjudication when mechanics apply.
+4. Applies structured state effects to `GameState`.
+5. Delegates to `CombatOrchestrator` when the encounter enters combat phase.
+6. Narrates results via `NarratorAgent`.
+7. Persists `GameState` to `GameStateRepository` after each action.
 
-The Narrative Director holds narrative intent for the current session and
-encounter, shapes pacing and dramatic tension, and may flag a narrative
-preferred outcome to the Session Orchestrator when story considerations should
-take precedence over mechanical outcomes. This includes the Rule of Cool: the
-right to allow a dramatically appropriate action to succeed even when the
-mechanical result would not support it.
+Handles `save_exit` intent by persisting and returning, allowing the session
+to resume later from the same encounter state.
 
-The Session Orchestrator consults the Narrative Director before routing to the
-Rules Agent when narrative intent may affect the outcome. The Narrative
-Director does not call the Rules Agent directly. Narrative override authority
-flows through the Session Orchestrator, which validates and applies it.
+### Combat Orchestrator (`combat_orchestrator.py`)
 
-The Narrative Director's personality, tone, Rule of Cool threshold, and
-storytelling preferences are configured from campaign canon authored during
-campaign creation. The details of how DM personality is represented, loaded,
-and applied are deferred until the Campaign Orchestrator is implemented.
+Owns the combat turn loop. Called by `EncounterOrchestrator` when phase is
+`COMBAT`. Manages initiative order via `CombatState.turn_order`, processes
+player and NPC turns, rolls and applies damage, tracks death saves, and
+determines victory/defeat/retreat. Delegates rules questions to `RulesAgent`
+and narration to `NarratorAgent`. Persists state after each turn.
 
-### Rules Agent
+## Agents
 
-The Rules Agent owns mechanical interpretation.
+Agents live under `app/campaignnarrator/agents/`. Each wraps one or more
+`pydantic_ai.Agent` instances configured via `PydanticAIAdapter`. Agents must
+not mutate state; they return structured data that the calling orchestrator
+validates and applies.
 
-It receives structured adjudication requests from the Encounter Orchestrator
-and returns structured mechanical results. It should know or retrieve relevant
-rules and compendium data, but it must not mutate state directly.
+| Agent | File | Responsibility |
+|---|---|---|
+| `RulesAgent` | `rules_agent.py` | Adjudicate encounter actions into structured rules output with roll requests and state effects |
+| `NarratorAgent` | `narrator_agent.py` | Convert public encounter frames into short player-facing prose; manage scene openings, NPC dialogue, and combat assessments |
+| `PlayerIntentAgent` | `player_intent_agent.py` | Classify player input into a typed `PlayerIntent` (category, check hint, target NPC) |
+| `EncounterPlannerAgent` | `encounter_planner_agent.py` | Plan, assess divergence, and recover encounter sequences for a module |
+| `CampaignGeneratorAgent` | `campaign_generator_agent.py` | Generate a campaign skeleton from the player's brief |
+| `ModuleGeneratorAgent` | `module_generator_agent.py` | Generate the next story module guided by milestones |
+| `BackstoryAgent` | `backstory_agent.py` | Draft a character backstory from player-provided fragments |
+| `StartupInterpreterAgent` | `startup_interpreter_agent.py` | Classify a returning player's free-form startup response into a structured intent |
+| `CharacterInterpreterAgent` | `character_interpreter_agent.py` | Classify a player's class choice and extract name/race from free-form text |
 
-### Narrator Agent
+## State Model
 
-The Narrator Agent owns player-facing expression. It is a thin, reactive
-component that converts resolved facts and narration frames into descriptive
-prose and dialogue.
+All structured runtime state is owned by `GameState`, a frozen immutable
+dataclass. State mutations produce a new `GameState` via `with_*` methods.
+`replace()` from `dataclasses` is used only inside domain model methods, never
+by external callers.
 
-It receives narration frames from the Encounter Orchestrator. It may write
-descriptions and dialogue, but it must not invent mechanics, mutate state,
-make story-direction decisions, or directly call the Rules Agent or Narrative
-Director.
+```
+GameState
+├── campaign: CampaignState | None
+│   ├── name, setting, narrator_personality, hidden_goal, bbeg_name/description
+│   ├── milestones: tuple[Milestone, ...]
+│   ├── current_milestone_index, starting_level, target_level
+│   ├── player_brief, player_actor_id, current_module_id
+│   └── (Milestone: milestone_id, title, description)
+├── module: ModuleState | None
+│   ├── module_id, campaign_id, title, summary, guiding_milestone_id
+│   ├── planned_encounters: tuple[EncounterTemplate, ...]
+│   ├── next_encounter_index
+│   └── completed_encounter_summaries: tuple[str, ...]
+├── encounter: EncounterState | None
+│   ├── encounter_id, phase: EncounterPhase, setting, scene_tone
+│   ├── actor_ids, player_actor_id
+│   ├── npc_presences: tuple[NpcPresence, ...]
+│   ├── public_events: tuple[str, ...]
+│   ├── hidden_facts: tuple[str, ...]
+│   ├── outcome: str | None
+│   └── current_location: str | None
+├── actor_registry: ActorRegistry
+│   └── actors: dict[str, ActorState]
+│       └── (ActorState: full D&D character sheet — HP, AC, ability scores,
+│            conditions, death saves, resources, inventory, weapons, feats)
+└── combat_state: CombatState | None
+    ├── turn_order: TurnOrder
+    ├── status: CombatStatus
+    ├── current_turn_resources: TurnResources
+    └── death_saves_remaining: int | None
+```
 
-### Repositories
+`NpcPresence` tracks each NPC's identity, display name, name-known status, and
+interaction status (`PRESENT`, `INTERACTED`, `AVAILABLE`, `CONCEALED`,
+`MENTIONED`, `DEPARTED`). Persistent NPCs travel between encounters via
+`EncounterTransition`.
+
+## Repositories
 
 Repositories hide storage layout and provide domain-oriented reads and writes.
-Files on disk are acceptable for the current stage. Each repository owns one
-data category:
+All storage is currently file-backed. Each repository owns one data category.
 
-- Rules repository: curated SRD rule source and generated indexes
-- Compendium repository: structured content for spells, monsters, equipment, and character options
-- State repository: mutable runtime truth including encounter, player character, world state, and campaign state
-- Memory repository: derived artifacts including the append-only event log and session summaries
-- Narrative repository: canonical campaign and narrative data
+| Repository | File | Stores |
+|---|---|---|
+| `GameStateRepository` | `game_state_repository.py` | Single JSON blob for campaign, module, encounter, and NPC actor registry. Player state is kept separate via `PlayerRepository`. |
+| `PlayerRepository` | `player_repository.py` | Player `ActorState` as JSON. Enriches with compendium reference text on load; strips transient fields on save. |
+| `NarrativeMemoryRepository` | `narrative_memory_repository.py` | Narrative events in LanceDB (vector store) + JSONL event log. Supports semantic retrieval, exchange buffer, combat logs, and campaign-scoped clearing. |
+| `CompendiumRepository` | `compendium_repository.py` | Read-only D&D 5e content: monsters, equipment, magic items, rules. Provides topic-scoped context retrieval for agents. |
+| `CharacterTemplateRepository` | `character_template_repository.py` | Pre-built Level 1 class templates as `ActorState` seeds for character creation. |
 
-### Tool Layer
+`GameStateRepository` is the single persistence facade for structured game
+state. It coordinates with `PlayerRepository` on `persist()` — the player actor
+is split out and saved separately, preventing player state from being lost if
+campaign state is destroyed.
 
-Tools perform deterministic operations such as dice rolling and state update
-application. Tools should be invoked by the Encounter Orchestrator or by
-narrowly scoped application services, not directly by agents.
+## Adapters
+
+Adapters isolate provider-specific SDK logic. All agent construction goes
+through `PydanticAIAdapter`.
+
+| Adapter | File | Wraps |
+|---|---|---|
+| `PydanticAIAdapter` | `adapters/pydantic_ai_adapter.py` | `pydantic_ai.Agent` with OpenAI or Ollama backend. Exposes `generate_text()` for plain-text output and `model` property for agent construction. Configured from environment via `from_env()`. |
+| `OllamaEmbeddingAdapter` | `adapters/embedding_adapter.py` | Ollama REST API (`nomic-embed-text`, 768-dim). Used by `NarrativeMemoryRepository` for vector storage. |
+| `StubEmbeddingAdapter` | `adapters/embedding_adapter.py` | Deterministic pseudo-random 768-dim embeddings. Used in tests to avoid Ollama dependency. |
+
+## Tool Layer
+
+Tools perform deterministic operations. They are invoked by orchestrators, not
+by agents.
+
+| Tool | File | Function |
+|---|---|---|
+| `roll` | `tools/dice.py` | Roll a dice expression string using the `multi_dice` library |
+| `build_npc_actor` | `tools/npc_generator.py` | Build an `ActorState` from an `EncounterNpc` template, loading compendium stats when available |
+| `scale_encounter_npcs` | `tools/cr_scaling.py` | Trim NPC list to fit a CR budget for the player's level |
+| `load_by_name` | `tools/monster_loader.py` | Load a monster `ActorState` from the SRD compendium by name |
+| `load_by_path` | `tools/monster_loader.py` | Parse a SRD monster markdown file into an `ActorState` |
+| `build_index` / `write_index` | `tools/monster_index_parser.py` | Build and write the monster index used for name-based lookup |
 
 ## Authority Boundaries
 
-- The Application Orchestrator owns top-level routing and startup.
-- The Session Orchestrator owns the play window lifecycle and narrative flow.
-- The Encounter Orchestrator owns encounter phase and tactical resolution.
-- The Narrative Director owns story-level intent and may veto mechanical outcomes through the Session Orchestrator.
-- The Rules Agent owns mechanical interpretation within the bounds set by the orchestrator.
-- The Narrator Agent owns player-facing prose only.
-- Repositories own storage access.
+- The Game Orchestrator owns top-level routing and startup detection.
+- The Startup Orchestrator owns the returning-player decision flow.
+- The Module Orchestrator owns module progression and inter-encounter lifecycle.
+- The Encounter Planner Orchestrator owns encounter preparation and divergence recovery.
+- The Encounter Orchestrator owns encounter phase and action routing.
+- The Combat Orchestrator owns the combat turn loop and death save tracking.
+- The Rules Agent owns mechanical interpretation and returns structured results only.
+- The Narrator Agent owns player-facing prose only; it must not mutate state or invent mechanics.
+- The PlayerIntent Agent owns input classification only.
+- Repositories own storage access; no orchestrator reads files directly.
 - Tools own deterministic mechanical execution.
-- OpenAI may recommend structured decisions, but production code validates and applies them.
+- LLM agents may recommend structured decisions; production code validates and applies them.
 
-These boundaries are intended to prevent prompt text or generated prose from
-becoming the source of truth for game state, and to prevent any single
-component from accumulating control it does not own.
-
-## Lifecycle Boundaries
-
-Sessions and encounters have independent lifecycles and must not be conflated.
-
-A **session** is a real-world play window bounded by player availability. The
-system has no authority over when a session starts or ends. A player may end a
-session at any point, including mid-encounter. The Session Orchestrator tracks
-what occurred during a play window for recap and memory purposes.
-
-An **encounter** is a game-world state machine with its own phase transitions,
-rules calls, dice handling, and completion logic. Encounter state persists
-independently. An encounter may start and complete within a single session, or
-it may span multiple sessions. A session may contain multiple encounters, and a
-session may end mid-encounter as a deliberate cliff-hanger.
-
-Session events and encounter events are recorded as independent streams in the
-event log:
-
-- Session events: session started, session ended (with what occurred summary)
-- Encounter events: encounter started, encounter saved, encounter completed
+These boundaries prevent prompt text or generated prose from becoming the
+source of truth for game state, and prevent any single component from
+accumulating control it does not own.
 
 ## Interaction Model
 
-The current interaction boundary is CLI `STDIN` and `STDOUT`.
+The current interaction boundary is CLI `STDIN` and `STDOUT` via `TerminalIO`.
 
-Acceptance tests act as scripted players by piping input into the CLI process
-and asserting output from `STDOUT`. This keeps tests on the same interaction
+`TerminalIO` uses `input()` for single-line reads and an `input()`-based loop
+for multiline input (blank line or EOF terminates). This bypasses macOS
+terminal canonical-mode buffer limits for long text pastes.
+
+Acceptance tests act as scripted players by injecting structured input through
+`TerminalIO` and asserting on `STDOUT`. This keeps tests on the same interaction
 path as a real user.
 
 A future UI should replace the CLI boundary without changing the orchestrator
 or agent contracts.
 
-## State Model
+## Lifecycle Boundaries
 
-Runtime state distinguishes:
+Encounters and modules have independent lifecycles and must not be conflated.
 
-- player-visible facts
-- hidden narrator or world facts
-- canonical state
-- derived narration context
-- recent event history
+An **encounter** is a game-world state machine with phase transitions, rules
+calls, dice handling, and completion logic. Encounter state persists in
+`GameStateRepository`. An encounter may start and complete within one play
+session, or it may span multiple sessions.
 
-Acceptance tests should verify state through ordinary player-visible queries
-such as `status`, `look around`, or `what happened`, not through privileged
-test-only state inspection.
+A **module** is a story arc containing a sequence of planned encounters. The
+`ModuleOrchestrator` manages encounter progression within a module and advances
+to the next module when the guiding milestone is achieved.
+
+A **campaign** is the top-level story container. It holds milestones, BBEG,
+setting, and the narrator personality. The current module is tracked within
+`CampaignState`.
 
 ## Testing Boundaries
 
-Unit tests verify one logical unit and may mock internal collaborators except
-the unit under test.
+Unit tests verify one logical unit and may mock internal collaborators. They
+live under `tests/unit/` and count toward coverage. Target: 90% or better at
+the project level.
 
 Integration tests verify interactions between internal production components.
-They live under `tests/integration` and do not count toward coverage.
+They live under `tests/integration/` and do not count toward coverage.
 
-Acceptance tests verify the full deployment unit through the CLI. They may fake
-external network dependencies such as OpenAI, typically with Dockerized
-WireMock. They must not mock production code and do not count toward coverage.
+Acceptance tests verify the full deployment unit through the CLI, using
+WireMock to fake the OpenAI API. They must not mock production code and do not
+count toward coverage.
 
-Only unit tests count toward project coverage.
-
-## Current Constraints
-
-The current implementation is intentionally constrained to:
-
-- one encounter template
-- one player character
-- Fighter support required at a minimum
-- goblin support required if available in the corpus
-- basic dialogue
-- basic skill checks
-- basic combat
-- basic equipment and potion handling
-- deterministic acceptance tests
-
-These constraints define the current implementation slice, not permanent product
-limits.
-
-## Open Design Questions Not Yet At LRM
-
-### Durable Persistence
-
-In-memory encounter state is acceptable for the current cut. File-backed
-encounter persistence is in progress. Durable save and resume behavior should
-be fully validated through acceptance tests before the Session Orchestrator
-is implemented.
-
-### Retrieval And Storage Strategy
-
-Files on disk remain acceptable for current corpus and fixture data. Database,
-document-store, and vector-store decisions are deferred until retrieval needs
-exceed simple file-backed access. The Rules Agent currently relies on base model
-knowledge rather than active retrieval from the rules corpus. Corpus retrieval
-should be addressed before the project expands to a second encounter type.
-
-### Narrative Director Personality
-
-The Narrative Director's personality, tone, Rule of Cool threshold, and
-storytelling style are configured from campaign canon. How DM personality is
-represented, validated, loaded, and applied to Narrative Director behavior is
-deferred until the Campaign Orchestrator is implemented.
-
-### User Interface
-
-The CLI is the current UI boundary. A richer UI is expected later, but its
-shape is not yet at the last responsible moment.
-
-### Player-Interactive Dice
-
-The system must preserve roll ownership and visibility so player-facing rolls
-can later become interactive. The current cut may still roll automatically.
-
-### Session Orchestrator And Between-Encounter Flow
-
-Between encounters within a session, the player may eventually explore, rest,
-take downtime actions, or engage in narrative dialogue. The Session
-Orchestrator's routing for these flows is deferred until a second encounter
-type or explicit between-encounter activity is needed.
+Tests must not expose private methods or promote internal constants to test
+them. The correct test for prompt wiring is an injection seam test that asserts
+the expected constant reaches the `Agent` constructor, not a string content
+assertion.

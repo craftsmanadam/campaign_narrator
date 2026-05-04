@@ -28,10 +28,12 @@ class TurnOrder:
         return replace(self, turns=(*self.turns[1:], self.turns[0]))
 
     def to_dict(self) -> list[dict[str, object]]:
+        """Serialize turn order as a JSON-compatible list."""
         return [t.to_dict() for t in self.turns]
 
     @classmethod
     def from_dict(cls, data: object) -> TurnOrder:
+        """Restore from to_dict(). Returns empty TurnOrder on invalid input."""
         if not isinstance(data, list | tuple):
             return cls()
         return cls(
@@ -51,6 +53,7 @@ class CombatState:
     death_saves_remaining: int | None = None
 
     def to_dict(self) -> dict[str, object]:
+        """Serialize to a JSON-compatible dict."""
         return {
             "turn_order": self.turn_order.to_dict(),
             "status": self.status.value,
@@ -67,6 +70,7 @@ class CombatState:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> CombatState:
+        """Restore from to_dict(). Unrecognized status values fall back to ACTIVE."""
         turn_order = TurnOrder.from_dict(data.get("turn_order", []))
         status_raw = data.get("status", CombatStatus.ACTIVE.value)
         status = (

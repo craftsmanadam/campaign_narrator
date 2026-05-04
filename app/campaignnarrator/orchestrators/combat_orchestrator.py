@@ -90,6 +90,7 @@ _NPC_COMBAT_ALLOWED_OUTCOMES = (
 
 
 def _format_weapon(weapon: WeaponState) -> str:
+    """Format a weapon's attack and damage stats as a single-line context string."""
     damage = weapon.damage_dice
     if weapon.damage_bonus > 0:
         damage += f"+{weapon.damage_bonus}"
@@ -102,6 +103,7 @@ def _format_weapon(weapon: WeaponState) -> str:
 
 
 def _format_visible_actor(actor: ActorState) -> str:
+    """Format an actor's identity and combat stats as a single-line context string."""
     role = "player" if actor.actor_type == ActorType.PC else actor.actor_type.value
     return (
         f"Actor {actor.actor_id} — {actor.name} ({role}), "
@@ -238,10 +240,14 @@ def _apply_npc_combat_effects(
 
 
 class _RulesAgentProtocol(Protocol):
+    """Structural protocol for the RulesAgent used by CombatOrchestrator."""
+
     def adjudicate(self, request: RulesAdjudicationRequest) -> RulesAdjudication: ...
 
 
 class _NarratorAgentProtocol(Protocol):
+    """Structural protocol for the NarratorAgent used by CombatOrchestrator."""
+
     def narrate(self, frame: NarrationFrame) -> Narration: ...
     def declare_npc_intent_from_json(self, context_json: str) -> str: ...
     def assess_combat_from_json(self, state_json: str) -> CombatAssessment: ...
@@ -268,6 +274,7 @@ class CombatOrchestrator:
         memory_repository: NarrativeMemoryRepository | None = None,
         game_state_repository: GameStateRepository | None = None,
     ) -> None:
+        """Store agents; build CombatIntent agent from adapter or test double."""
         self._rules_agent = rules_agent
         self._narrator_agent = narrator_agent
         self._io = io
@@ -335,6 +342,7 @@ class CombatOrchestrator:
             self._memory_repository.clear_combat_memory()
 
     def _process_turn(self, game_state: GameState) -> _TurnResult:
+        """Dispatch the current actor's turn: skip dead, death-save unconscious, run."""
         if game_state.combat_state is None:
             return _TurnResult(game_state=game_state, narration=None)
 
@@ -385,6 +393,7 @@ class CombatOrchestrator:
         return game_state
 
     def _run_player_turn(self, game_state: GameState, actor: ActorState) -> _TurnResult:
+        """Run the player's action loop until they end their turn or exit."""
         actor = actor.reset_turn_resources()
         game_state = game_state.with_actor_registry(
             game_state.actor_registry.with_actor(actor)
@@ -448,6 +457,7 @@ class CombatOrchestrator:
         actor: ActorState,
         raw_input: str,
     ) -> tuple[GameState, str]:
+        """Adjudicate raw_input as a combat action and apply resulting state effects."""
         state = game_state.encounter  # type: ignore[assignment]
         registry = game_state.actor_registry
         request = self._build_rules_request(state, registry, actor, raw_input)
@@ -562,6 +572,7 @@ class CombatOrchestrator:
         return game_state
 
     def _run_npc_turn(self, game_state: GameState, actor: ActorState) -> _TurnResult:
+        """Declare NPC intent, adjudicate it, apply effects, and narrate."""
         actor = actor.reset_turn_resources()
         game_state = game_state.with_actor_registry(
             game_state.actor_registry.with_actor(actor)
@@ -662,6 +673,7 @@ class CombatOrchestrator:
         return tuple(resolved)
 
     def _classify_combat_intent(self, raw_input: str) -> str:
+        """Return the intent category string for the player's raw combat input."""
         return self._intent_agent.run_sync(
             json.dumps({"player_input": raw_input})
         ).output.intent
@@ -674,6 +686,7 @@ class CombatOrchestrator:
         intent: str,
         allowed_outcomes: tuple[str, ...] = _COMBAT_ALLOWED_OUTCOMES,
     ) -> RulesAdjudicationRequest:
+        """Assemble a RulesAdjudicationRequest for the given actor's intent."""
         feat_context = tuple(
             f"Feat — {feat.name}: {feat.effect_summary}" for feat in actor.feats
         )
@@ -707,6 +720,7 @@ class CombatOrchestrator:
         purpose: str,
         roll_events: tuple[str, ...] = (),
     ) -> NarrationFrame:
+        """Assemble a NarrationFrame for a combat turn result or clarification."""
         return NarrationFrame(
             purpose=purpose,
             phase=EncounterPhase.COMBAT,
@@ -725,6 +739,7 @@ class CombatOrchestrator:
     def _assess_combat(
         self, game_state: GameState, last_narration: str
     ) -> CombatAssessment:
+        """Ask the NarratorAgent whether combat should continue after this turn."""
         state = game_state.encounter  # type: ignore[assignment]
         registry = game_state.actor_registry
         actor_summaries = [
@@ -750,6 +765,7 @@ class CombatOrchestrator:
         )
 
     def _format_resources(self, resources: TurnResources) -> str:
+        """Return a single-line string showing available action economy resources."""
         action = "available" if resources.action_available else "used"
         bonus = "available" if resources.bonus_action_available else "used"
         reaction = "available" if resources.reaction_available else "used"
@@ -764,6 +780,7 @@ class CombatOrchestrator:
         )
 
     def _format_combat_status(self, game_state: GameState) -> str:
+        """Return pipe-separated narrative summaries for all encounter actors."""
         if game_state.encounter is None:
             return ""
         summaries = [

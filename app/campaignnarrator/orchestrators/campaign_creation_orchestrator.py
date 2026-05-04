@@ -61,6 +61,7 @@ class CampaignCreationOrchestrator:
         agents: CampaignCreationAgents,
         module_orchestrator: ModuleOrchestrator,
     ) -> None:
+        """Store collaborators used during campaign and module creation."""
         self._io = io
         self._player = player
         self._repos = repositories

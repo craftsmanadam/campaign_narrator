@@ -38,6 +38,7 @@ def _build_application_graph(
 
 
 def _arguments(argv: Sequence[str] | None) -> Namespace:
+    """Parse and return CLI arguments from argv (or sys.argv when None)."""
     parser = argparse.ArgumentParser(prog="campaignnarrator")
     parser.add_argument("--data-root", type=Path, default=None)
     args = parser.parse_args(argv)
@@ -45,6 +46,7 @@ def _arguments(argv: Sequence[str] | None) -> Namespace:
 
 
 def _data_root(args: Namespace, settings) -> Any:
+    """Return the data root path from args, falling back to settings."""
     if args.data_root is not None:
         data_root = args.data_root
     else:
@@ -73,6 +75,7 @@ def main(
     graph = _build_application_graph(data_root, stdin=stdin, stdout=stdout)
 
     def _sigterm_handler(signum: int, frame: object) -> None:
+        """Flush game state to disk and exit cleanly on SIGTERM."""
         graph.game_orchestrator.save_state()
         sys.exit(0)
 
