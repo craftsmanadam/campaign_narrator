@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import replace
 from pathlib import Path
 
 from campaignnarrator.domain.models import ActorRegistry, GameState
@@ -62,7 +61,7 @@ class GameStateRepository:
         gs = GameState.from_json(raw)
 
         if player.actor_id not in gs.actor_registry.actors:
-            return replace(gs, actor_registry=gs.actor_registry.with_actor(player))
+            return gs.with_actor_registry(gs.actor_registry.with_actor(player))
         return gs
 
     def persist(self, state: GameState) -> None:
@@ -81,7 +80,7 @@ class GameStateRepository:
             for actor_id, actor in state.actor_registry.actors.items()
             if actor_id != self._player_actor_id
         }
-        npc_state = replace(state, actor_registry=ActorRegistry(actors=npc_actors))
+        npc_state = state.with_actor_registry(ActorRegistry(actors=npc_actors))
 
         self._state_path.parent.mkdir(parents=True, exist_ok=True)
         self._state_path.write_text(

@@ -399,14 +399,16 @@ def test_terminal_io_prompt_optional_returns_whitespace_only_input() -> None:
 
 
 @patch("builtins.input", side_effect=["line one", "line two", ""])
-def test_terminal_io_prompt_multiline_collects_until_blank_line(_: MagicMock) -> None:
+def test_terminal_io_prompt_multiline_collects_until_blank_line(
+    mock_input: MagicMock,
+) -> None:
     """prompt_multiline() joins lines until a blank line terminates input."""
     io = TerminalIO(StringIO(""), StringIO())
     assert io.prompt_multiline("> ") == "line one\nline two"
 
 
 @patch("builtins.input", side_effect=EOFError)
-def test_terminal_io_prompt_multiline_stops_at_eof(_: MagicMock) -> None:
+def test_terminal_io_prompt_multiline_stops_at_eof(mock_input: MagicMock) -> None:
     """prompt_multiline() terminates cleanly on EOFError (Ctrl+D on empty line)."""
     io = TerminalIO(StringIO(""), StringIO())
     assert io.prompt_multiline("> ") == ""

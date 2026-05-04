@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Protocol
 
 from pydantic_ai import Agent
@@ -390,12 +390,10 @@ class CombatOrchestrator:
             game_state.actor_registry.with_actor(actor)
         )
         if game_state.combat_state is not None:
-            game_state = replace(
-                game_state,
-                combat_state=replace(
-                    game_state.combat_state,
-                    current_turn_resources=actor.get_turn_resources(),
-                ),
+            game_state = game_state.with_combat_state(
+                game_state.combat_state.with_current_turn_resources(
+                    actor.get_turn_resources()
+                )
             )
 
         self._io.display(f"--- {actor.name}'s turn ---")

@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import json
 from collections.abc import Mapping
-from dataclasses import replace
 from pathlib import Path
 
 from campaignnarrator.domain.models import ActorState
@@ -59,11 +58,11 @@ def _enrich_player_references(
         if item.reference is not None:
             with contextlib.suppress(FileNotFoundError):
                 texts.append(compendium.load_reference_text(item.reference))
-    return replace(actor, references=tuple(texts))
+    return actor.with_references(tuple(texts))
 
 
 def _strip_player_references(actor: ActorState) -> ActorState:
-    return replace(actor, references=())
+    return actor.with_references(())
 
 
 def player_template_from_seed(

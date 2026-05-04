@@ -155,9 +155,7 @@ class GameState:
         )
         return replace(
             self,
-            combat_state=replace(
-                self.combat_state, current_turn_resources=new_resources
-            ),
+            combat_state=self.combat_state.with_current_turn_resources(new_resources),
         )
 
     def adjust_hit_points(self, actor_id: str, delta: int) -> GameState:

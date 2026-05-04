@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import replace
 from pathlib import Path
 
 from campaignnarrator.agents.encounter_planner_agent import EncounterPlannerAgent
@@ -134,7 +133,7 @@ class EncounterPlannerOrchestrator:
             player=player,
             narrative_context=narrative_context,
         )
-        module = replace(module, planned_encounters=new_plans, next_encounter_index=0)
+        module = module.with_planned_encounters(new_plans).with_next_encounter_index(0)
         gs = self._game_state_repo.load()
         self._game_state_repo.persist(gs.with_module(module))
         return module
@@ -253,7 +252,7 @@ class EncounterPlannerOrchestrator:
 
         completed = module.planned_encounters[:current_index]
         new_plans = tuple(completed) + tuple(recovery.updated_templates)
-        module = replace(module, planned_encounters=new_plans)
+        module = module.with_planned_encounters(new_plans)
         gs = self._game_state_repo.load()
         self._game_state_repo.persist(gs.with_module(module))
         return module
@@ -327,9 +326,7 @@ class EncounterPlannerOrchestrator:
                         presence.actor_id,
                     )
                     continue
-                npc_presences.append(
-                    replace(presence, status=NpcPresenceStatus.INTERACTED)
-                )
+                npc_presences.append(presence.with_status(NpcPresenceStatus.INTERACTED))
 
         encounter = EncounterState(
             encounter_id=encounter_id,

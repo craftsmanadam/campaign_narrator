@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from campaignnarrator.agents.campaign_generator_agent import CampaignGeneratorAgent
 from campaignnarrator.agents.module_generator_agent import ModuleGeneratorAgent
@@ -140,7 +140,7 @@ class CampaignCreationOrchestrator:
         )
         # Persist campaign + module together through the state facade
         gs = self._repos.game_state.load()
-        persisted_gs = replace(gs, campaign=campaign, module=module)
+        persisted_gs = gs.with_campaign(campaign).with_module(module)
         self._repos.game_state.persist(persisted_gs)
 
         # Delegate encounter loop to ModuleOrchestrator

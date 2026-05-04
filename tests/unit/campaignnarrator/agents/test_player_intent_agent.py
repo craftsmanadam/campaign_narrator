@@ -16,7 +16,6 @@ from campaignnarrator.domain.models import (
 )
 
 
-
 def _make_agent(intent: PlayerIntent) -> PlayerIntentAgent:
     mock_agent = MagicMock()
     mock_agent.run_sync.return_value.output = intent

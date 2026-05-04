@@ -341,9 +341,9 @@ def test_init_raises_type_error_when_adapter_is_not_pydantic_ai_adapter() -> Non
 
 @patch("campaignnarrator.agents.rules_agent.Agent")
 @patch("campaignnarrator.agents.rules_agent.PydanticAIAdapter", MagicMock)
-def test_rules_agent_passes_rules_instructions_to_agent(mock_agent_cls: MagicMock) -> None:
+def test_rules_agent_passes_rules_instructions_to_agent(
+    mock_agent_cls: MagicMock,
+) -> None:
     RulesAgent(adapter=MagicMock())
     _, kwargs = mock_agent_cls.call_args
     assert kwargs["instructions"] == RULES_INSTRUCTIONS
-
-

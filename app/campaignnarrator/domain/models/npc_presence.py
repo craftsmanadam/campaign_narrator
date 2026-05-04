@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
 
@@ -41,6 +41,10 @@ class NpcPresence:
     name_known: bool  # Has the player learned this NPC's name?
     status: NpcPresenceStatus = NpcPresenceStatus.AVAILABLE
     interaction_summaries: tuple[str, ...] = field(default_factory=tuple)
+
+    def with_status(self, status: NpcPresenceStatus) -> NpcPresence:
+        """Return a copy with status replaced."""
+        return replace(self, status=status)
 
     def to_dict(self) -> dict[str, object]:
         d: dict[str, object] = {

@@ -12,7 +12,10 @@ from campaignnarrator.agents.narrator_agent import (
     NarratorAgent,
     _serialize_npc_presences,
 )
-from campaignnarrator.agents.prompts import BASE_NARRATE_INSTRUCTIONS, SCENE_OPENING_INSTRUCTIONS
+from campaignnarrator.agents.prompts import (
+    BASE_NARRATE_INSTRUCTIONS,
+    SCENE_OPENING_INSTRUCTIONS,
+)
 from campaignnarrator.domain.models import (
     CampaignState,
     CombatAssessment,

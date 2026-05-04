@@ -106,11 +106,9 @@ class EncounterOrchestrator:
                 _frame(game_state, "scene_opening"),
                 game_state,
             )
-            updated = replace(
-                game_state.encounter,
-                phase=EncounterPhase.SOCIAL,
-                scene_tone=opening.scene_tone,
-            )
+            updated = game_state.encounter.with_phase(
+                EncounterPhase.SOCIAL
+            ).with_scene_tone(opening.scene_tone)
             game_state = game_state.with_encounter(updated)
             self._io.display(opening.text)
             self._game_state_repo.persist(game_state)
