@@ -31,7 +31,16 @@ class TerminalIO:
     def prompt_multiline(self, text: str) -> str:
         self._stdout.write(text)
         self._stdout.flush()
-        return self._stdin.read()
+        lines: list[str] = []
+        while True:
+            try:
+                line = input()
+            except EOFError:
+                break
+            if not line and lines:
+                break
+            lines.append(line)
+        return "\n".join(lines)
 
     def display(self, text: str) -> None:
         self._stdout.write(text + "\n")

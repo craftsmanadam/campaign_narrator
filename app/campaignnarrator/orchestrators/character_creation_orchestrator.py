@@ -112,7 +112,7 @@ class CharacterCreationOrchestrator:
     ) -> str:
         self._io.display(
             "\nDescribe your past in your own words. "
-            "You can paste multiple lines — press Ctrl+D when done. "
+            "You can paste multiple lines — press Enter twice when done. "
             "If you would like help crafting a backstory, just say 'help'.\n"
         )
         raw = self._io.prompt_multiline("> ").strip()
@@ -146,7 +146,7 @@ class CharacterCreationOrchestrator:
     def _choose_description(self) -> str:
         self._io.display(
             "\nDescribe your appearance. "
-            "You can write as much as you like — press Ctrl+D when done.\n"
+            "You can write as much as you like — press Enter twice when done.\n"
         )
         while True:
             result = self._io.prompt_multiline("> ").strip()

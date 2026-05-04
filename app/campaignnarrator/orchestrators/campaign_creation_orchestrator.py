@@ -25,7 +25,7 @@ _BRIEF_PROMPT = (
     "Describe the world you want to inhabit, where your journey starts, what drives "
     "your character, and what enemies you hope to face. Speak freely — the more you "
     "tell me, the richer your tale will be.\n\n"
-    "You can write as much as you like — press Ctrl+D when done.\n\n"
+    "You can write as much as you like — press Enter twice when done.\n\n"
     "> "
 )
 
