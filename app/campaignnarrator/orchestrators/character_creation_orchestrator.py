@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from campaignnarrator.agents.backstory_agent import BackstoryAgent
 from campaignnarrator.domain.models import ActorState, PlayerIO
@@ -59,13 +59,12 @@ class CharacterCreationOrchestrator:
         )
         description = self._choose_description()
 
-        actor = replace(
-            template,
-            actor_id="pc:player",
-            name=name,
-            race=race,
-            background=background,
-            description=description or None,
+        actor = (
+            template.with_actor_id("pc:player")
+            .with_name(name)
+            .with_race(race)
+            .with_background(background)
+            .with_description(description or None)
         )
         self._repos.actor.save(actor)
 

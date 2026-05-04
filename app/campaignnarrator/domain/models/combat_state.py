@@ -98,6 +98,18 @@ class CombatState:
             death_saves_remaining=death_saves_remaining,
         )
 
+    def with_combat_status(self, status: CombatStatus) -> CombatState:
+        """Return a copy with status replaced."""
+        return replace(self, status=status)
+
+    def with_turn_order(self, turn_order: TurnOrder) -> CombatState:
+        """Return a copy with turn_order replaced."""
+        return replace(self, turn_order=turn_order)
+
+    def with_death_saves_remaining(self, n: int) -> CombatState:
+        """Return a copy with death_saves_remaining replaced."""
+        return replace(self, death_saves_remaining=n)
+
     def with_current_turn_resources(self, resources: TurnResources) -> CombatState:
         """Return a copy with current_turn_resources replaced."""
         return replace(self, current_turn_resources=resources)

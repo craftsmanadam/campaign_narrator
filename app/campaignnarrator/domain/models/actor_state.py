@@ -16,6 +16,13 @@ from .actor_components import (
 
 # HP ratio thresholds for actor narrative summaries
 _HP_THRESHOLD_BARELY_STANDING = 0.25
+
+# Death saving throw thresholds
+_DEATH_SAVE_NAT_ONE = 1
+_DEATH_SAVE_NAT_TWENTY = 20
+_DEATH_SAVE_MIN_SUCCESS_ROLL = 10
+_DEATH_SAVE_SUCCESS_THRESHOLD = 3
+_DEATH_SAVE_FAILURE_THRESHOLD = 3
 _HP_THRESHOLD_BLOODIED = 0.5
 _HP_THRESHOLD_LIGHTLY_WOUNDED = 0.75
 
@@ -163,6 +170,72 @@ class ActorState:
         if name not in self.conditions:
             return self
         return replace(self, conditions=tuple(c for c in self.conditions if c != name))
+
+    def with_actor_id(self, actor_id: str) -> ActorState:
+        """Return a copy with actor_id replaced."""
+        return replace(self, actor_id=actor_id)
+
+    def with_name(self, name: str) -> ActorState:
+        """Return a copy with name replaced."""
+        return replace(self, name=name)
+
+    def with_race(self, race: str) -> ActorState:
+        """Return a copy with race replaced."""
+        return replace(self, race=race)
+
+    def with_background(self, background: str) -> ActorState:
+        """Return a copy with background replaced."""
+        return replace(self, background=background)
+
+    def with_description(self, description: str | None) -> ActorState:
+        """Return a copy with description replaced."""
+        return replace(self, description=description)
+
+    def apply_death_save_roll(self, roll_result: int) -> ActorState:
+        """Apply a death saving throw result and return the updated actor.
+
+        - Natural 1: +2 failures
+        - Natural 20: +2 successes
+        - 10-19: +1 success
+        - 2-9: +1 failure
+        - 3+ successes: actor gains 'stable', loses 'unconscious'
+        - 3+ failures: actor gains 'dead', loses 'unconscious'
+        """
+        successes = self.death_save_successes
+        failures = self.death_save_failures
+
+        if roll_result == _DEATH_SAVE_NAT_ONE:
+            failures += 2
+        elif roll_result == _DEATH_SAVE_NAT_TWENTY:
+            successes += 2
+        elif roll_result >= _DEATH_SAVE_MIN_SUCCESS_ROLL:
+            successes += 1
+        else:
+            failures += 1
+
+        if successes >= _DEATH_SAVE_SUCCESS_THRESHOLD:
+            return replace(
+                self,
+                death_save_successes=_DEATH_SAVE_SUCCESS_THRESHOLD,
+                death_save_failures=failures,
+                conditions=(
+                    *(c for c in self.conditions if c != "unconscious"),
+                    "stable",
+                ),
+            )
+        if failures >= _DEATH_SAVE_FAILURE_THRESHOLD:
+            return replace(
+                self,
+                death_save_successes=successes,
+                death_save_failures=_DEATH_SAVE_FAILURE_THRESHOLD,
+                conditions=(
+                    *(c for c in self.conditions if c != "unconscious"),
+                    "dead",
+                ),
+            )
+        return replace(
+            self, death_save_successes=successes, death_save_failures=failures
+        )
 
     def apply_change_hp(self, delta: int) -> ActorState:
         """Return a copy with hp_current adjusted by delta, clamped to [0, hp_max]."""

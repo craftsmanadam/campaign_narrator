@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import replace
 from pathlib import Path
 
 from campaignnarrator.domain.models import ActorState, ActorType, EncounterNpc
@@ -34,7 +33,7 @@ def build_npc_actor(
     ):
         try:
             actor = _load_monster(npc.monster_name, index_path=index_path)
-            return replace(actor, actor_id=actor_id, name=npc.display_name)
+            return actor.with_actor_id(actor_id).with_name(npc.display_name)
         except KeyError:
             _log.warning(
                 "Monster %r not found in compendium; using simple NPC stats",

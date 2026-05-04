@@ -31,13 +31,6 @@ __all__ = [
 
 _log = logging.getLogger(__name__)
 
-# Death saving throw thresholds
-_DEATH_SAVE_NAT_ONE = 1
-_DEATH_SAVE_NAT_TWENTY = 20
-_DEATH_SAVE_MIN_SUCCESS_ROLL = 10
-_DEATH_SAVE_SUCCESS_THRESHOLD = 3
-_DEATH_SAVE_FAILURE_THRESHOLD = 3
-
 
 class _PlayerNotFoundError(RuntimeError):
     """Player actor was not found in the registry."""
@@ -116,7 +109,7 @@ class GameState:
         """
         if self.combat_state is None:
             return self
-        return replace(self, combat_state=replace(self.combat_state, status=status))
+        return replace(self, combat_state=self.combat_state.with_combat_status(status))
 
     def advance_turn(self) -> GameState:
         """Rotate the turn order and initialize fresh TurnResources for the next actor.
@@ -135,11 +128,9 @@ class GameState:
         )
         return replace(
             self,
-            combat_state=replace(
-                self.combat_state,
-                turn_order=new_turn_order,
-                current_turn_resources=fresh_resources,
-            ),
+            combat_state=self.combat_state.with_turn_order(
+                new_turn_order
+            ).with_current_turn_resources(fresh_resources),
         )
 
     def spend_turn_resource(self, resource_type: str, amount: int = 1) -> GameState:
@@ -310,11 +301,9 @@ class GameState:
             downed = downed_pcs[0]
             return replace(
                 self,
-                combat_state=replace(
-                    self.combat_state,
-                    status=CombatStatus.PLAYER_DOWN_NO_ALLIES,
-                    death_saves_remaining=3 - downed.death_save_failures,
-                ),
+                combat_state=self.combat_state.with_combat_status(
+                    CombatStatus.PLAYER_DOWN_NO_ALLIES
+                ).with_death_saves_remaining(3 - downed.death_save_failures),
             )
         return self
 
@@ -331,44 +320,7 @@ class GameState:
         Raises KeyError if actor_id not in registry.
         """
         actor = self.actor_registry.actors[actor_id]
-        successes = actor.death_save_successes
-        failures = actor.death_save_failures
-
-        if roll_result == _DEATH_SAVE_NAT_ONE:
-            failures += 2
-        elif roll_result == _DEATH_SAVE_NAT_TWENTY:
-            successes += 2
-        elif roll_result >= _DEATH_SAVE_MIN_SUCCESS_ROLL:
-            successes += 1
-        else:
-            failures += 1
-
-        if successes >= _DEATH_SAVE_SUCCESS_THRESHOLD:
-            updated = replace(
-                actor,
-                death_save_successes=_DEATH_SAVE_SUCCESS_THRESHOLD,
-                death_save_failures=failures,
-                conditions=(
-                    *(c for c in actor.conditions if c != "unconscious"),
-                    "stable",
-                ),
-            )
-        elif failures >= _DEATH_SAVE_FAILURE_THRESHOLD:
-            updated = replace(
-                actor,
-                death_save_successes=successes,
-                death_save_failures=_DEATH_SAVE_FAILURE_THRESHOLD,
-                conditions=(
-                    *(c for c in actor.conditions if c != "unconscious"),
-                    "dead",
-                ),
-            )
-        else:
-            updated = replace(
-                actor,
-                death_save_successes=successes,
-                death_save_failures=failures,
-            )
+        updated = actor.apply_death_save_roll(roll_result)
         return replace(self, actor_registry=self.actor_registry.with_actor(updated))
 
     def get_player(self) -> ActorState:
