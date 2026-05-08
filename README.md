@@ -204,6 +204,20 @@ make run_local ARGS="--env openai"
 
 The script starts Ollama in Docker, pulls any missing models, seeds static game data, and launches the CLI. Everything after `make run_local` is automatic.
 
+### Running two instances simultaneously
+
+Two independent game sessions can run side-by-side. The second instance reuses the already-running Ollama container automatically; only the state directory needs to differ:
+
+```bash
+# Terminal 1 — first session (default state directory)
+make run_local ARGS="--env openai"
+
+# Terminal 2 — second session (separate state directory)
+DATA_ROOT=var/data_store_2 make run_local ARGS="--env openai"
+```
+
+Each instance maintains its own character, campaign, and narrative memory under its `DATA_ROOT`. `make clear_state` only clears the default `var/data_store`; to clear a custom root run `rm -rf var/data_store_2` directly.
+
 ### First run: character creation
 
 On first launch there is no saved character, so the game walks through creation before the first encounter:

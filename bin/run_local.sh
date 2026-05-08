@@ -21,6 +21,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Capture DATA_ROOT before env files can overwrite it — a caller-supplied value
+# (e.g. DATA_ROOT=var/data_store_2 make run_local) must win over env file defaults.
+_DATA_ROOT_OVERRIDE="${DATA_ROOT:-}"
+
 # Load secrets first so that profile values can override non-sensitive defaults.
 if [ -f ".env.secrets" ]; then
   puts "${BLUE}Loading secrets: .env.secrets${RESET}"
@@ -43,38 +47,46 @@ fi
 puts "${BLUE}Loading env profile: ${ENV_FILE}${RESET}"
 set -a && source "$ENV_FILE" && set +a
 
-DATA_ROOT="${DATA_ROOT:-var/data_store}"
+DATA_ROOT="${_DATA_ROOT_OVERRIDE:-${DATA_ROOT:-var/data_store}}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-${OPENAI_MODEL:-orieg/gemma3-tools:12b-ft-v2}}"
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-nomic-embed-text}"
 LLM_PROVIDER="${LLM_PROVIDER:-ollama}"
 
-# Start Ollama (always needed for embeddings)
-puts "${BLUE}Starting Ollama...${RESET}"
-docker compose -f docker-compose.local.yml up -d
+# Start Ollama (always needed for embeddings).
+# If another instance already has Ollama running on port 11434, reuse it rather
+# than starting a second container that would fail to bind the port.
+if curl -sf http://localhost:11434/api/version > /dev/null 2>&1; then
+  puts "${BLUE}Ollama already running on port 11434 — reusing existing instance.${RESET}"
+else
+  puts "${BLUE}Starting Ollama...${RESET}"
+  docker compose -f docker-compose.local.yml up -d
 
-# Wait for Ollama health (30 second timeout)
-puts "${BLUE}Waiting for Ollama API...${RESET}"
-timeout=30
-elapsed=0
-until curl -sf http://localhost:11434/api/version > /dev/null; do
-  if [ "$elapsed" -ge "$timeout" ]; then
-    puts "${RED}ERROR: Ollama did not become ready within ${timeout}s.${RESET}"
-    puts "Check: docker compose -f docker-compose.local.yml logs ollama"
-    exit 1
-  fi
-  sleep 1
-  elapsed=$((elapsed + 1))
-done
-puts "${GREEN}Ollama ready.${RESET}"
+  puts "${BLUE}Waiting for Ollama API...${RESET}"
+  timeout=30
+  elapsed=0
+  until curl -sf http://localhost:11434/api/version > /dev/null; do
+    if [ "$elapsed" -ge "$timeout" ]; then
+      puts "${RED}ERROR: Ollama did not become ready within ${timeout}s.${RESET}"
+      puts "Check: docker compose -f docker-compose.local.yml logs ollama"
+      exit 1
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  puts "${GREEN}Ollama ready.${RESET}"
+fi
 
-# Pull embedding model (always needed)
+# Pull embedding model (always needed). Use the HTTP API directly so this works
+# whether Ollama was started by this compose project or a pre-existing instance.
 puts "${BLUE}Pulling embedding model (no-op if already cached)...${RESET}"
-docker compose -f docker-compose.local.yml exec ollama ollama pull "$EMBEDDING_MODEL"
+curl -sf http://localhost:11434/api/pull \
+  -d "{\"name\":\"$EMBEDDING_MODEL\",\"stream\":false}" > /dev/null
 
 if [ "$LLM_PROVIDER" != "openai" ]; then
   # Pull and warm up the local LLM model
   puts "${BLUE}Pulling LLM model (no-op if already cached)...${RESET}"
-  docker compose -f docker-compose.local.yml exec ollama ollama pull "$OLLAMA_MODEL"
+  curl -sf http://localhost:11434/api/pull \
+    -d "{\"name\":\"$OLLAMA_MODEL\",\"stream\":false}" > /dev/null
 
   # Warm up: force model into memory before first player request.
   # Cold start takes ~12s; doing it here prevents the first game response from hanging.
