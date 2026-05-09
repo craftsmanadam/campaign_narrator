@@ -264,6 +264,11 @@ class EncounterOrchestrator:
 
     def _run_combat(self, game_state: GameState) -> GameState:
         """Delegate the combat turn loop to CombatOrchestrator."""
+        if (
+            game_state.combat_state is not None
+            and game_state.combat_state.status is CombatStatus.SAVED_AND_QUIT
+        ):
+            game_state = game_state.with_combat_status(CombatStatus.ACTIVE)
         orchestrator = CombatOrchestrator(
             rules_agent=self._rules_agent,
             narrator_agent=self._narrator_agent,
@@ -421,6 +426,11 @@ class EncounterOrchestrator:
         """
         state = game_state.encounter
         registry = game_state.actor_registry
+        absent_npc_ids = {
+            p.actor_id
+            for p in state.npc_presences
+            if p.status in {NpcPresenceStatus.MENTIONED, NpcPresenceStatus.DEPARTED}
+        }
         rolls = [
             (
                 actor_id,
@@ -428,7 +438,7 @@ class EncounterOrchestrator:
                 roll(f"1d20+{registry.actors[actor_id].initiative_bonus}"),
             )
             for actor_id in state.actor_ids
-            if actor_id in registry.actors
+            if actor_id in registry.actors and actor_id not in absent_npc_ids
         ]
         sorted_rolls = sorted(rolls, key=lambda entry: entry[2], reverse=True)
         ordered = tuple(

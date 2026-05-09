@@ -752,6 +752,86 @@ def test_aggressive_input_rolls_initiative_then_enters_combat(
     assert narrator_agent.frames[-1].purpose == "combat_start"
 
 
+def test_enter_combat_excludes_mentioned_and_departed_npcs_from_initiative(
+    tmp_path: Path, mocker: object
+) -> None:
+    """NPCs with MENTIONED or DEPARTED status must not appear in the initiative roll."""
+    mock_roll = mocker.patch(  # type: ignore[attr-defined]
+        "campaignnarrator.orchestrators.encounter_orchestrator.roll",
+        side_effect=[18, 12],
+    )
+    actor_repo = PlayerRepository(tmp_path)
+    actor_repo.save(_default_player())
+    goblin = _default_npc()
+    captain = replace(
+        _default_npc(),
+        actor_id="npc:captain",
+        name="Captain Elira",
+    )
+    enc_path = _write_encounter(
+        tmp_path,
+        EncounterState(
+            encounter_id="hedgerow",
+            phase=EncounterPhase.SOCIAL,
+            setting="A hedgerow at night.",
+            actor_ids=("pc:talia", "npc:goblin-scout", "npc:captain"),
+            player_actor_id="pc:talia",
+            npc_presences=(
+                NpcPresence(
+                    actor_id="npc:goblin-scout",
+                    display_name="Goblin Scout",
+                    description="a goblin",
+                    name_known=True,
+                    status=NpcPresenceStatus.AVAILABLE,
+                ),
+                NpcPresence(
+                    actor_id="npc:captain",
+                    display_name="Captain Elira",
+                    description="the captain",
+                    name_known=True,
+                    status=NpcPresenceStatus.MENTIONED,
+                ),
+            ),
+        ),
+    )
+    initial_state = _build_game_state(
+        actor_repo, enc_path, npc_actors=(goblin, captain)
+    )
+    fake_gsr = FakeGameStateRepository(initial_state)
+    narrator_agent = FakeNarratorAgent()
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            memory=FakeMemoryRepository(), game_state=fake_gsr
+        ),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=narrator_agent),
+        io=ScriptedIO(["I draw steel and rush the goblin."]),
+        _player_intent_agent=FakePlayerIntentAgent(
+            [_intent(IntentCategory.HOSTILE_ACTION)]
+        ),
+    )
+
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
+    ) as mock_cls:
+        combat_state = replace(
+            initial_state.encounter,
+            phase=EncounterPhase.COMBAT,
+            outcome="combat",
+        )
+        mock_cls.return_value.run.return_value = GameState(
+            campaign=initial_state.campaign,
+            encounter=combat_state,
+            actor_registry=initial_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(), status=CombatStatus.ACTIVE
+            ),
+        )
+        orchestrator.run(initial_state)
+
+    # Only pc:talia and npc:goblin-scout should have rolled — npc:captain is MENTIONED
+    assert [c.args[0] for c in mock_roll.call_args_list] == ["1d20+5", "1d20+2"]
+
+
 def test_enter_combat_emits_encounter_completed_event(
     tmp_path: Path, mocker: object
 ) -> None:
@@ -1144,6 +1224,55 @@ def test_combat_complete_transitions_encounter_to_encounter_complete(
         or result.encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE
     )
     assert fake_gsr.load().encounter.phase is EncounterPhase.ENCOUNTER_COMPLETE
+
+
+def test_resume_combat_resets_saved_and_quit_to_active(tmp_path: Path) -> None:
+    """A game state persisted with SAVED_AND_QUIT must resume as ACTIVE combat.
+
+    Without this reset, CombatOrchestrator.run() exits immediately on a
+    non-ACTIVE status and prints 'Game saved' again instead of running turns.
+    """
+    initial_state = _combat_game_state(tmp_path, goblin_hp=7)
+    saved_and_quit_state = GameState(
+        campaign=initial_state.campaign,
+        encounter=initial_state.encounter,
+        actor_registry=initial_state.actor_registry,
+        combat_state=CombatState(
+            turn_order=TurnOrder(),
+            status=CombatStatus.SAVED_AND_QUIT,
+        ),
+    )
+    fake_gsr = FakeGameStateRepository(saved_and_quit_state)
+    orchestrator = EncounterOrchestrator(
+        repositories=OrchestratorRepositories(
+            memory=FakeMemoryRepository(), game_state=fake_gsr
+        ),
+        agents=OrchestratorAgents(rules=FakeRulesAgent(), narrator=FakeNarratorAgent()),
+        io=ScriptedIO([]),
+        _player_intent_agent=FakePlayerIntentAgent(),
+    )
+
+    captured_status: list[CombatStatus] = []
+
+    def _capture_run(game_state: GameState) -> GameState:
+        if game_state.combat_state is not None:
+            captured_status.append(game_state.combat_state.status)
+        return GameState(
+            campaign=game_state.campaign,
+            encounter=game_state.encounter,
+            actor_registry=game_state.actor_registry,
+            combat_state=CombatState(
+                turn_order=TurnOrder(), status=CombatStatus.COMPLETE
+            ),
+        )
+
+    with patch(
+        "campaignnarrator.orchestrators.encounter_orchestrator.CombatOrchestrator"
+    ) as mock_cls:
+        mock_cls.return_value.run.side_effect = _capture_run
+        orchestrator.run(saved_and_quit_state)
+
+    assert captured_status == [CombatStatus.ACTIVE]
 
 
 def test_exit_during_combat_saves_state(tmp_path: Path) -> None:
