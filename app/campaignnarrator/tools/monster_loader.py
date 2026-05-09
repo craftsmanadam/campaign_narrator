@@ -156,8 +156,9 @@ def load_by_name(name: str, *, index_path: Path) -> ActorState:
         KeyError: When the monster name is not found in the index.
     """
     entries: list[dict[str, str]] = json.loads(index_path.read_text(encoding="utf-8"))
+    name_lower = name.lower()
     for entry in entries:
-        if entry["name"] == name:
+        if entry["name"].lower() == name_lower:
             file_value = entry["file"]
             file_path = Path(file_value)
             if not file_path.is_absolute():

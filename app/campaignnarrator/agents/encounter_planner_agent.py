@@ -41,7 +41,11 @@ _PLAN_INSTRUCTIONS = (
     "(template_npc_id: 'goblin-scout-a', display_name: 'Goblin Scout A'). "
     "Do NOT include player HP, AC, or other mechanical stats — narrative context "
     "only. "
-    "CR must be a float (0.25, 0.5, 1.0, etc.)."
+    "CR must be a float (0.25, 0.5, 1.0, etc.). "
+    "Set is_ally: true for NPCs who are on the player's side (survivors, companions, "
+    "escorts, friendly witnesses). Set is_ally: false for enemies and neutral NPCs. "
+    "Allies have their combat turns skipped — they act narratively but do not attack "
+    "the player."
 )
 
 _ASSESS_INSTRUCTIONS = (
@@ -77,7 +81,8 @@ _RECOVERY_INSTRUCTIONS = (
     "Reuse template_npc_id values for NPCs that still exist in the narrative. "
     "Assign new unique template_npc_id values for any new NPCs. "
     "Set template_id as 'enc-bridge-001', 'enc-bridge-002' for bridges; "
-    "preserve existing IDs for unchanged templates."
+    "preserve existing IDs for unchanged templates. "
+    "Set is_ally: true for NPCs on the player's side; is_ally: false for enemies."
 )
 
 

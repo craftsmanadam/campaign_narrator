@@ -26,6 +26,7 @@ class EncounterNpc(BaseModel):
     cr: float
     name_known: bool = False
     persistent: bool = False
+    is_ally: bool = False
 
     @field_validator("cr", mode="before")
     @classmethod

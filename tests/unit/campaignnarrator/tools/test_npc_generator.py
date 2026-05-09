@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from campaignnarrator.domain.models import EncounterNpc
+from campaignnarrator.domain.models import ActorType, EncounterNpc
 from campaignnarrator.tools.npc_generator import build_npc_actor
 
 
@@ -60,3 +60,31 @@ class TestBuildNpcActor:
         assert actor.actor_id == "npc:goblin-b"
         expected_hp = 1
         assert actor.hp_max == expected_hp
+
+    def test_is_ally_false_produces_npc_actor_type(self) -> None:
+        npc = EncounterNpc(
+            template_npc_id="guard-a",
+            display_name="Guard",
+            role="enemy",
+            description="A hostile guard.",
+            monster_name=None,
+            stat_source="simple_npc",
+            cr=0.0,
+            is_ally=False,
+        )
+        actor = build_npc_actor(npc, actor_id="npc:guard-a", index_path=None)
+        assert actor.actor_type == ActorType.NPC
+
+    def test_is_ally_true_produces_ally_actor_type(self) -> None:
+        npc = EncounterNpc(
+            template_npc_id="jessa",
+            display_name="Jessa",
+            role="survivor",
+            description="A friendly survivor.",
+            monster_name=None,
+            stat_source="simple_npc",
+            cr=0.0,
+            is_ally=True,
+        )
+        actor = build_npc_actor(npc, actor_id="npc:jessa", index_path=None)
+        assert actor.actor_type == ActorType.ALLY

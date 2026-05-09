@@ -88,8 +88,8 @@ class GameState:
         return replace(self, encounter=encounter)
 
     def clear_encounter(self) -> GameState:
-        """Return a copy with encounter cleared to None."""
-        return replace(self, encounter=None)
+        """Return a copy with encounter and combat_state cleared to None."""
+        return replace(self, encounter=None, combat_state=None)
 
     def with_actor_registry(self, registry: ActorRegistry) -> GameState:
         """Return a copy with actor_registry replaced."""

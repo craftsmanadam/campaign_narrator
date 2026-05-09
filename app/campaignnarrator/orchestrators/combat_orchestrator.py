@@ -358,6 +358,12 @@ class CombatOrchestrator:
 
         if actor.actor_type == ActorType.PC:
             result = self._run_player_turn(game_state, actor)
+            # Don't advance turn if player saved/quit mid-turn — resume here next time
+            if (
+                result.game_state.combat_state is not None
+                and result.game_state.combat_state.status != CombatStatus.ACTIVE
+            ):
+                return result
         elif actor.actor_type == ActorType.ALLY:
             return _TurnResult(game_state=game_state.advance_turn(), narration=None)
         else:

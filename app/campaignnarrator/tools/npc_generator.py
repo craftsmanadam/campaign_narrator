@@ -25,6 +25,7 @@ def build_npc_actor(
     index_path is valid. Falls back to simple placeholder stats on any
     lookup failure.
     """
+    actor_type = ActorType.ALLY if npc.is_ally else ActorType.NPC
     if (
         npc.stat_source == "monster_compendium"
         and npc.monster_name
@@ -33,7 +34,11 @@ def build_npc_actor(
     ):
         try:
             actor = _load_monster(npc.monster_name, index_path=index_path)
-            return actor.with_actor_id(actor_id).with_name(npc.display_name)
+            return (
+                actor.with_actor_id(actor_id)
+                .with_name(npc.display_name)
+                .with_actor_type(actor_type)
+            )
         except KeyError:
             _log.warning(
                 "Monster %r not found in compendium; using simple NPC stats",
@@ -47,7 +52,7 @@ def build_npc_actor(
     return ActorState(
         actor_id=actor_id,
         name=npc.display_name,
-        actor_type=ActorType.NPC,
+        actor_type=actor_type,
         hp_max=_SIMPLE_NPC_HP,
         hp_current=_SIMPLE_NPC_HP,
         armor_class=_SIMPLE_NPC_AC,

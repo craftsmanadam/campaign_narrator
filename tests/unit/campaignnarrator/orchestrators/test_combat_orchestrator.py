@@ -865,8 +865,8 @@ def test_save_and_quit_preserves_final_state() -> None:
             ),
         )
     )
-    # Turn order rotates after the player's turn ends (even on exit_session),
-    # but actor HP and encounter identity must be unchanged.
+    # Turn order must NOT rotate on exit_session — resume picks up at the player's turn.
+    assert result.combat_state.turn_order.current_actor_id == "pc:talia"
     assert result.actor_registry.actors["pc:talia"].hp_current == TALIA.hp_current
     assert result.encounter.encounter_id == state.encounter_id
 

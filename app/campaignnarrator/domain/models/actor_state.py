@@ -179,6 +179,10 @@ class ActorState:
         """Return a copy with name replaced."""
         return replace(self, name=name)
 
+    def with_actor_type(self, actor_type: ActorType) -> ActorState:
+        """Return a copy with actor_type replaced."""
+        return replace(self, actor_type=actor_type)
+
     def with_race(self, race: str) -> ActorState:
         """Return a copy with race replaced."""
         return replace(self, race=race)

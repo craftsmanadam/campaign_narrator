@@ -307,6 +307,13 @@ def test_clear_encounter_does_not_mutate_original() -> None:
     assert gs.encounter is enc
 
 
+def test_clear_encounter_also_clears_combat_state() -> None:
+    gs = GameState(encounter=_make_enc(), combat_state=CombatState())
+    result = gs.clear_encounter()
+    assert result.encounter is None
+    assert result.combat_state is None
+
+
 def test_with_actor_registry_replaces_registry() -> None:
     registry = ActorRegistry().with_actor(TALIA)
     gs = GameState()

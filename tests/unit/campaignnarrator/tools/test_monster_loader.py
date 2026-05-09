@@ -194,3 +194,27 @@ def test_load_by_name_raises_on_unknown_monster(tmp_path: Path) -> None:
 
     with pytest.raises(KeyError, match="Dragon"):
         load_by_name("Dragon", index_path=index_path)
+
+
+def test_load_by_name_case_insensitive(tmp_path: Path) -> None:
+    monster_dir = tmp_path / "monsters_dir"
+    monster_dir.mkdir()
+    goblin_path = monster_dir / "Goblin.md"
+    goblin_path.write_text(_GOBLIN_MD, encoding="utf-8")
+
+    index_path = tmp_path / "index.json"
+    index_path.write_text(
+        json.dumps(
+            [
+                {
+                    "name": "Goblin",
+                    "cr": "1/4",
+                    "type": "humanoid",
+                    "file": str(goblin_path),
+                }
+            ]
+        )
+    )
+
+    actor = load_by_name("goblin", index_path=index_path)
+    assert actor.hp_max == _GOBLIN_HP
